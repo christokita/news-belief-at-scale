@@ -14,13 +14,15 @@ Looking at tweet data
 ####################
 import json
 import pandas as pd
+import numpy as np
 
 
 ####################
 # Load data
 ####################
-filename = "../data/tweets/sample_tweets.json"
-#filename = "../data/tweets/crowdsource_factchecking_prem2.json"
+#filename = "../data/tweets/sample_tweets.json"
+#filename = "../data/tweets/sample_retweet.json"
+filename = "../data/tweets/crowdsource_factchecking_prem2.json"
 
 tweet_data = pd.DataFrame(columns = ['user_id', 'user_name',
                                      'tweet_time', 'tweet_text', 'tweet_id',
@@ -41,23 +43,33 @@ with open(filename,) as json_file:
         tweet_text = data['text']
         tweet_id = data['id']
         quote_status = data['is_quote_status']
-        retweet_status = data['retweeted']
         tweet_url = "https://twitter.com/" + user_name + "/status/" + str(tweet_id)
         
         # Parse urls (cane contain multiple and are in nested list)
         url_collection = data['entities']['urls']
-        url_count = 0
-        urls_list = []
-        urls_expanded_list = []
-        for url_set in url_collection:
-            urls_list.append(url_set['url'])
-            urls_expanded_list.append(url_set['expanded_url'])
-            url_count += 1
-        url = ",".join(urls_list)
-        url_expanded = ",".join(urls_expanded_list)
+        url_count = len(url_collection)
+        if url_count > 0:
+            urls_list = []
+            urls_expanded_list = []
+            for url_set in url_collection:
+                urls_list.append(url_set['url'])
+                urls_expanded_list.append(url_set['expanded_url'])
+            url = ",".join(urls_list)
+            url_expanded = ",".join(urls_expanded_list)
+        else:
+            urls_list = ""
+            urls_expanded_list = ""
+        
+        # Check if rewteeted and if so, get info
+        if 'retweeted_status' in data:
+            retweet_status = True
+            rt_user = data['retweeted_status']['user']
+            retweet_user_id = rt_user['id']
+        else:
+            retweet_status = False
+            retweet_user_id = np.nan
         
         # Append to tweet dataframe
-        print(url)
         this_tweet = pd.DataFrame({'user_id': user_id, 
                                    'user_name': user_name,
                                    'tweet_time': tweet_time,
@@ -68,5 +80,6 @@ with open(filename,) as json_file:
                                    'url_count': url_count,
                                    'is_quote': quote_status,
                                    'is_retweet': retweet_status, 
+                                   'retweeted_user_id': retweet_user_id,
                                    'tweet_url': tweet_url}, index = [0])
-        tweet_data = tweet_data.append(this_tweet, ignore_index = True)
+        tweet_data = tweet_data.append(this_tweet, ignore_index = True, sort = False)
