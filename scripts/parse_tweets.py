@@ -47,7 +47,8 @@ def tweet_parser(filename):
             retweet_count = data['retweet_count']
             quote_count = data['quote_count']
             reply_count = data['reply_count']
-            quote_status = data['is_quote_status']
+            quote_status_nominal = data['is_quote_status']
+            quote_status = 'quoted_status' in data
             retweet_status = 'retweeted_status' in data
             tweet_url = "https://twitter.com/" + user_name + "/status/" + str(tweet_id)
             
@@ -99,13 +100,14 @@ def tweet_parser(filename):
                                        'urls': url,
                                        'urls_expanded': url_expanded,
                                        'url_count': url_count,
-                                       'is_quote': quote_status,
-                                       'is_retweet': retweet_status, 
-                                       'is_extended_tweet': extended_tweet,
                                        'favorite_count': favorite_count,
                                        'retweet_count': retweet_count,
                                        'quote_count': quote_count,
                                        'reply_count': reply_count,
+                                       'is_quote': quote_status,
+                                       'is_quote_nominal': quote_status_nominal,
+                                       'is_retweet': retweet_status, 
+                                       'is_extended_tweet': extended_tweet,
                                        'retweeted_user_id': retweet_user_id,
                                        'rewteeted_user_name': retweet_user_name,
                                        'retweet_id': retweet_id,
@@ -125,10 +127,10 @@ def tweet_parser(filename):
 save_file_name = "parsed_tweets"
 #source_directory = "../" #local files   
 source_directory = "/Volumes/CKT-DATA/" #external hard drive
-json1 = "data/tweets/raw_json/crowdsource_factchecking_prem2.json"
-json2 = "data/tweets/raw_json/crowdsource_factchecking.json"
-json3 = "data/tweets/raw_json/crowdsource_factchecking_enterprise_trial.json"
-json_files = [json1, json2, json3,]
+json1 = "data/tweets/crowdsource_factchecking_prem2.json"
+json2 = "data/tweets/crowdsource_factchecking.json"
+json3 = "data/tweets/crowdsource_factchecking_enterprise_trial.json"
+json_files = [json1, json2, json3]
 json_files = [source_directory + file for file in json_files]
 
 # Parse data
@@ -142,5 +144,6 @@ for file in json_files:
         tweet_data = copy.deepcopy(data)
     del data
 
-out_path = source_directory + "data/tweets/" + save_file_name + ".csv"
+# Save
+out_path = source_directory + "data_derived/tweets/" + save_file_name + ".csv"
 tweet_data.to_csv(out_path, index = False)
