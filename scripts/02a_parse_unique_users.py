@@ -6,8 +6,8 @@ Created on Tue Apr 14 10:44:52 2020
 @author: ChrisTokita
 
 SCRIPT:
-This script uses a high-performance computing cluster to
-parse user data to determine the unique number and IDs of users (and user types).
+Parse user data to determine the unique number and IDs of users (and user types).
+This script uses a high performance computing cluster, assuming a slurm-based scheduling system.
 """
 
 ####################
@@ -20,7 +20,7 @@ import re
 import sys
 
 # Get file numbers
-i = sys.argv[1] # get which chunk of the 
+i = int(sys.argv[1]) # get which chunk of the 
 
 # path to data
 data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/"
@@ -43,7 +43,7 @@ tweeters = np.unique(tweet_data['user_id'])
 # Get unique IDs of followers
 follower_files = os.listdir(path_to_followers)
 follower_files = [file for file in follower_files if re.match('[0-9]', file)] #filter out hidden copies of same files
-follower_files = follower_files[ (865*i) : (865*i+1) ] #there are 86,370 files and we want 100 chunks
+follower_files = follower_files[ (865*i) : (865*(i+1)) ] #there are 86,370 files and we want 100 chunks
 
 followers = np.array([])
 for file in follower_files:
@@ -59,6 +59,6 @@ followers = pd.DataFrame(followers, columns = ['follower_id'])
 followers_excl_tweeters = pd.DataFrame(followers_excl_tweeters, columns = ['follower_id'])
 
 chunk_label = str(i).zfill(2)
-tweeters.to_csv(outpath_tweeters + "unique_tweeters_" + chunk_label + "csv", index = False)
-followers.to_csv(outpath_followers + "unique_followers_" + chunk_label + ".csv", index = False)
-followers_excl_tweeters.to_csv(outpath_followers + "unique_followers_excludingtweeters_" + chunk_label + ".csv", index = False)
+tweeters.to_csv(outpath_tweeters + "unique_tweeters.csv", index = False)
+followers.to_csv(outpath_followers + "processed_followers/unique_followers_" + chunk_label + ".csv", index = False)
+followers_excl_tweeters.to_csv(outpath_followers + "processed_followers_excludingtweeters/unique_followers_excludingtweeters_" + chunk_label + ".csv", index = False)
