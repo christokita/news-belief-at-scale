@@ -13,6 +13,7 @@ import pandas as pd
 import numpy as np
 import os
 import re
+import tqdm
 
 # path to data
 tweet_file = "/Volumes/CKT-DATA/data_derived/tweets/parsed_tweets.csv"
