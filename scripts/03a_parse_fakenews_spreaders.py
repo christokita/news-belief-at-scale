@@ -91,9 +91,41 @@ exposed_followers = exposed_followers.astype(int)
 no_follower_list = no_follower_list.astype(int)
 
 
+####################
+# Determine the friends of FM tweeters (i.e., who they are following)
+####################
+# loop through friend files and get set of unique followers who were exposed to the article
+friend_files = os.listdir(data_directory + "data/friends/")
+friend_files = [file for file in friend_files if re.match('[0-9]', file)] #filter out hidden copies of same files
+fm_friends = np.array([])
+no_friends_list = np.array([])
+for user_id in fm_tweeters:
+    regex = re.compile(r"[0-9].*_%s.csv" % str(user_id))
+    file = list(filter(regex.match, friend_files))
+    try:
+        if len(file) > 1:
+            print("WARNING: user_id = %d matches multiple follower list files." % user_id)
+        friend_list = pd.read_csv(data_directory + "data/friends/" + file[0])
+        fm_friends = np.append(fm_friends, friend_list)
+        fm_friends = np.unique(fm_friends)
+    except:
+        no_friends_list = np.append(no_friends_list, user_id)
+fm_friends = fm_friends.astype(int)
+no_friends_list = no_friends_list.astype(int)
+
+
+
+####################
 # Save
+####################
 chunk_label = str(i).zfill(2)
+
 exposed_followers = pd.DataFrame(exposed_followers, columns = ['user_id'])
-exposed_followers.to_csv(data_directory + "data_derived/followers/processed_exposed_followers/followers_exposed_fakenews_" + chunk_label + ".csv", index = False)
 no_follower_list = pd.DataFrame(no_follower_list, columns = ['user_id'])
+fm_friends = pd.DataFrame(fm_friends, columns = ['user_id'])
+no_friends_list = pd.DataFrame(no_friends_list, columns = ['user_id'])
+
+exposed_followers.to_csv(data_directory + "data_derived/followers/processed_exposed_followers/followers_exposed_fakenews_" + chunk_label + ".csv", index = False)
 no_follower_list.to_csv(data_directory + "data_derived/followers/nofollowers_fm_tweeters/nofollowers_fm_tweeters_" + chunk_label + ".csv", index = False)
+fm_friends.to_csv(data_directory + "data_derived/friends/processed_fm_tweeter_friends/friends_fm_" + chunk_label + ".csv", index = False)
+no_friends_list.to_csv(data_directory + "data_derived/friends/nofriends_fm_tweeters/nofriends_fm_tweeters_" + chunk_label + ".csv", index = False)
