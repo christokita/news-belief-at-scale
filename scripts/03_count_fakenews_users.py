@@ -6,7 +6,7 @@ Created on Fri Apr 17 15:14:12 2020
 @author: ChrisTokita
 
 SCRIPT:
-Determine who shared fake news articles and who was potentially exposed to it. 
+Determine who shared fake news articles, who was potentially exposed to it, and who fake news tweeters are following. 
 """
 
 ####################
@@ -20,7 +20,6 @@ import multiprocessing as mp
 
 # high level directory (external HD or cluster storage)
 data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/"
-data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/"
 
 
 
@@ -83,16 +82,17 @@ def parse_exposed_followers(i, ids, directory):
         try:
             if len(file) > 1:
                 print("WARNING: user_id = %d matches multiple follower list files." % user_id)
-            follower_list = pd.read_csv(directory + "data/followers/" + file[0], names = ['user_id'], header = 0)
-            exposed_followers = exposed_followers.append(follower_list, ignore_index = True)
+            follower_list = pd.read_csv(directory + "data/followers/" + file[0], names = ['user_id'], header = 0, dtype = int)
+            exposed_followers = exposed_followers.append(follower_list, ignore_index = True, sort = False)
             del follower_list
             exposed_followers = exposed_followers.drop_duplicates()
         except:
-            no_followers = no_followers.append(user_id, ignore_index = True)
+            no_followers = no_followers.append({'user_id': user_id}, ignore_index = True, sort = False)
             
-    # Write to file        
-    exposed_followers.to_csv(directory + "data_derived/followers/processed_exposed_followers/followers_exposed_fakenews_" + i + ".csv", index = False)
-    no_followers.to_csv(directory + "data_derived/followers/nofollowers_fm_tweeters/nofollowers_fm_tweeters_" + i + ".csv", index = False)
+    # Write to file  
+    chunk_label = str(i).zfill(2)      
+    exposed_followers.to_csv(directory + "data_derived/followers/processed_exposed_followers/followers_exposed_fakenews_" + chunk_label + ".csv", index = False)
+    no_followers.to_csv(directory + "data_derived/followers/nofollowers_fm_tweeters/nofollowers_fm_tweeters_" + chunk_label + ".csv", index = False)
 
 # Parse exposed followers
 pool = mp.Pool(mp.cpu_count())
@@ -121,21 +121,22 @@ def parse_fm_friends(i, ids, directory):
         try:
             if len(file) > 1:
                 print("WARNING: user_id = %d matches multiple follower list files." % user_id)
-            friend_list = pd.read_csv(directory + "data/friends/" + file[0])
-            fm_friends = fm_friends.append(friend_list, ignore_index = True)
+            friend_list = pd.read_csv(directory + "data/friends/" + file[0], names = ['user_id'], header = 0, dtype = int)
+            fm_friends = fm_friends.append(friend_list, ignore_index = True, sort = False)
             del friend_list
             fm_friends = fm_friends.drop_duplicates()
         except:
-            no_friends_list = no_friends_list.append(user_id, ignore_index = True)
+            no_friends_list = no_friends_list.append({'user_id': user_id}, ignore_index = True, sort = False)
             
     # Write to file
-    fm_friends.to_csv(directory + "data_derived/friends/processed_fm_tweeter_friends/friends_fm_" + i + ".csv", index = False)
-    no_friends_list.to_csv(directory + "data_derived/friends/nofriends_fm_tweeters/nofriends_fm_tweeters_" + i + ".csv", index = False)
+    chunk_label = str(i).zfill(2)
+    fm_friends.to_csv(directory + "data_derived/friends/processed_fm_tweeter_friends/friends_fm_" + chunk_label + ".csv", index = False)
+    no_friends_list.to_csv(directory + "data_derived/friends/nofriends_fm_tweeters/nofriends_fm_tweeters_" + chunk_label + ".csv", index = False)
 
 # Parse exposed followers
 pool = mp.Pool(mp.cpu_count())
 for i in range(100):
-    pool.apply(parse_exposed_followers, args = (i, fm_tweeters, data_directory))
+    pool.apply(parse_fm_friends, args = (i, fm_tweeters, data_directory))
 pool.close()
 
 
@@ -205,6 +206,7 @@ friend_files = sorted( os.listdir(path_to_fm_friends) )
 num_files = len(friend_files)
 all_friends = np.array([], dtype = int)
 for file in friend_files:
+    print(file)
     data = np.loadtxt(path_to_fm_friends + file, skiprows = 1, dtype = int) #first row is header
     all_friends = np.append(all_friends, data)
     all_friends = np.unique(all_friends)
