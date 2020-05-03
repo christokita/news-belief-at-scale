@@ -69,7 +69,7 @@ plt.hist(fake_freq, log = True)
 # Determine how many users were potentially exposed to these articles
 ####################
 # Take chunk of FM article tweeters and combine followers
-fm_tweeters = fm_tweeters[ (260*i) : (260*(i+1)) ] #There are 25,546 users who tweeted a FM article
+fm_tweeters = fm_tweeters[ (262*i) : (262*(i+1)) ] #There are 25,546 users who tweeted a FM article
 
 # loop through files and get set of unique followers who were exposed to the article
 follower_files = os.listdir(data_directory + "data/followers/")
