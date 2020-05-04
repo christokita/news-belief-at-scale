@@ -44,6 +44,9 @@ fm_tweeters, fake_freq = np.unique(fm_tweeters, return_counts = True)
 fm_tweeters = pd.DataFrame(fm_tweeters, columns = ['user_id'])
 count_fm_tweeters = fm_tweeters.shape[0]
 
+# Save FM tweeters
+fm_tweeters.to_csv(outpath_tweet_data + "unique_fm_tweeters.csv", index = False)
+
 
 ####################
 # Count up unique followers exoised to FM news
@@ -62,7 +65,7 @@ for file in exposed_files:
     data = np.genfromtxt(path_to_exposed + file, skip_header = 1, dtype = str) #first row is header
     all_exposed = np.append(all_exposed, data)
     all_exposed = np.unique(all_exposed)
-    del(data)
+    del data
 all_exposed_minus_tweeters = np.setdiff1d(all_exposed, fm_tweeters)
 count_all_exposed = all_exposed.shape[0]
 count_all_exposed_minus_tweeters = all_exposed_minus_tweeters.shape[0]
@@ -74,13 +77,22 @@ all_exposed_minus_tweeters = pd.DataFrame(all_exposed_minus_tweeters, columns = 
 exposed_nofollower_files = sorted( os.listdir(path_nofollowers_fm_tweeters) )
 no_followers = np.array([], dtype = str)
 for file in exposed_nofollower_files:
-    data = np.genfromtxt(path_nofollowers_fm_tweeters + file, skiprows = 1, dtype = str) #first row is header
-    no_followers = np.append(no_followers, data)
-    no_followers = np.unique(no_followers)
-    del(data)
+    data = np.genfromtxt(path_nofollowers_fm_tweeters + file, dtype = str) #first row is header
+    try:
+        data = data[1:len(data)] #if empty, will return error
+        no_followers = np.append(no_followers, data)
+        no_followers = np.unique(no_followers)
+        del data
+    except:
+        next
 count_no_followers = no_followers.shape[0]
 no_followers = pd.DataFrame(no_followers, columns = ["user_id"], dtype = str)
 
+# Save
+all_exposed.to_csv(outpath_follower_data + "exposed_fakenews_followers.csv", index = False)
+all_exposed_minus_tweeters.to_csv(outpath_follower_data + "exposed_fakenews_followers_excl_fmtweeters.csv", index = False)
+no_followers.to_csv(outpath_follower_data + "fm_tweeter_nofollowers.csv", index = False)
+del all_exposed, all_exposed_minus_tweeters, no_followers
 
 ####################
 # Count up friends of FM tweeters
@@ -93,7 +105,7 @@ for file in friend_files:
     data = np.genfromtxt(path_to_fm_friends + file, skip_header = 1, dtype = str) #first row is header
     all_friends = np.append(all_friends, data)
     all_friends = np.unique(all_friends)
-    del(data)
+    del data
 all_friends_minus_tweeters = np.setdiff1d(all_friends, fm_tweeters)
 count_all_friends = all_friends.shape[0]
 count_all_friends_minus_tweeters = all_friends_minus_tweeters.shape[0]
@@ -105,16 +117,25 @@ all_friends_minus_tweeters = pd.DataFrame(all_friends_minus_tweeters, columns = 
 fm_tweeters_nofriends_files = sorted( os.listdir(path_to_nofriends_fm_tweeters) )
 no_friends = np.array([], dtype = str)
 for file in fm_tweeters_nofriends_files:
-    data = np.genfromtxt(path_to_nofriends_fm_tweeters + file, skip_header = 1, dtype = str) #first row is header
-    no_friends = np.append(no_friends, data)
-    no_friends = np.unique(no_friends)
-    del(data)
+    data = np.genfromtxt(path_to_nofriends_fm_tweeters + file, dtype = str) #first row is header
+    try:
+        data = data[1:len(data)] #if empty, will return error
+        no_friends = np.append(no_friends, data)
+        no_friends = np.unique(no_friends)
+        del data
+    except:
+        next
 count_no_friends = no_friends.shape[0]
 no_friends = pd.DataFrame(no_friends, columns = ["user_id"], dtype = str)
 
+# Save
+all_friends.to_csv(outpath_friend_data + "friends_fm_tweeters.csv", index = False)
+all_friends_minus_tweeters.to_csv(outpath_friend_data + "friends_fm_tweeters_excl_fmtweeters.csv", index = False)
+no_friends.to_csv(outpath_friend_data + "fm_tweeter_nofriends.csv", index = False)
+del all_friends, all_friends_minus_tweeters, no_friends
 
 ####################
-# Save
+# Summarize
 ####################
 # Measure number of users and write out to file
 unique_users = pd.DataFrame({'user_type': ["Tweeters", "FM tweeters", 
@@ -124,11 +145,3 @@ unique_users = pd.DataFrame({'user_type': ["Tweeters", "FM tweeters",
                                        count_all_exposed, count_all_exposed_minus_tweeters, count_no_followers,
                                        count_all_friends, count_all_friends_minus_tweeters, count_no_friends]})
 unique_users.to_csv(outpath + "exposed_user_summary.csv", index = False)
-
-all_exposed.to_csv(outpath_follower_data + "exposed_fakenews_followers.csv", index = False)
-all_exposed_minus_tweeters.to_csv(outpath_follower_data + "exposed_fakenews_followers_excl_fmtweeters.csv", index = False)
-no_followers.to_csv(outpath_follower_data + "fm_tweeter_nofollowers.csv", index = False)
-fm_tweeters.to_csv(outpath_tweet_data + "unique_fm_tweeters.csv", index = False)
-all_friends.to_csv(outpath_friend_data + "friends_fm_tweeters.csv", index = False)
-all_friends_minus_tweeters.to_csv(outpath_friend_data + "friends_fm_tweeters_excl_fmtweeters.csv", index = False)
-no_friends.to_csv(outpath_friend_data + "fm_tweeter_nofriends.csv", index = False)

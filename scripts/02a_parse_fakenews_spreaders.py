@@ -45,8 +45,8 @@ def simplify_link(link):
     return link
 
 # Load and parse tweets according to full and shortened URLs
-tweets = pd.read_csv(data_directory + "data_derived/tweets/parsed_tweets.csv")
-fm_tweets = pd.DataFrame(columns = np.append(tweets.columns, 'daily_article_number')) #add column to keep track of article
+tweets = pd.read_csv(data_directory + "data_derived/tweets/parsed_tweets.csv", dtype = str)
+fm_tweets = pd.DataFrame(columns = np.append(tweets.columns, 'total_article_number')) #add column to keep track of article
 for j in range(len(fm_articles)):
     # Prep links for pattern matching
     link = simplify_link( fm_articles['link'].iloc[j] )
@@ -60,14 +60,14 @@ for j in range(len(fm_articles)):
     has_link = has_full_link | has_short_link #boolean operator to find which indices have one of the two possible links
     # Set up dataframe
     tweets_sharing = tweets[has_link].copy()
-    tweets_sharing['daily_article_number'] = fm_articles['daily article number'].iloc[j]
+    tweets_sharing['total_article_number'] = fm_articles['total article number'].iloc[j]
     fm_tweets = fm_tweets.append(tweets_sharing)
     
 # Write FM tweets and tweeters to file
 fm_tweets.to_csv(data_directory + "data_derived/tweets/FM_tweets.csv", index = False)
     
 # Get user IDs of tweeters of FM articles, 
-fm_tweeters = fm_tweets['user_id'].astype(str)
+fm_tweeters = fm_tweets['user_id']
 fm_tweeters = np.unique(fm_tweeters)
 
 ####################
@@ -79,7 +79,7 @@ fm_tweeters = fm_tweeters[ (step_size*i) : (step_size*(i+1)) ] #There are 26,493
 
 # loop through files and get set of unique followers who were exposed to the article
 follower_files = os.listdir(data_directory + "data/followers/")
-follower_files = [file for file in follower_files if re.match('[0-9]', file)] #filter out hidden copies of same files
+follower_files = [file for file in follower_files if re.match('^[0-9]', file)] #filter out hidden copies of same files
 exposed_followers = np.array([], dtype = str)
 no_follower_list = np.array([], dtype = str)
 for user_id in fm_tweeters:
@@ -101,7 +101,7 @@ for user_id in fm_tweeters:
 ####################
 # loop through friend files and get set of unique followers who were exposed to the article
 friend_files = os.listdir(data_directory + "data/friends/")
-friend_files = [file for file in friend_files if re.match('[0-9]', file)] #filter out hidden copies of same files
+friend_files = [file for file in friend_files if re.match('^[0-9]', file)] #filter out hidden copies of same files
 fm_friends = np.array([], dtype = str)
 no_friends_list = np.array([], dtype = str)
 for user_id in fm_tweeters:
