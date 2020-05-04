@@ -10,4 +10,4 @@
 ##Load anaconda python packages
 module load anaconda3 
 ##Run script passing the array job number to the script
-srun python3 scripts/03a_parse_fakenews_spreaders.py $SLURM_ARRAY_TASK_ID 
+srun python3 scripts/02a_parse_fakenews_spreaders.py $SLURM_ARRAY_TASK_ID 

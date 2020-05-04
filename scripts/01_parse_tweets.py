@@ -39,10 +39,10 @@ def tweet_parser(filename):
             data = json.loads(tweet)
 
             # Get tweet attributes of interest
-            user_id = data['user']['id']
+            user_id = data['user']['id_str']
             user_name = data['user']['screen_name']
             tweet_time = data['created_at']
-            tweet_id = data['id']
+            tweet_id = data['id_str']
             favorite_count = data['favorite_count']
             retweet_count = data['retweet_count']
             quote_count = data['quote_count']
@@ -77,14 +77,14 @@ def tweet_parser(filename):
             
             # Check if rewteeted or quoted tweet, and if so, get info
             if quote_status:
-                retweet_id = data['quoted_status']['id']
+                retweet_id = data['quoted_status']['id_str']
                 rt_user = data['quoted_status']['user']
-                retweet_user_id = rt_user['id']
+                retweet_user_id = rt_user['id_str']
                 retweet_user_name = rt_user['screen_name']
             elif retweet_status:
-                retweet_id = data['retweeted_status']['id']
+                retweet_id = data['retweeted_status']['id_str']
                 rt_user = data['retweeted_status']['user']
-                retweet_user_id = rt_user['id']
+                retweet_user_id = rt_user['id_str']
                 retweet_user_name = rt_user['screen_name']
             else:
                 retweet_id = np.nan
@@ -126,7 +126,7 @@ def tweet_parser(filename):
 # Speficy files to be read
 save_file_name = "parsed_tweets"
 #source_directory = "../" #local files   
-source_directory = "/Volumes/CKT-DATA/" #external hard drive
+source_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external hard drive
 json1 = "data/tweets/crowdsource_factchecking_prem2.json"
 json2 = "data/tweets/crowdsource_factchecking.json"
 json3 = "data/tweets/crowdsource_factchecking_enterprise_trial.json"
