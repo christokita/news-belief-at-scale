@@ -7,6 +7,11 @@ Created on Fri Apr 17 15:14:12 2020
 
 SCRIPT:
 Determine who shared fake news articles and who was potentially exposed to it. 
+
+Note: 
+The overall logic of this script is to 
+(1) load in user IDs as int64 to prevent truncation. 
+(2) convert to str?
 """
 
 ####################
@@ -45,7 +50,7 @@ def simplify_link(link):
     return link
 
 # Load and parse tweets according to full and shortened URLs
-tweets = pd.read_csv(data_directory + "data_derived/tweets/parsed_tweets.csv", dtype = str)
+tweets = pd.read_csv(data_directory + "data_derived/tweets/parsed_tweets.csv")
 fm_tweets = pd.DataFrame(columns = np.append(tweets.columns, 'total_article_number')) #add column to keep track of article
 for j in range(len(fm_articles)):
     # Prep links for pattern matching
@@ -67,7 +72,7 @@ for j in range(len(fm_articles)):
 fm_tweets.to_csv(data_directory + "data_derived/tweets/FM_tweets.csv", index = False)
     
 # Get user IDs of tweeters of FM articles, 
-fm_tweeters = fm_tweets['user_id']
+fm_tweeters = fm_tweets['user_id'].astype(int)
 fm_tweeters = np.unique(fm_tweeters)
 
 ####################
@@ -80,15 +85,15 @@ fm_tweeters = fm_tweeters[ (step_size*i) : (step_size*(i+1)) ] #There are 26,493
 # loop through files and get set of unique followers who were exposed to the article
 follower_files = os.listdir(data_directory + "data/followers/")
 follower_files = [file for file in follower_files if re.match('^[0-9]', file)] #filter out hidden copies of same files
-exposed_followers = np.array([], dtype = str)
-no_follower_list = np.array([], dtype = str)
+exposed_followers = np.array([], dtype = int)
+no_follower_list = np.array([], dtype = int)
 for user_id in fm_tweeters:
     regex = re.compile(r"[0-9].*_%s.csv" % user_id)
     file = list(filter(regex.match, follower_files))
     if len(file) > 1:
         print("WARNING: user_id = %d matches multiple follower list files." % user_id)
     try:
-        follower_list = np.genfromtxt(data_directory + "data/followers/" + file[0], dtype = str)
+        follower_list = np.genfromtxt(data_directory + "data/followers/" + file[0], dtype = int)
         follower_list = follower_list[1:len(follower_list)] #remove header, will raise error if empty
         exposed_followers = np.append(exposed_followers, follower_list)
         exposed_followers = np.unique(exposed_followers)
@@ -102,15 +107,15 @@ for user_id in fm_tweeters:
 # loop through friend files and get set of unique followers who were exposed to the article
 friend_files = os.listdir(data_directory + "data/friends/")
 friend_files = [file for file in friend_files if re.match('^[0-9]', file)] #filter out hidden copies of same files
-fm_friends = np.array([], dtype = str)
-no_friends_list = np.array([], dtype = str)
+fm_friends = np.array([], dtype = int)
+no_friends_list = np.array([], dtype = int)
 for user_id in fm_tweeters:
-    regex = re.compile(r"[0-9].*_%s.csv" % str(user_id))
+    regex = re.compile(r"[0-9].*_%s.csv" % user_id)
     file = list(filter(regex.match, friend_files))
     if len(file) > 1:
         print("WARNING: user_id = %d matches multiple follower list files." % user_id)
     try:
-        friend_list = np.genfromtxt(data_directory + "data/friends/" + file[0], dtype = str)
+        friend_list = np.genfromtxt(data_directory + "data/friends/" + file[0], dtype = int)
         friend_list = friend_list[1:len(friend_list)] #remove header, will raise error if empty
         fm_friends = np.append(fm_friends, friend_list)
         fm_friends = np.unique(fm_friends)
@@ -123,10 +128,10 @@ for user_id in fm_tweeters:
 ####################
 chunk_label = str(i).zfill(2)
 
-exposed_followers = pd.DataFrame(exposed_followers, columns = ['user_id'], dtype = str)
-no_follower_list = pd.DataFrame(no_follower_list, columns = ['user_id'], dtype = str)
-fm_friends = pd.DataFrame(fm_friends, columns = ['user_id'], dtype = str)
-no_friends_list = pd.DataFrame(no_friends_list, columns = ['user_id'], dtype = str)
+exposed_followers = pd.DataFrame(exposed_followers, columns = ['user_id'], dtype = int)
+no_follower_list = pd.DataFrame(no_follower_list, columns = ['user_id'], dtype = int)
+fm_friends = pd.DataFrame(fm_friends, columns = ['user_id'], dtype = int)
+no_friends_list = pd.DataFrame(no_friends_list, columns = ['user_id'], dtype = int)
 
 exposed_followers.to_csv(data_directory + "data_derived/followers/processed_exposed_followers/followers_exposed_fakenews_" + chunk_label + ".csv", index = False)
 no_follower_list.to_csv(data_directory + "data_derived/followers/nofollowers_fm_tweeters/nofollowers_fm_tweeters_" + chunk_label + ".csv", index = False)
