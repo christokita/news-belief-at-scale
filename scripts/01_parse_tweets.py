@@ -109,7 +109,7 @@ def tweet_parser(filename):
                                        'is_retweet': retweet_status, 
                                        'is_extended_tweet': extended_tweet,
                                        'retweeted_user_id': retweet_user_id,
-                                       'rewteeted_user_name': retweet_user_name,
+                                       'retweeted_user_name': retweet_user_name,
                                        'retweet_id': retweet_id,
                                        'tweet_url': tweet_url}, index = [0])
             try:
@@ -125,8 +125,8 @@ def tweet_parser(filename):
 ####################
 # Speficy files to be read
 save_file_name = "parsed_tweets"
-#source_directory = "../" #local files   
 source_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external hard drive
+#source_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #storage on HPC cluster
 json1 = "data/tweets/crowdsource_factchecking_prem2.json"
 json2 = "data/tweets/crowdsource_factchecking.json"
 json3 = "data/tweets/crowdsource_factchecking_enterprise_trial.json"
