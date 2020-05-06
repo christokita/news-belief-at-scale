@@ -9,4 +9,4 @@
 ##Load anaconda python packages
 module load anaconda3 
 ##Run script
-srun python3 scripts/02_count_fakenews_exposed.py
+srun python3 scripts/02_count_fakenews_users.py

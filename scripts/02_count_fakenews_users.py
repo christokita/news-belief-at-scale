@@ -32,20 +32,20 @@ def parse_users(i, ids, directory, step_size, data_type):
     # Get appropriate list of files for friend/follower data
     if data_type == "followers":
         user_files = os.listdir(directory + "data/followers/")
-    elif data_type == "frineds":
+    elif data_type == "friends":
         user_files = os.listdir(directory + "data/friends/")
-    user_files = [file for file in user_files if re.match('[0-9]', file)] #filter out hidden copies of same files
+    user_files = [file for file in user_files if re.match('^[0-9]', file)] #filter out hidden copies of same files
     
     # Loop through user IDs and get friends/followers of that user
-    users = np.array([], dtype = str)
-    no_user_data = np.array([], dtype = str)
+    users = np.array([], dtype = int)
+    no_user_data = np.array([], dtype = int)
     for user_id in ids:
         regex = re.compile(r"[0-9].*_%s.csv" % user_id)
         file = list(filter(regex.match, user_files))
         try:
             if len(file) > 1:
                 print("WARNING: user_id = %d matches multiple follower list files." % user_id)
-            user_list = np.genfromtxt(data_directory + "data/followers/" + file[0], dtype = str)
+            user_list = np.genfromtxt(data_directory + "data/followers/" + file[0], dtype = int)
             user_list = user_list[1:len(user_list)] #remove header, will raise error if empty
             users = np.append(users, user_list)
             users = np.unique(users)
@@ -54,8 +54,8 @@ def parse_users(i, ids, directory, step_size, data_type):
             
     # Write to file  
     chunk_label = str(i).zfill(2)      
-    users = pd.DataFrame(users, columns = ['user_id'], dtype = str)
-    no_user_data = pd.DataFrame(no_user_data, columns = ['user_id'], dtype = str)
+    users = pd.DataFrame(users, columns = ['user_id'], dtype = int)
+    no_user_data = pd.DataFrame(no_user_data, columns = ['user_id'], dtype = int)
     if data_type == "followers":
         users.to_csv(directory + "data_derived/followers/processed_exposed_followers/followers_exposed_fakenews_" + chunk_label + ".csv", index = False)
         no_user_data.to_csv(directory + "data_derived/followers/nofollowers_fm_tweeters/nofollowers_fm_tweeters_" + chunk_label + ".csv", index = False)
@@ -85,31 +85,44 @@ if __name__ == "__main__":
     articles = pd.read_csv(data_directory + "data/articles/daily_articles.csv")
     fm_articles = articles[articles['total article number'].isin(fakenews_ids)]
     
+    # Function to clean up links for better matching
+    def simplify_link(link):
+        if link is not np.nan:
+            link = re.sub('http.*//', '', link)
+            link = re.sub('^www\.', '', link)
+            link = re.sub('/$', '', link)
+        return link
+    
     # Load and parse tweets according to full and shortened URLs
     tweets = pd.read_csv(data_directory + "data_derived/tweets/parsed_tweets.csv")
-    fm_tweets = pd.DataFrame(columns = tweets.columns)
+    fm_tweets = pd.DataFrame(columns = np.append(tweets.columns, 'total_article_number')) #add column to keep track of article
     for j in range(len(fm_articles)):
-        link = fm_articles['link'].iloc[j]
-        shortlink = fm_articles['short link'].iloc[j]
-        try:
-            has_full_link = tweets['urls_expanded'].str.contains(link)
-            has_short_link = tweets['urls_expanded'].str.contains(shortlink)
-        except:
-            has_short_link = pd.Series(np.repeat(False, tweets.shape[0]))
+        # Prep links for pattern matching
+        link = simplify_link( fm_articles['link'].iloc[j] )
+        shortlink = simplify_link( fm_articles['short link'].iloc[j] )
+        # Search through URLS
+        has_full_link = tweets['urls_expanded'].str.contains(link)
+        if shortlink is not np.nan:
+            has_short_link = tweets['urls_expanded'].str.contains(shortlink) | tweets['urls'].str.contains(shortlink)
+        elif shortlink is np.nan:
+            has_short_link = pd.Series(np.repeat(False, tweets.shape[0])) #if shortlink is nan
         has_link = has_full_link | has_short_link #boolean operator to find which indices have one of the two possible links
-        fm_tweets = fm_tweets.append(tweets[has_link])  
+        # Set up dataframe
+        tweets_sharing = tweets[has_link].copy()
+        tweets_sharing['total_article_number'] = fm_articles['total article number'].iloc[j]
+        fm_tweets = fm_tweets.append(tweets_sharing)
+        
+    # Write FM tweets and tweeters to file
+    fm_tweets.to_csv(data_directory + "data_derived/tweets/FM_tweets.csv", index = False)
     
     
     ####################
     # Determine which users tweeted false articles
     ####################
     # Get user IDs of tweeters of FM articles, 
-    fm_tweeters = pd.DataFrame(fm_tweets['user_id'], columns = ['user_id'], dtype = str)
+    fm_tweeters = pd.DataFrame(fm_tweets['user_id'].astype(int), columns = ['user_id'], dtype = int)
     fm_tweeters = fm_tweeters.drop_duplicates()
     fm_tweeters = fm_tweeters.sort_values(by = ['user_id'])
-    
-    # Write FM tweets and tweeters to file
-    fm_tweets.to_csv(data_directory + "data_derived/tweets/FM_tweets.csv", index = False)
     
     
     ####################
@@ -129,9 +142,9 @@ if __name__ == "__main__":
     
     # Function to compile processed user data files
     def compile_userdata(path_to_data, processed_files, tweeter_set = None):
-        compiled_users = pd.DataFrame(columns = ['user_id'], dtype = str)
+        compiled_users = pd.DataFrame(columns = ['user_id'], dtype = int)
         for file in processed_files:
-            data = pd.read_csv(path_to_data + file, dtype = str)
+            data = pd.read_csv(path_to_data + file, dtype = int)
             compiled_users = compiled_users.append(data, ignore_index = True, sort = False)
             compiled_users = compiled_users.drop_duplicates()
             compiled_users = compiled_users.sort_values(by = ['user_id'])
@@ -153,7 +166,7 @@ if __name__ == "__main__":
     # Count up unique followers exposed to FM news
     ####################
     # Get unique IDs of tweeters
-    tweeters = tweets['user_id'].astype(str)
+    tweeters = tweets['user_id'].astype(int)
     tweeters = np.unique(tweeters)
     count_tweeters = len(tweeters)
     
