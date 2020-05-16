@@ -33,3 +33,7 @@ tweeters_old = pd.read_csv(data_directory + "data_derived/tweets/unique_fm_tweet
 tweeters_new = pd.read_csv(data_directory + "data_derived/tweets/unique_fm_tweeters.csv", dtype = int)
 new_tweeters = sorted(np.setdiff1d(tweeters_new['user_id'], tweeters_old['user_id']))
 nolonger_tweeters = sorted(np.setdiff1d(tweeters_old['user_id'], tweeters_new['user_id']))
+
+
+# Print summaries
+print(")
