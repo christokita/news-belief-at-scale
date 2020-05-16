@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=4
+#SBATCH --cpus-per-task=10
 #SBATCH --time=11:59:00
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=ctokita@princeton.edu
