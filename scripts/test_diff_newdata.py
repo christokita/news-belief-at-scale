@@ -36,4 +36,8 @@ nolonger_tweeters = sorted(np.setdiff1d(tweeters_old['user_id'], tweeters_new['u
 
 
 # Print summaries
-print(")
+print("With new tweet parsing method, we have:\n\
+      - %d new FM tweeters and %d users that are no longer FM tweeters\n\
+      - %d new exposed followers and %d users that are no longer exposed followers\n\
+      - %d new friends of FM tweeters and %d users that are no longer friends of FM tweeters" %\
+      (len(new_tweeters), len(nolonger_tweeters), len(new_followers), len(nolonger_followers), len(new_friends), len(nolonger_friends)))
