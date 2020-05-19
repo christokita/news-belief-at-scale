@@ -75,8 +75,8 @@ def parse_retweet(tweet, user_id, rt_edge, friend_files, all_tweets):
         rt_edge['Type'] = "Presumed Phantom RT"
         return rt_edge
     else: 
-        friends = np.genfromtxt(data_directory + "data/friends/" + fr_file[0], skip_header = 1, dtype = int)
-
+        friends = np.genfromtxt(data_directory + "data/friends/" + fr_file[0], dtype = int)
+        friends = np.delete(friends, 0) #drop header
     
     # If retweeted user is followed by focal user, count that as flow of tweet
     if rt_user_id in friends:
@@ -129,13 +129,19 @@ def parse_quotedtweet(tweet, rt_edge, articles):
     link = simplify_link( article.iloc[0]['link'] )
     shortlink = simplify_link( article.iloc[0]['short link'] )
     
+    # If links are not present (np.nan) in tweet, replace with '' for string matching purposes
+    # You can't test if a string is in x, if x is not a string (e.g., x = np.nan)
+    for col in ['urls', 'urls_expanded', 'quoted_urls', 'quoted_urls_expanded']:
+        if pd.isnull(tweet[col]):
+            tweet.loc[col] = ''
+    
     # Search through URLS to determine if in main (i.e., extra text) tweet or the quoted tweet
     if pd.isna(shortlink):
         in_main = link in tweet['urls_expanded']
         in_quoted = link in tweet['quoted_urls_expanded']
     else: 
         in_main = (link in tweet['urls_expanded']) | (shortlink in tweet['urls'])
-        in_quoted = (link in tweet['quoted_urls_expanded']) | (shortlink in tweet['quoted_urls_expanded'])
+        in_quoted = (link in tweet['quoted_urls_expanded']) | (shortlink in tweet['quoted_urls'])
         
     # Determine what to do
     if in_quoted:
@@ -149,9 +155,10 @@ def parse_quotedtweet(tweet, rt_edge, articles):
 
 # Function to clean up links for better matching
 def simplify_link(link):
-    if link is not np.nan:
+    if not pd.isna(link):
         link = re.sub('http.*//', '', link)
         link = re.sub('^www\.', '', link)
+        link = re.sub('\?.*$', '', link)
         link = re.sub('/$', '', link)
     return link
 
@@ -162,8 +169,8 @@ def simplify_link(link):
 if __name__ == '__main__':
     
     # high level directory (external HD or cluster storage)
-#    data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/"
-    data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/"
+    data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster storage
+#    data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
     
     # Load tweet data, esnure in proper format
     fm_tweets = pd.read_csv(data_directory + "data_derived/tweets/FM_tweets.csv")
@@ -198,8 +205,8 @@ if __name__ == '__main__':
         filtered_nodes = filtered_nodes.rename(columns = {'user_id': 'Id', 'user_name': 'label'})
         filtered_edges = retweet_edges[retweet_edges['Total_Article_Number'] == story]
         # Write
-        filtered_edges.to_csv(data_directory + "data_derived/network/rtnetwork_edges_article" + str(story) + ".csv", index = False)
-        filtered_nodes.to_csv(data_directory + "data_derived/network/rtnetwork_nodes_article" + str(story) + ".csv", index = False)
+        filtered_edges.to_csv(data_directory + "data_derived/networks/rtnetwork_edges_article" + str(story) + ".csv", index = False)
+        filtered_nodes.to_csv(data_directory + "data_derived/networks/rtnetwork_nodes_article" + str(story) + ".csv", index = False)
             
     # Create total nodetable
     nodes = fm_tweets[['user_id', 'user_name']]
@@ -207,6 +214,6 @@ if __name__ == '__main__':
     nodes = nodes.rename(columns = {'user_id': 'Id', 'user_name': 'label'})
     
     # Write to file
-    retweet_edges.to_csv(data_directory + "data_derived/network/rtnetwork_edges.csv", index = False)
-    nodes.to_csv(data_directory + "data_derived/network/rtnetwork_nodes.csv", index = False)
+    retweet_edges.to_csv(data_directory + "data_derived/networks/rtnetwork_edges.csv", index = False)
+    nodes.to_csv(data_directory + "data_derived/networks/rtnetwork_nodes.csv", index = False)
     
