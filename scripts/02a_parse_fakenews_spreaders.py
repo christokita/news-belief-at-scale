@@ -58,10 +58,10 @@ for j in range(articles.shape[0]):
     link = simplify_link( articles['link'].iloc[j] )
     shortlink = simplify_link( articles['short link'].iloc[j] )
     # Search through URLS
-    has_full_link = tweets['urls_expanded'].str.contains(link) | tweets['quoted_urls_expanded'].str.contains(link)
+    has_full_link = tweets['urls_expanded'].str.contains(link, na = False) | tweets['quoted_urls_expanded'].str.contains(link, na = False)
     if not pd.isna(shortlink):
-        has_short_link_main = tweets['urls_expanded'].str.contains(shortlink) | tweets['urls'].str.contains(shortlink)
-        has_short_link_quoted = tweets['quoted_urls_expanded'].str.contains(shortlink) | tweets['quoted_urls'].str.contains(shortlink)
+        has_short_link_main = tweets['urls_expanded'].str.contains(shortlink, na = False) | tweets['urls'].str.contains(shortlink, na = False)
+        has_short_link_quoted = tweets['quoted_urls_expanded'].str.contains(shortlink, na = False) | tweets['quoted_urls'].str.contains(shortlink, na = False)
         has_short_link = has_short_link_main | has_short_link_quoted
     elif pd.isna(shortlink):
         has_short_link = pd.Series(np.repeat(False, tweets.shape[0])) #if shortlink is nan
@@ -74,7 +74,7 @@ tweets.to_csv(data_directory + "data_derived/tweets/parsed_tweets.csv", index = 
 fm_tweets = tweets[tweets['total_article_number'].isin(fakenews_ids)]
 fm_tweets.to_csv(data_directory + "data_derived/tweets/FM_tweets.csv", index = False)
 
-# ID and save tweets without IDs
+# find and save tweets without article IDs
 missing_ids = tweets[pd.isnull(tweets['total_article_number'])]
 if missing_ids.shape[0] > 0:
     missing_article_ids = [x  for x in  np.arange(1, 166) if x not in np.unique(tweets['total_article_number'])]
