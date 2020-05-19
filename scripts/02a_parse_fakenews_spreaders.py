@@ -42,9 +42,10 @@ articles = pd.read_csv(data_directory + "data/articles/daily_articles.csv")
 
 # Function to clean up links for better matching
 def simplify_link(link):
-    if link is not np.nan:
+    if not pd.isnull(link):
         link = re.sub('http.*//', '', link)
         link = re.sub('^www\.', '', link)
+        link = re.sub('\?.*$', '', link)
         link = re.sub('/$', '', link)
     return link
 
