@@ -57,6 +57,10 @@ tweeters = tweet_data['user_id'].astype(int)
 tweeters = np.unique(tweeters)
 count_tweeters = len(tweeters)
 
+# Save tweeters
+tweeters = pd.DataFrame(tweeters, columns = ['user_id'])
+tweeters.to_csv(outpath_tweet_data + "unique_tweeters.csv", index = False)
+
 # Count up followers
 exposed_files = sorted( os.listdir(path_to_exposed) )
 num_files = len(exposed_files)
