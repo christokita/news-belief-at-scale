@@ -25,49 +25,57 @@ data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
 
 
 ####################
-# Determine article sets: Liberal FM, Conservative FM, Liberal True, Conservative True
+# Add article-level information
 ####################
-# Load articles
-articles = pd.read_csv(data_directory + "data/articles/daily_articles.csv")
-
-# Get article IDs of fake and true articles (as evaluated by fact checkers)
-news_evaluations = pd.read_csv(data_directory + "data/articles/evaluations.csv")
-fakenews_ids = news_evaluations["article_num"][news_evaluations['mode of FC'] == "FM"]
-truenews_ids = news_evaluations["article_num"][news_evaluations['mode of FC'] == "T"]
-
-# Grab articles by lean and veracity
-true_con_articles = articles[articles['total article number'].isin(truenews_ids) & articles['source'].str.match('.*con')]
-true_lib_articles = articles[articles['total article number'].isin(truenews_ids) & articles['source'].str.match('.*lib')]
-fm_con_articles = articles[articles['total article number'].isin(fakenews_ids) & articles['source'].str.match('.*con')]
-fm_lib_articles = articles[articles['total article number'].isin(fakenews_ids) & articles['source'].str.match('.*lib')]
-
-
-####################
-# Determine ideological distribution 
-####################
-# Load tweets and ideological scores
+# Load tweets
 tweets = pd.read_csv(data_directory + "data_derived/tweets/parsed_tweets.csv")
+
+# Get source lean ratings
+articles = pd.read_csv(data_directory + "data/articles/daily_articles.csv")
+articles = articles.rename(columns = {'total article number': 'total_article_number'})
+articles['source_lean'] = articles['source'].str.replace('rss_|ct_', '')
+lean_dict = {'con': 'C', 'lib': 'L', 'unclear': 'U'}
+articles['source_lean'] = articles['source_lean'].map(lean_dict)
+articles = articles[['total_article_number', 'source_lean']]
+
+# Load and prepare article veracity evaluations
+news_evaluations = pd.read_csv(data_directory + "data/articles/evaluations.csv")
+news_evaluations = news_evaluations.rename(columns = {'article_num': 'total_article_number',
+                                                      'mode of FC': 'article_fc_rating'})
+news_evaluations = news_evaluations[['total_article_number', 'article_fc_rating']]
+news_evaluations = news_evaluations.dropna()
+
+# Load and prepare article lean ratings
+article_ratings = pd.read_csv(data_directory + "data/articles/article_level.csv")
+article_ratings = article_ratings.rename(columns = {'article_num': 'total_article_number', 
+                                                    'main_tag': 'article_main_tag',
+                                                    'lean': 'article_lean',
+                                                    'other_tags': 'article_other_tags',
+                                                    'con_feel': 'article_con_feel',
+                                                    'lib_feel': 'article_lib_feel'})
+article_ratings = article_ratings.drop(columns = ['daily article number', 'partisan_diff', 
+                                                  'Unnamed: 8', 'Unnamed: 9', 
+                                                  'Unnamed: 10', 'Unnamed: 11'])
+
+# Merge in article and source info
+labeled_tweeters = tweets.merge(articles, how = 'left', on = 'total_article_number')
+labeled_tweeters = labeled_tweeters.merge(news_evaluations, how = 'left', on = 'total_article_number')
+labeled_tweeters = labeled_tweeters.merge(article_ratings, how = 'left', on = 'total_article_number')
+
+####################
+# Add user-level information
+####################
+# Load and prepare ideological scores
 ideological_scores = pd.read_csv(data_directory + "data_derived/ideological_scores/unique_fm_tweeters-scored.csv")
-ideological_scores = ideological_scores.rename(columns = {'id_str': 'user_id'})
+ideological_scores = ideological_scores.rename(columns = {'id_str': 'user_id', 'ideology_score': 'user_ideology'})
 ideological_scores = ideological_scores.drop(columns = ['Unnamed: 0'])
 
-# Subset out by article type
-fm_con_tweeters = tweets[tweets['total_article_number'].isin(fm_con_articles['total article number'])]
-fm_lib_tweeters = tweets[tweets['total_article_number'].isin(fm_lib_articles['total article number'])]
-
 # Merge in ideological scores
-fm_con_tweeters = fm_con_tweeters.merge(ideological_scores, how = 'left', on = 'user_id')
-fm_lib_tweeters = fm_lib_tweeters.merge(ideological_scores, how = 'left', on = 'user_id')
+labeled_tweeters = labeled_tweeters.merge(ideological_scores, how = 'left', on = 'user_id')
 
-# Label and join into master data set
-fm_con_tweeters['article_type'] = 'false-conservative'
-fm_lib_tweeters['article_type'] = 'false-liberal'
-labeled_tweeters = fm_con_tweeters.append(fm_lib_tweeters)
 
-# Plot
-import matplotlib.pyplot as plt
-
-plt.figure(figsize = (8,6))
-bin_list = np.arange(-4.1, 4.1, 0.2)
-plt.hist(fm_con_tweeters['ideology_score'], alpha = 0.5, label = "Con FM Articles", color = '#d54c54', bins = bin_list)
-plt.hist(fm_lib_tweeters['ideology_score'], alpha = 0.5, label = "Lib FM Articles", color = '#006195', bins = bin_list)
+####################
+# Write to file
+####################
+# Save
+labeled_tweeters.to_csv(data_directory + "data_derived/ideological_scores/labeled_tweets.csv", index = False)

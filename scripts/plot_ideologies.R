@@ -27,7 +27,8 @@ outpath <- 'output/ideology/'
 ####################
 # Read in data
 tweeter_scores <- read.csv(tweeter_score_path, header = TRUE) %>% 
-  mutate(article_ideology = article_con_feel - article_lib_feel)
+  mutate(article_ideology = article_con_feel - article_lib_feel) %>% 
+  filter(!is.na(total_article_number))
 
 
 ####################
@@ -37,7 +38,9 @@ tweeter_scores <- read.csv(tweeter_score_path, header = TRUE) %>%
 pal <- c("#d54c54", "#006195", "#C5CBD3")
 
 # All source types
-gg_fmtweeters <- ggplot(data = tweeter_scores, aes(x = ideology_score, group = article_type, fill = article_type)) +
+gg_fmtweeters <- tweeter_scores %>% 
+  filter(article_fc_rating == "FM") %>% 
+  ggplot(., aes(x = ideology_score, group = source_lean, fill = source_lean)) +
   geom_histogram(alpha = 0.6, position = 'identity') +
   xlab("Tweeter ideology") +
   ylab("Log count") +
@@ -51,8 +54,9 @@ ggsave(gg_fmtweeters, file = paste0(outpath, "FMtweeters_ideologies_bysource.png
 
 # Just liberal and conservative sources
 gg_fmtweeters_libcon <- tweeter_scores %>% 
-  filter(article_type %in% c("false-conservative", "false-liberal")) %>% 
-  ggplot(., aes(x = ideology_score, group = article_type, fill = article_type)) +
+  filter(source_lean %in% c("C", "L"),
+         article_fc_rating == "FM") %>% 
+  ggplot(., aes(x = ideology_score, group = source_lean, fill = source_lean)) +
   geom_histogram(alpha = 0.6, position = 'identity') +
   xlab("Tweeter ideology") +
   ylab("Count") +
@@ -70,7 +74,48 @@ ggsave(gg_fmtweeters_libcon, file = paste0(outpath, "FMtweeters_ideologies_lib-c
 # Plot colors
 pal <- c("#d54c54", "#006195", "#9D69A3", "#C5CBD3")
 
+###### All articles #####
+# Distribution of user ideology by article lean
 gg_articlelean <- ggplot(data = tweeter_scores, aes(x = ideology_score, group = article_lean, fill = article_lean)) +
+  geom_histogram(position = 'identity') +
+  xlab("Tweeter ideology") +
+  ylab("Count") +
+  scale_x_continuous(limits = c(-4, 4), expand = c(0, 0)) +
+  scale_fill_manual(values = pal, name = "Article lean", labels = c("Conservative", "Liberal", "Neutral", "Unclear")) +
+  facet_wrap(~article_lean, scales = 'free', ncol = 1) +
+  theme_ctokita() +
+  theme(strip.background = element_blank(),
+        strip.text = element_blank(),
+        aspect.ratio = 0.2)
+gg_articlelean
+ggsave(gg_articlelean, file = paste0(outpath, "alltweeters_ideologies_byarticlelean.png"), width = 90, height = 70, units = "mm", dpi = 400)
+
+# Tweeter ideology vs article ideology
+gg_articleideol <- tweeter_scores %>% 
+  filter(article_fc_rating %in% c("FM", "T"),
+         !is.na(user_ideology)) %>% 
+  ggplot(., aes(x = ideology_score, y = article_ideology, color = article_lean)) +
+  geom_hline(aes(yintercept = 0), size = 0.3, linetype = "dotted") +
+  geom_vline(aes(xintercept = 0), size = 0.3, linetype = "dotted") +
+  geom_point(size = 0.5,
+             alpha = 0.4, 
+             stroke = 0, 
+             position = position_jitter(0.1)) +
+  xlab("Tweeter ideology") +
+  ylab("Article ideology") +
+  scale_color_manual(values = pal, name = "Article lean", labels = c("Conservative", "Liberal", "Neutral", "Unclear")) +
+  scale_x_continuous(breaks = seq(-6, 6, 2), limits = c(-4.7, 4.7)) +
+  scale_y_continuous(breaks = seq(-6, 6, 2), limits = c(-4.6, 4.6)) +
+  theme_ctokita() +
+  facet_wrap(~article_fc_rating, scales = "free")
+gg_articleideol
+ggsave(gg_articleideol, file = paste0(outpath, "tweeterideology_vs_articleideology.png"), width = 100, height = 45, units = "mm", dpi = 400)
+
+
+###### Just FM articles #####
+gg_articlelean <- tweeter_scores %>% 
+  filter(article_fc_rating == "FM") %>% 
+  ggplot(., aes(x = ideology_score, group = article_lean, fill = article_lean)) +
   geom_histogram(position = 'identity') +
   xlab("Tweeter ideology") +
   ylab("Count") +
@@ -85,13 +130,3 @@ gg_articlelean
 ggsave(gg_articlelean, file = paste0(outpath, "FMtweeters_ideologies_byarticlelean.png"), width = 90, height = 70, units = "mm", dpi = 400)
 
 
-gg_articleideol <- ggplot(data = tweeter_scores, aes(x = article_ideology, y = ideology_score, color = article_lean)) +
-  geom_hline(aes(yintercept = 0), size = 0.3, linetype = "dotted") +
-  geom_vline(aes(xintercept = 0), size = 0.3, linetype = "dotted") +
-  geom_point(alpha = 0.6, position = position_jitter(0.1)) +
-  xlab("Article ideology") +
-  ylab("Tweeter ideology") +
-  scale_x_continuous(limits = c(-4, 4)) +
-  scale_y_continuous(limits = c(-4, 4)) +
-  theme_ctokita() 
-gg_articleideol
