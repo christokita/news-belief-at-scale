@@ -3,3 +3,4 @@ data/tweets/*
 data/friends/*
 data/follwing/*
 .Rproj.user
+.Rhistory
