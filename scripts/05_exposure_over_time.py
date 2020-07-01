@@ -93,20 +93,21 @@ if __name__ == '__main__':
     unique_articles = labeled_tweets['total_article_number'].unique()
     unique_articles.sort()
     unique_articles = unique_articles[~np.isnan(unique_articles)] #drop nan
+    unique_articles = unique_articles.astype(int)
     
     # Check if some articles have already been processed
     # If so, remove from list of articles to process
     processed_articles = os.listdir(data_directory + "data_derived/timeseries/individual_articles/")
     processed_articles = [file for file in processed_articles if re.match('^article', file)] #filter out hidden copies of same files
     processed_articles = [re.search('([0-9]+)', file).group(1) for file in processed_articles]
-    processed_articles = np.array(processed_articles, dtype = float)
+    processed_articles = np.array(processed_articles, dtype = int)
     unique_articles = np.setdiff1d(unique_articles, processed_articles)
     
     # Process articles in parallel, saving the data for each article individually
     pool = mp.Pool(mp.cpu_count())
     for story in unique_articles:
         story_exposed = pool.apply(unique_exposed_over_time, args = (story, labeled_tweets, data_directory))
-        story_exposed.to_csv(data_directory + "data_derived/timeseries/individual_articles/article_" + int(story) + ".csv")
+        story_exposed.to_csv(data_directory + "data_derived/timeseries/individual_articles/article_" + str(story) + ".csv", index = False)
     pool.close()
     pool.join()
 
