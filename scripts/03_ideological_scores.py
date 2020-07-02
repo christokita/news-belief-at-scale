@@ -67,9 +67,7 @@ labeled_tweeters = labeled_tweeters.merge(article_ratings, how = 'left', on = 't
 ####################
 # Load and prepare ideological scores
 ideological_scores = pd.read_csv(data_directory + "data_derived/ideological_scores/unique_tweeters_ideology_scores.csv")
-#ideological_scores = ideological_scores.rename(columns = {'id_str': 'user_id', 'ideology_score': 'user_ideology'})
-ideological_scores = ideological_scores.rename(columns = {'pablo_score': 'user_ideology'})
-#ideological_scores = ideological_scores.drop(columns = ['Unnamed: 0'])
+ideological_scores = ideological_scores.rename(columns = {'id_str': 'user_id', 'pablo_score': 'user_ideology'})
 
 # Merge in ideological scores
 labeled_tweeters = labeled_tweeters.merge(ideological_scores, how = 'left', on = 'user_id')
