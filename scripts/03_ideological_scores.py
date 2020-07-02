@@ -79,4 +79,4 @@ labeled_tweeters = labeled_tweeters.merge(ideological_scores, how = 'left', on =
 # Write to file
 ####################
 # Save
-labeled_tweeters.to_csv(data_directory + "data_derived/ideological_scores/labeled_tweets.csv", index = False)
+labeled_tweeters.to_csv(data_directory + "data_derived/tweets/all_tweets_labeled.csv", index = False)
