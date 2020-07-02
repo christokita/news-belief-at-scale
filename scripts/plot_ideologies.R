@@ -40,7 +40,7 @@ pal <- c("#d54c54", "#006195", "#C5CBD3")
 # All source types
 gg_fmtweeters <- tweeter_scores %>% 
   filter(article_fc_rating == "FM") %>% 
-  ggplot(., aes(x = ideology_score, group = source_lean, fill = source_lean)) +
+  ggplot(., aes(x = user_ideology, group = source_lean, fill = source_lean)) +
   geom_histogram(alpha = 0.6, position = 'identity') +
   xlab("Tweeter ideology") +
   ylab("Log count") +
@@ -56,7 +56,7 @@ ggsave(gg_fmtweeters, file = paste0(outpath, "FMtweeters_ideologies_bysource.png
 gg_fmtweeters_libcon <- tweeter_scores %>% 
   filter(source_lean %in% c("C", "L"),
          article_fc_rating == "FM") %>% 
-  ggplot(., aes(x = ideology_score, group = source_lean, fill = source_lean)) +
+  ggplot(., aes(x = user_ideology, group = source_lean, fill = source_lean)) +
   geom_histogram(alpha = 0.6, position = 'identity') +
   xlab("Tweeter ideology") +
   ylab("Count") +
@@ -76,7 +76,7 @@ pal <- c("#d54c54", "#006195", "#9D69A3", "#C5CBD3")
 
 ###### All articles #####
 # Distribution of user ideology by article lean
-gg_articlelean <- ggplot(data = tweeter_scores, aes(x = ideology_score, group = article_lean, fill = article_lean)) +
+gg_articlelean <- ggplot(data = tweeter_scores, aes(x = user_ideology, group = article_lean, fill = article_lean)) +
   geom_histogram(position = 'identity') +
   xlab("Tweeter ideology") +
   ylab("Count") +
@@ -94,7 +94,7 @@ ggsave(gg_articlelean, file = paste0(outpath, "alltweeters_ideologies_byarticlel
 gg_articleideol <- tweeter_scores %>% 
   filter(article_fc_rating %in% c("FM", "T"),
          !is.na(user_ideology)) %>% 
-  ggplot(., aes(x = ideology_score, y = article_ideology, color = article_lean)) +
+  ggplot(., aes(x = user_ideology, y = article_ideology, color = article_lean)) +
   geom_hline(aes(yintercept = 0), size = 0.3, linetype = "dotted") +
   geom_vline(aes(xintercept = 0), size = 0.3, linetype = "dotted") +
   geom_point(size = 0.5,
@@ -115,7 +115,7 @@ ggsave(gg_articleideol, file = paste0(outpath, "tweeterideology_vs_articleideolo
 ###### Just FM articles #####
 gg_articlelean <- tweeter_scores %>% 
   filter(article_fc_rating == "FM") %>% 
-  ggplot(., aes(x = ideology_score, group = article_lean, fill = article_lean)) +
+  ggplot(., aes(x = user_ideology, group = article_lean, fill = article_lean)) +
   geom_histogram(position = 'identity') +
   xlab("Tweeter ideology") +
   ylab("Count") +
