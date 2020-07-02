@@ -33,22 +33,18 @@ line_color <- "#495867"
 ####################
 # Load data 
 ####################
-# Read in data
+# Read in data, Calculate time since first sharing of the story
 tweeter_scores <- read.csv(tweeter_score_path, header = TRUE) %>% 
   mutate(article_ideology = article_con_feel - article_lib_feel,
          tweet_time_text = tweet_time,
          tweet_time = as.POSIXct(tweet_time, format = "%a %b %d %H:%M:%S %z %Y")) %>% 
   filter(!is.na(total_article_number)) %>% 
-  arrange(total_article_number, tweet_time)
-
-# Calculate time since first sharing of the story
-tweeter_scores <- tweeter_scores %>% 
+  arrange(total_article_number, tweet_time) %>% 
   group_by(total_article_number) %>% 
   mutate(article_first_time = min(tweet_time)) %>% 
   mutate(tweet_number = 1:length(tweet_time), #order tweets for plotting purposes
          relative_tweet_time = as.numeric( (tweet_time - article_first_time) / (60*60) ) ) %>%  #time diff is in seconds, so convert to hours
-  mutate(relative_tweet_count = tweet_number / max(tweet_number),
-         hour_bin = cut(relative_tweet_time, breaks = seq(0, 50, 1), include.lowest = TRUE, labels = seq(0, 49)))
+  mutate(relative_tweet_count = tweet_number / max(tweet_number))
 
 # Add dummy rows of pre-first share for plotting purposes
 # (1) Create empty dataframe for dummy rows
@@ -67,13 +63,14 @@ tweeter_scores <- dummy_rows %>%
          relative_tweet_count = 0,
          total_article_number = rep(unique(tweeter_scores$total_article_number), each = 2)) %>% 
   merge(., unique_article_ratings) %>% 
-  rbind(tweeter_scores, .)
+  rbind(tweeter_scores, .) %>% 
+  mutate(hour_bin = cut(relative_tweet_time, breaks = seq(-2, 50, 1), include.lowest = TRUE, labels = seq(-2, 49))) #bin by hour tweet appeared
 
 # Calculate new tweets per hour
 tweet_perhour <- tweeter_scores %>% 
   group_by(article_fc_rating, total_article_number, hour_bin) %>% 
   count(.)
-
+tweet_perhour$n[tweet_perhour$hour_bin == -1] <- 0 #zero out the count of dummy rows
 
 ####################
 # Plot tweeting of stories over time
@@ -84,27 +81,10 @@ pal <- rev(brewer.pal(5, "RdYlBu"))
 gg_tweettime <- tweet_perhour %>% 
   filter(article_fc_rating %in% c("T", "FM")) %>% 
   ggplot(., aes(x = hour_bin, y = n, group = total_article_number)) +
-  geom_step(size = 0.2, alpha = 0.5, color = line_color) +
+  geom_line(size = 0.2, alpha = 0.5, color = line_color) +
   xlab("Time since first article share (hrs)") +
   ylab("Tweets") +
   scale_y_log10() +
-  theme_ctokita() +
-  theme(aspect.ratio = NULL) +
-  facet_wrap(~article_fc_rating, 
-             ncol = 1,
-             strip.position = "right",
-             labeller = labeller(article_fc_rating = label_veracity))
-gg_tweettime
-
-gg_tweettime <- tweet_perhour %>% 
-  filter(article_fc_rating %in% c("T", "FM")) %>% 
-  mutate(article = as.factor(as.character(total_article_number))) %>% 
-  ggplot(., aes(x = hour_bin, y = article, fill = n)) +
-  # geom_step(size = 0.2, alpha = 0.5, color = line_color) +
-  geom_tile() +
-  xlab("Time since first article share (hrs)") +
-  ylab("Tweets") +
-  # scale_y_log10() +
   theme_ctokita() +
   theme(aspect.ratio = NULL) +
   facet_wrap(~article_fc_rating, 
