@@ -179,7 +179,10 @@ if __name__ == '__main__':
                          dtype = {'quoted_urls': object, 'quoted_urls_expanded': object, #these two columns cause memory issues if not pre-specified dtype
                                   'user_id': 'Int64', 'tweet_id': 'Int64', 
                                   'retweeted_user_id': 'Int64', 'retweet_id': 'Int64',
-                                  'quoted_user_id': 'Int64', 'quoted_id': 'Int64'})  
+                                  'quoted_user_id': 'Int64', 'quoted_id': 'Int64'}) 
+    
+    # Filter out tweets that don't have assigned article, count number of tweets
+    tweets = tweets.dropna(subset =['total_article_number'])
     number_of_tweets = tweets.shape[0]
     
     # Load articles
