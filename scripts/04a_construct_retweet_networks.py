@@ -29,8 +29,41 @@ import datetime as dt
 # Note i = 9,10 is example of phantom retweet
 # Note i = 2014, 2603, 3777 are quotes
 
+def article_tweet_edges(article_id, tweets, articles, friend_files):
+    # Function that will take a set of tweets, contruct an edge+node list, and save to file
+    #
+    # OUTPUT:
+    # - rt_edge:dataframe row with user ids in the 'Source' and 'Target' column, denoting the flow of the article, along with a label for the type of flow.
+    #           This will return None if it encounters an original sharing of the article.
+    
+    # Filter tweets to those sharing story and sort by time
+    selected_tweets = tweets[tweets.total_article_number == article_id].copy()
+    n_tweets = len(selected_tweets)
+    
+    # Loop over tweets sharing this specific article and create edgelist
+    retweet_edges = pd.DataFrame(columns = ['Source', 'Target', 'type', 'total_article_number', 'tweet_id'])
+    for i in range(n_tweets):
+        edge = determine_retweet_edges(i, selected_tweets, articles, friend_files)
+        if edge is not None:
+            edge['tweet_id'] = selected_tweets.tweet_id.iloc[i]
+            retweet_edges = retweet_edges.append(edge, sort = False)
+            
+    # Create total nodelist
+    nodes = selected_tweets[['user_id', 'user_name', 'user_ideology', 'total_article_number']]
+    node_tweet_count = pd.value_counts(nodes['user_id']).to_frame().reset_index()
+    node_tweet_count = node_tweet_count.rename(columns = {'index': 'user_id', 'user_id': 'tweet_count'}) #count up multiple tweets by same user
+    nodes = nodes.drop_duplicates()
+    nodes = nodes.merge(node_tweet_count, on = 'user_id') #add column of tweet counts
+    nodes['ID'] = nodes['user_id'] #for Gephi
+    nodes['Label'] = nodes['user_name'] #for Gephi
+    
+    # Write to file
+    retweet_edges.to_csv(data_directory + "data_derived/networks/specific_article_networks/article" + str(article_id) + "_edges.csv", index = False)
+    nodes.to_csv(data_directory + "data_derived/networks/specific_article_networks/article" + str(article_id) + "_nodes.csv", index = False) 
+    return None
+
 def determine_retweet_edges(i, tweets, articles, friend_files):
-    # Function that will take a tweet and determine if it was a RT or quoted tweet, and if so, determine who the RT came from.
+    # Function that will take a single tweet and determine if it was a RT or quoted tweet, and if so, determine who the RT came from.
     #
     # OUTPUT:
     # - rt_edge:dataframe row with user ids in the 'Source' and 'Target' column, denoting the flow of the article, along with a label for the type of flow.
@@ -40,7 +73,6 @@ def determine_retweet_edges(i, tweets, articles, friend_files):
     tweet = tweets.iloc[i,:]
     user_id = tweet['user_id'].astype(int)
     rt_edge = pd.DataFrame({'Source': user_id, 'Target': None, 'type': None, 'total_article_number': tweet['total_article_number']}, index = [0])
-    
     
     # If retweet determine who they were actually retweeting
     if tweet['is_retweet']:
@@ -180,10 +212,21 @@ if __name__ == '__main__':
                                   'user_id': 'Int64', 'tweet_id': 'Int64', 
                                   'retweeted_user_id': 'Int64', 'retweet_id': 'Int64',
                                   'quoted_user_id': 'Int64', 'quoted_id': 'Int64'}) 
-    
-    # Filter out tweets that don't have assigned article, count number of tweets
-    tweets = tweets.dropna(subset =['total_article_number'])
     number_of_tweets = tweets.shape[0]
+    
+    # Get unique articles
+    unique_articles = tweets['total_article_number'].unique()
+    unique_articles.sort()
+    unique_articles = unique_articles[~np.isnan(unique_articles)] #drop nan
+    unique_articles = unique_articles.astype(int)
+    
+    # Check if some articles have already been processed
+    # If so, remove from list of articles to process
+    processed_articles = os.listdir(data_directory + "data_derived/networks/specific_article_networks/")
+    processed_articles = [file for file in processed_articles if re.match('^article', file)] #filter out hidden copies of same files
+    processed_articles = [re.search('([0-9]+)', file).group(1) for file in processed_articles]
+    processed_articles = np.array(processed_articles, dtype = int)
+    unique_articles = np.setdiff1d(unique_articles, processed_articles)
     
     # Load articles
     articles = pd.read_csv(data_directory + "data/articles/daily_articles.csv")
@@ -191,37 +234,26 @@ if __name__ == '__main__':
     # Get list of friend files for reference
     friend_files = [file for file in os.listdir(data_directory + "data/friends/") if re.match('^[0-9]', file)] #filter out hidden copies of same files
 
-    # Process tweets in parallel
-    retweet_edges = pd.DataFrame(columns = ['Source', 'Target', 'type', 'total_article_number', 'tweet_index', 'tweet_id'])
+    # Process article tweets in parallel, writing individual article networks to file
     pool = mp.Pool(mp.cpu_count())
-    for i in range(number_of_tweets):
-        edge = pool.apply(determine_retweet_edges, args = (i, tweets, articles, friend_files))
-        if edge is not None:
-            edge['tweet_index'] = i
-            edge['tweet_id'] = tweets.tweet_id.iloc[i]
-            retweet_edges = retweet_edges.append(edge, sort = False)
+    for article_id in unique_articles:
+        pool.apply_async(article_tweet_edges, args = (article_id, tweets, articles, friend_files))
     pool.close()
     pool.join()
     
-#    # Output example networks of specific stories
-#    for story in [28, 37]: 
-#        # Filter to appropriate set of nodes and edges
-#        filtered_tweets = tweets[tweets['total_article_number'] == story] 
-#        filtered_nodes = filtered_tweets[['user_id', 'user_name']]
-#        filtered_nodes = filtered_nodes.drop_duplicates()
-#        filtered_nodes = filtered_nodes.rename(columns = {'user_id': 'Id', 'user_name': 'label'})
-#        filtered_edges = retweet_edges[retweet_edges['Total_Article_Number'] == story]
-#        # Write
-#        filtered_edges.to_csv(data_directory + "data_derived/networks/rtnetwork_edges_article" + str(story) + ".csv", index = False)
-#        filtered_nodes.to_csv(data_directory + "data_derived/networks/rtnetwork_nodes_article" + str(story) + ".csv", index = False)
-            
-    # Create total nodetable
-    nodes = tweets[['user_id', 'user_name', 'user_ideology']]
-    nodes = nodes.drop_duplicates()
-    nodes['ID'] = nodes['user_id'] #for Gephi
-    nodes['Label'] = nodes['user_name'] #for Gephi
+    # Compile individual article networks into main edge and node list
+    retweet_edges = pd.DataFrame(columns = ['Source', 'Target', 'type', 'total_article_number', 'tweet_id'])
+    retweet_nodes = pd.DataFrame(columns = ['user_id', 'user_name', 'user_ideology', 'ID', 'Label'])
+    article_files = os.listdir(data_directory + "data_derived/networks/specific_article_networks/")
+    article_edge_files = [file for file in article_files if re.match('^article[0-9]+_edges', file)] #filter out hidden copies of same files
+    article_node_files = [file for file in article_files if re.match('^article[0-9]+_nodes', file)] #filter out hidden copies of same files
+    for j in range(len(article_node_files)):
+        edges = pd.read_csv(data_directory + "data_derived/networks/specific_article_networks/" + article_edge_files[j])
+        nodes = pd.read_csv(data_directory + "data_derived/networks/specific_article_networks/" + article_node_files[j])
+        retweet_edges = retweet_edges.append(edges, sort = False)
+        retweet_nodes = retweet_nodes.append(nodes, sort = False)
     
     # Write to file
     retweet_edges.to_csv(data_directory + "data_derived/networks/rtnetwork_edges.csv", index = False)
-    nodes.to_csv(data_directory + "data_derived/networks/rtnetwork_nodes.csv", index = False)
+    retweet_nodes.to_csv(data_directory + "data_derived/networks/rtnetwork_nodes.csv", index = False)
     
