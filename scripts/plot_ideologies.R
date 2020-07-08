@@ -16,20 +16,21 @@ source("scripts/_plot_themes/theme_ctokita.R")
 ####################
 # Paramters for analysis: paths to data, paths for output, and filename
 ####################
-tweeter_score_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ideological_scores/labeled_tweets.csv' #path to fitness cascade data
+tweeter_score_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/all_tweets_labeled.csv' #path to fitness cascade data
 outpath <- 'output/ideology/'
-
-
-############################## Ideological distribution of tweeters ##############################
 
 ####################
 # Load data 
 ####################
 # Read in data
 tweeter_scores <- read.csv(tweeter_score_path, header = TRUE) %>% 
-  mutate(article_ideology = article_con_feel - article_lib_feel) %>% 
+  mutate(article_ideology = article_con_feel - article_lib_feel,
+         user_ideological_extremity = abs(user_ideology)) %>% 
   filter(!is.na(total_article_number))
 
+
+
+############################## Ideological distribution of tweeters ##############################
 
 ####################
 # Plot: Tweeter ideology distribution by article source lean
@@ -130,3 +131,41 @@ gg_articlelean
 ggsave(gg_articlelean, file = paste0(outpath, "FMtweeters_ideologies_byarticlelean.png"), width = 90, height = 70, units = "mm", dpi = 400)
 
 
+
+############################## Summary of ideology by article type ##############################
+
+####################
+# Plot: Ideology by article veracity
+####################
+# Summarise data
+tweeter_veracity <- tweeter_scores %>% 
+  group_by(article_fc_rating) %>% 
+  summarise(ideological_extremity = mean(user_ideological_extremity, na.rm = TRUE))
+
+# Plot 
+gg_veracityextr <- ggplot() +
+  geom_point(data = tweeter_scores,  aes(x = article_fc_rating, y = user_ideology),
+             size = 0.1, stroke = 0, alpha = 0.3,
+             position = position_jitter(width = 0.1)) +
+  theme_ctokita()
+gg_veracityextr
+
+
+####################
+# Plot: Ideological diversity by article veracity
+####################
+# Summarise data
+article_diversity <- tweeter_scores %>% 
+  group_by(total_article_number, article_fc_rating) %>% 
+  summarise(ideology_sd = sd(user_ideology, na.rm = TRUE)) %>% 
+  filter(article_fc_rating %in% c("T", "FM"))
+
+# Plot
+gg_ideodiversity <- ggplot() +
+  # geom_point(data = article_diversity,  aes(x = article_fc_rating, y = ideology_sd),
+  #            size = 1, stroke = 0, alpha = 0.5,
+  #            position = position_jitter(width = 0.05)) +
+  geom_histogram(data = article_diversity,  aes(x = ideology_sd), binwidth = 0.2) +
+  facet_grid(article_fc_rating~.) +
+  theme_ctokita()
+gg_ideodiversity
