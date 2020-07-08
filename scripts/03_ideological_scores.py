@@ -68,6 +68,14 @@ labeled_tweeters = labeled_tweeters.merge(article_ratings, how = 'left', on = 't
 # Load and prepare ideological scores
 ideological_scores = pd.read_csv(data_directory + "data_derived/ideological_scores/unique_tweeters_ideology_scores.csv")
 ideological_scores = ideological_scores.rename(columns = {'id_str': 'user_id', 'pablo_score': 'user_ideology'})
+ideological_scores['user_ideol_extremity'] = abs(ideological_scores['user_ideology'])
+
+# Create broad ideological categories: Liberal, Moderate, Conservative
+ideo_threshold = 1 #how far from zero is the cutoff for non-Moderates?
+ideological_scores.loc[ideological_scores.user_ideology < -ideo_threshold, 'user_ideol_category'] = -1 #liberal
+ideological_scores.loc[ideological_scores.user_ideology > ideo_threshold, 'user_ideol_category'] = 1 #conservative
+ideological_scores.loc[ideological_scores['user_ideology'].between(-ideo_threshold, ideo_threshold, inclusive = True), 'user_ideol_category'] = 0 #moderate
+
 
 # Merge in ideological scores
 labeled_tweeters = labeled_tweeters.merge(ideological_scores, how = 'left', on = 'user_id')
