@@ -24,36 +24,13 @@ import scipy.stats as stats
 data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
 
 ####################
-# Load and bind together rt networks (temporary)
+# Load rt networks (temporary)
 ####################
 # Load data
-#rt_edges = pd.read_csv(data_directory + "/data_derived/networks/rtnetwork_edges.csv")
-#rt_nodes = pd.read_csv(data_directory + "/data_derived/networks/rtnetwork_nodes.csv")
+rt_edges = pd.read_csv(data_directory + "/data_derived/networks/rtnetwork_edges.csv")
+rt_nodes = pd.read_csv(data_directory + "/data_derived/networks/rtnetwork_nodes.csv")
 
-# Load and bind together rt networks (temporary)
-article_files = os.listdir(data_directory + "data_derived/networks/specific_article_networks/")
-article_edge_files = [file for file in article_files if re.match('^article[0-9]+_edges', file)] #filter out hidden copies of same files
-article_node_files = [file for file in article_files if re.match('^article[0-9]+_nodes', file)] #filter out hidden copies of same files
-for file in article_node_files:
-    nodes = pd.read_csv(data_directory + "data_derived/networks/specific_article_networks/" + file)
-    if 'rt_nodes' not in globals():
-        rt_nodes = nodes
-    else:
-        rt_nodes = rt_nodes.append(nodes, sort = False)
-    del nodes
-for file in article_edge_files:
-    edges = pd.read_csv(data_directory + "data_derived/networks/specific_article_networks/" + file)
-    if 'rt_edges' not in globals():
-        rt_edges = edges
-    else:
-        rt_edges = rt_edges.append(edges, sort = False)
-    del edges
-
-# Add in article information
-    
-####################
 # Add article-level information
-####################
 # Get source lean ratings
 articles = pd.read_csv(data_directory + "data/articles/daily_articles.csv")
 articles = articles.rename(columns = {'total article number': 'total_article_number'})
@@ -109,6 +86,13 @@ for article_id in unique_articles:
     g = nx.DiGraph() #directed
     g.add_nodes_from(article_nodes['user_id'])
     g.add_edges_from( list(zip(article_edges['Source'], article_edges['Target'])) )
+    
+    # TEST: import ideology scores for assortativity calculation
+    ideologies = article_nodes['user_ideology'].replace(np.nan, 0)
+    ideologies = round(ideologies*1000, 0)
+    ideologies = ideologies.astype(int)
+    nx.set_node_attributes(g, ideologies, name = 'user_ideology')
+    assort = nx.attribute_assortativity_coefficient(g, 'user_ideology')
     
     # Calculate metrics of interest
     network_density = nx.density(g)
