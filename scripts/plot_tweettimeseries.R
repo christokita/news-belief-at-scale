@@ -12,20 +12,26 @@ library(dplyr)
 library(tidyr)
 library(stringr)
 library(RColorBrewer)
+library(scales)
 source("scripts/_plot_themes/theme_ctokita.R")
 
 ####################
 # Paramters for analysis: paths to data, paths for output, and filename
 ####################
-tweeter_score_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ideological_scores/labeled_tweets.csv' #path to fitness cascade data
+tweeter_score_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/all_tweets_labeled.csv' #path to fitness cascade data
 outpath <- 'output/ideology/'
 
 # For labeling facet plots
-label_veracity <- c("T" = "Real", 
-                    "FM" = "Fake")
+label_veracity <- c("T" = "True news", 
+                    "FM" = "Fake news")
 
 # Color palette
 line_color <- "#495867"
+ideol_pal <- rev(brewer.pal(5, "RdBu"))
+ideol_pal[3] <- "#e0e0e0"
+ideol_dist_pal <- rev(brewer.pal(5, "PuOr"))
+ideol_dist_pal[3] <- "#e0e0e0"
+
 
 
 ############################## Plot time series of article shares ##############################
@@ -64,19 +70,17 @@ tweeter_scores <- dummy_rows %>%
          total_article_number = rep(unique(tweeter_scores$total_article_number), each = 2)) %>% 
   merge(., unique_article_ratings) %>% 
   rbind(tweeter_scores, .) %>% 
-  mutate(hour_bin = cut(relative_tweet_time, breaks = seq(-2, 50, 1), include.lowest = TRUE, labels = seq(-2, 49))) #bin by hour tweet appeared
+  mutate(hour_bin = cut(relative_tweet_time, breaks = seq(-2, 50, 1), include.lowest = TRUE, right = FALSE, labels = seq(-2, 49))) #bin by hour tweet appeared
 
 # Calculate new tweets per hour
 tweet_perhour <- tweeter_scores %>% 
   group_by(article_fc_rating, total_article_number, hour_bin) %>% 
   count(.)
-tweet_perhour$n[tweet_perhour$hour_bin == -1] <- 0 #zero out the count of dummy rows
+tweet_perhour$n[tweet_perhour$hour_bin %in% c(-2, -1)] <- 0 #zero out the count of dummy rows
 
 ####################
 # Plot tweeting of stories over time
 ####################
-pal <- rev(brewer.pal(5, "RdYlBu"))
-
 # New tweets over time
 gg_tweettime <- tweet_perhour %>% 
   filter(article_fc_rating %in% c("T", "FM")) %>% 
@@ -116,7 +120,7 @@ gg_totaltweets <- tweeter_scores %>%
              strip.position = "right",
              labeller = labeller(article_fc_rating = label_veracity))
 gg_totaltweets
-ggsave(gg_totaltweets, filename = "output/timeseries/timeseries_totaltweetcount.png", width = 90, height = 45, units = "mm", dpi = 400)
+ggsave(gg_totaltweets, filename = "output/timeseries/total_tweet_count.png", width = 90, height = 45, units = "mm", dpi = 400)
 
 # Percentiage of tweets per story
 gg_perctweets <- tweeter_scores %>% 
@@ -137,7 +141,7 @@ gg_perctweets <- tweeter_scores %>%
              strip.position = "right",
              labeller = labeller(article_fc_rating = label_veracity))
 gg_perctweets
-ggsave(gg_perctweets, filename = "output/timeseries/timeseries_percentagestorytweets.png", width = 90, height = 45, units = "mm", dpi = 400)
+ggsave(gg_perctweets, filename = "output/timeseries/percentage_story_tweets.png", width = 90, height = 45, units = "mm", dpi = 400)
 
 ####################
 # Plot saturation time of stories
@@ -158,6 +162,47 @@ gg_saturationcount <- tweeter_scores %>%
              strip.position = "right",
              labeller = labeller(article_fc_rating = label_veracity))
 gg_saturationcount
+
+####################
+# Plot ideology distance of tweeters relative to article content
+####################
+# NOTE: Figure out why (sign) of difference and difference show very different plots
+
+# Calculate distance between ideological category of user and article
+# Filter out users without ideological scores, bin by hour
+ideol_dist_time <- tweeter_scores %>% 
+  filter(!is.na(user_ideology)) %>% 
+  mutate(article_ideol_category = ifelse(article_lean == "L", -1, ifelse(article_lean == "C", 1, 0))) %>% 
+  mutate(ideol_diff = user_ideol_category - article_ideol_category) %>% 
+  mutate(ideol_distance = sign(user_ideol_category - article_ideol_category)) %>%
+  group_by(article_fc_rating, total_article_number, hour_bin) %>% 
+  count(ideol_distance) %>% 
+  mutate(freq_ideol_distance = n / sum(n)) %>% 
+  group_by(article_fc_rating, hour_bin, ideol_distance) %>% 
+  summarise(freq_ideol_distance = mean(freq_ideol_distance))
+
+gg_ideoltime <- ideol_dist_time %>% 
+  filter(article_fc_rating %in% c("FM", "T")) %>%
+  ggplot(., aes(x = hour_bin, y = freq_ideol_distance, fill = as.factor(ideol_distance))) +
+  geom_bar(position = "fill", stat = "identity") +
+  scale_x_discrete(breaks = seq(0, 48, 6), limits = seq(0, 32)) +
+  scale_fill_manual(values = ideol_dist_pal[c(1,3,5)],
+                    name = NULL,
+                    labels = c("User more liberal than article", 
+                               "Same ideology", 
+                               "User more conservative than article")) +
+  xlab("Time since first article share (hrs)") +
+  ylab("Prop. of tweeters") +
+  theme_ctokita() +
+  theme(aspect.ratio = NULL, 
+        legend.box.margin = unit(c(0, 0, 0, 0), "mm")) +
+  facet_wrap(~article_fc_rating, 
+             strip.position = "right",
+             ncol = 1,
+             labeller = labeller(article_fc_rating = label_veracity))
+gg_ideoltime
+ggsave(gg_ideoltime, filename = "output/timeseries/ideology_relative_tweeters.png", width = 120, height = 45, units = "mm", dpi = 400)
+
 
 
 ############################## Plot time series of article exposure ##############################
@@ -209,7 +254,7 @@ gg_exposuretime <- exposure_timeseries %>%
              strip.position = "right",
              labeller = labeller(article_fc_rating = label_veracity))
 gg_exposuretime
-ggsave(gg_exposuretime, filename = "output/timeseries/timeseries_totalexposure.png", width = 90, height = 45, units = "mm", dpi = 400)
+ggsave(gg_exposuretime, filename = "output/timeseries/total_exposure.png", width = 90, height = 45, units = "mm", dpi = 400)
 
 # Percentiage of tweets per story
 gg_relexpostime <- exposure_timeseries %>% 
