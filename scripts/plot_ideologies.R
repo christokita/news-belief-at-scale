@@ -24,8 +24,7 @@ outpath <- 'output/ideology/'
 ####################
 # Read in data
 tweeter_scores <- read.csv(tweeter_score_path, header = TRUE) %>% 
-  mutate(article_ideology = article_con_feel - article_lib_feel,
-         user_ideological_extremity = abs(user_ideology)) %>% 
+  mutate(article_ideology = article_con_feel - article_lib_feel) %>% 
   filter(!is.na(total_article_number))
 
 
@@ -157,15 +156,16 @@ gg_veracityextr
 # Summarise data
 article_diversity <- tweeter_scores %>% 
   group_by(total_article_number, article_fc_rating) %>% 
-  summarise(ideology_sd = sd(user_ideology, na.rm = TRUE)) %>% 
+  summarise(ideology_sd = sd(user_ideology, na.rm = TRUE),
+            ideology_mean = mean(user_ideology, na.rm = TRUE)) %>% 
   filter(article_fc_rating %in% c("T", "FM"))
 
 # Plot
 gg_ideodiversity <- ggplot() +
-  # geom_point(data = article_diversity,  aes(x = article_fc_rating, y = ideology_sd),
-  #            size = 1, stroke = 0, alpha = 0.5,
-  #            position = position_jitter(width = 0.05)) +
-  geom_histogram(data = article_diversity,  aes(x = ideology_sd), binwidth = 0.2) +
-  facet_grid(article_fc_rating~.) +
+  geom_point(data = article_diversity,  aes(x = article_fc_rating, y = ideology_sd),
+             size = 1, stroke = 0, alpha = 0.5,
+             position = position_jitter(width = 0.05)) +
+  # geom_histogram(data = article_diversity,  aes(x = ideology_sd), binwidth = 0.2) +
+  # facet_grid(article_fc_rating~.) +
   theme_ctokita()
 gg_ideodiversity
