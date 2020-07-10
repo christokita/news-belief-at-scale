@@ -23,7 +23,11 @@ outpath <- 'output/ideology/'
 
 # For labeling facet plots
 label_veracity <- c("T" = "True news", 
-                    "FM" = "Fake news")
+                    "FM" = "Fake news",
+                    "C" = "Conservative",
+                    "L" = "Liberal",
+                    "N" = "Neutral",
+                    "U" = "Unclear")
 
 # Color palette
 line_color <- "#495867"
@@ -70,8 +74,9 @@ tweeter_scores <- dummy_rows %>%
          total_article_number = rep(unique(tweeter_scores$total_article_number), each = 2)) %>% 
   merge(., unique_article_ratings) %>% 
   rbind(tweeter_scores, .) %>% 
-  mutate(hour_bin = cut(relative_tweet_time, breaks = seq(-2, 50, 1), include.lowest = TRUE, right = FALSE, labels = seq(-2, 49))) #bin by hour tweet appeared
-
+  mutate(hour_bin = cut(relative_tweet_time, breaks = seq(-2, 50, 1), include.lowest = TRUE, right = FALSE, labels = seq(-2, 49))) %>%  #bin by hour tweet appeared
+  mutate(hour_bin = as.numeric(as.character(hour_bin))) #convert from factor to plain number
+  
 # Calculate new tweets per hour
 tweet_perhour <- tweeter_scores %>% 
   group_by(article_fc_rating, total_article_number, hour_bin) %>% 
@@ -166,8 +171,6 @@ gg_saturationcount
 ####################
 # Plot ideology distance of tweeters relative to article content
 ####################
-# NOTE: Figure out why (sign) of difference and difference show very different plots
-
 # Calculate distance between ideological category of user and article
 # Filter out users without ideological scores, bin by hour
 ideol_dist_time <- tweeter_scores %>% 
@@ -181,16 +184,16 @@ ideol_dist_time <- tweeter_scores %>%
   group_by(article_fc_rating, hour_bin, ideol_distance) %>% 
   summarise(freq_ideol_distance = mean(freq_ideol_distance))
 
-gg_ideoltime <- ideol_dist_time %>% 
+gg_ideoldisttime <- ideol_dist_time %>% 
   filter(article_fc_rating %in% c("FM", "T")) %>%
-  ggplot(., aes(x = hour_bin, y = freq_ideol_distance, fill = as.factor(ideol_distance))) +
+  ggplot(., aes(x = hour_bin, y = freq_ideol_distance, fill = factor(ideol_distance, levels = c(1, 0, -1)))) +
   geom_bar(position = "fill", stat = "identity") +
-  scale_x_discrete(breaks = seq(0, 48, 6), limits = seq(0, 32)) +
-  scale_fill_manual(values = ideol_dist_pal[c(1,3,5)],
+  scale_x_continuous(breaks = seq(0, 48, 6), limits = c(0, 32)) +
+  scale_fill_manual(values = rev(ideol_dist_pal[c(1,3,5)]),
                     name = NULL,
-                    labels = c("User more liberal than article", 
+                    labels = c("User more conservative than article", 
                                "Same ideology", 
-                               "User more conservative than article")) +
+                               "User more liberal than article")) +
   xlab("Time since first article share (hrs)") +
   ylab("Prop. of tweeters") +
   theme_ctokita() +
@@ -200,8 +203,59 @@ gg_ideoltime <- ideol_dist_time %>%
              strip.position = "right",
              ncol = 1,
              labeller = labeller(article_fc_rating = label_veracity))
+gg_ideoldisttime
+ggsave(gg_ideoldisttime, filename = "output/timeseries/ideology_relative_tweeters.png", width = 120, height = 45, units = "mm", dpi = 400)
+
+
+####################
+# Plot ideology tweeters by article time
+####################
+# Calculate average ideological distribution of tweeters over time
+# Bin ideologies, filter out users without ideological scores, bin by hour
+ideol_time <- tweeter_scores %>% 
+  filter(!is.na(user_ideology)) %>% 
+  mutate(ideol_bin = cut(user_ideology, breaks = c(-6, -1, 1, 6), labels = c(-1, 0, 1), right = FALSE, include.lowest = TRUE)) %>%
+  group_by(article_fc_rating, article_lean, total_article_number, hour_bin) %>% 
+  count(ideol_bin) %>% 
+  mutate(freq_ideol_bin = n / sum(n)) %>% 
+  group_by(article_fc_rating, article_lean, hour_bin, ideol_bin) %>% 
+  summarise(freq_ideol_bin = mean(freq_ideol_bin))
+
+gg_ideoltime <- ideol_time %>% 
+  filter(article_fc_rating %in% c("FM", "T")) %>%
+  ggplot(., aes(x = hour_bin, y = freq_ideol_bin, fill = factor(ideol_bin, levels = c(1, 0, -1)))) +
+  geom_bar(position = "fill", stat = "identity", width = 0.8) +
+  scale_x_continuous(breaks = seq(0, 48, 6), limits = c(0, 32)) +
+  scale_fill_manual(values = rev(ideol_pal[c(1,3,5)]),
+                    name = "User ideology",
+                    labels = c("Conservative", "Moderate", "Liberal")) +
+  xlab("Time since first article share (hrs)") +
+  ylab("Prop. of tweeters") +
+  theme_ctokita() +
+  theme(aspect.ratio = NULL, 
+        legend.box.margin = unit(c(0, 0, 0, 0), "mm")) +
+  facet_grid(article_fc_rating~article_lean,
+             labeller = labeller(article_fc_rating = label_veracity))
 gg_ideoltime
-ggsave(gg_ideoltime, filename = "output/timeseries/ideology_relative_tweeters.png", width = 120, height = 45, units = "mm", dpi = 400)
+ggsave(gg_ideoltime, filename = "output/timeseries/ideology_tweeters.png", width = 120, height = 45, units = "mm", dpi = 400)
+
+gg_ideoltime_raw <- tweeter_scores %>% 
+  filter(article_fc_rating %in% c("FM", "T"),
+         !is.na(user_ideology)) %>%
+  ggplot(., aes(x = relative_tweet_time, y = user_ideology, color = user_ideology)) +
+  geom_point(size = 0.3, stroke = 0, position = position_jitter(width = 0.1, height = 0.1)) +
+  scale_color_gradientn(colors = ideol_pal, limits = c(-2, 2), oob = scales::squish) +
+  scale_x_continuous(breaks = seq(0, 48, 12)) +
+  scale_y_continuous(breaks = seq(-4, 4, 2)) +
+  xlab("Time since first article share (hrs)") +
+  ylab("User ideology") +
+  theme_ctokita() +
+  theme(aspect.ratio = NULL, 
+        legend.position = "none") +
+  facet_grid(article_fc_rating~article_lean,
+             labeller = labeller(article_fc_rating = label_veracity))
+gg_ideoltime_raw
+ggsave(gg_ideoltime_raw, filename = "output/timeseries/ideology_raw_tweeters.png", width = 90, height = 45, units = "mm", dpi = 400)
 
 
 
