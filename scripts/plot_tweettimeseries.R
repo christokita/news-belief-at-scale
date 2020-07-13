@@ -159,14 +159,16 @@ gg_saturationcount <- tweeter_scores %>%
   group_by(total_article_number) %>% 
   filter(relative_tweet_count == min(relative_tweet_count)) %>% 
   ggplot(., aes(x = relative_tweet_time)) +
-  geom_histogram(aes(y = stat(density))) +
-  xlab(paste0("Time to ", percentile*100, "% sharing saturation")) +
+  geom_histogram(aes(y = stat(density)), binwidth = 2, color = 'white', fill = line_color) +
+  xlab(paste0("Time to ", percentile*100, "% sharing saturation (hrs.)")) +
   theme_ctokita() +
   facet_wrap(~article_fc_rating, 
              ncol = 1,
              strip.position = "right",
              labeller = labeller(article_fc_rating = label_veracity))
 gg_saturationcount
+ggsave(gg_saturationcount, filename = paste0("output/timeseries/story_saturation", percentile*100, ".png"), width = 55, height = 90, units = "mm", dpi = 400)
+
 
 ####################
 # Plot ideology distance of tweeters relative to article content
@@ -185,10 +187,11 @@ ideol_dist_time <- tweeter_scores %>%
   summarise(freq_ideol_distance = mean(freq_ideol_distance))
 
 gg_ideoldisttime <- ideol_dist_time %>% 
-  filter(article_fc_rating %in% c("FM", "T")) %>%
+  filter(article_fc_rating %in% c("FM", "T"),
+         hour_bin >= 0) %>%
   ggplot(., aes(x = hour_bin, y = freq_ideol_distance, fill = factor(ideol_distance, levels = c(1, 0, -1)))) +
-  geom_bar(position = "fill", stat = "identity") +
-  scale_x_continuous(breaks = seq(0, 48, 6), limits = c(0, 32)) +
+  geom_bar(position = "fill", stat = "identity", width = 1) +
+  scale_x_continuous(breaks = seq(0, 48, 6)) +
   scale_fill_manual(values = rev(ideol_dist_pal[c(1,3,5)]),
                     name = NULL,
                     labels = c("User more conservative than article", 
@@ -224,8 +227,8 @@ ideol_time <- tweeter_scores %>%
 gg_ideoltime <- ideol_time %>% 
   filter(article_fc_rating %in% c("FM", "T")) %>%
   ggplot(., aes(x = hour_bin, y = freq_ideol_bin, fill = factor(ideol_bin, levels = c(1, 0, -1)))) +
-  geom_bar(position = "fill", stat = "identity", width = 0.8) +
-  scale_x_continuous(breaks = seq(0, 48, 6), limits = c(0, 32)) +
+  geom_bar(position = "fill", stat = "identity", width = 1) +
+  scale_x_continuous(breaks = seq(0, 48, 6), limits = c(-1, 32)) +
   scale_fill_manual(values = rev(ideol_pal[c(1,3,5)]),
                     name = "User ideology",
                     labels = c("Conservative", "Moderate", "Liberal")) +
