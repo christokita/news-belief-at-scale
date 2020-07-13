@@ -1,0 +1,13 @@
+##############################
+#
+# Colors for use in plots
+#
+##############################
+
+
+##########
+# Liberal vs. Conservative colors
+##########
+# From eduardo's figure
+Blue - #317fca
+Red - #e00203
