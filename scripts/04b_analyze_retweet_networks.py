@@ -109,3 +109,6 @@ for article_id in unique_articles:
                                  article_nodes['article_fc_rating'].unique()[0], article_nodes['article_lean'].unique()[0]]], 
                                 columns = article_network_metrics.columns, index = [0])
     article_network_metrics = article_network_metrics.append(article_data, sort = False)
+    
+# Write to file
+article_network_metrics.to_csv(data_directory + "data_derived/networks/article_network_metrics.csv", index = False)
