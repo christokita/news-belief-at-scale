@@ -19,6 +19,23 @@ source("scripts/_plot_themes/theme_ctokita.R")
 tweeter_score_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/all_tweets_labeled.csv' #path to fitness cascade data
 outpath <- 'output/ideology/'
 
+# For labeling facet plots
+label_veracity <- c("T" = "True news", 
+                    "FM" = "Fake news",
+                    "CND" = "CND",
+                    "No mode!" = "No mode!",
+                    "C" = "Conservative",
+                    "L" = "Liberal",
+                    "N" = "Neutral",
+                    "U" = "Unclear")
+
+# Color palette
+plot_color <- "#495867"
+ideol_pal <- rev(brewer.pal(5, "RdBu"))
+ideol_pal[3] <- "#e0e0e0"
+source_pal <- c(ideol_pal[c(5,1)], "#9D69A3", "#C5CBD3")
+
+
 ####################
 # Load data 
 ####################
@@ -34,17 +51,14 @@ tweeter_scores <- read.csv(tweeter_score_path, header = TRUE) %>%
 ####################
 # Plot: Tweeter ideology distribution by article source lean
 ####################
-# Plot colors
-pal <- c("#d54c54", "#006195", "#C5CBD3")
-
 # All source types
 gg_fmtweeters <- tweeter_scores %>% 
   filter(article_fc_rating == "FM") %>% 
   ggplot(., aes(x = user_ideology, group = source_lean, fill = source_lean)) +
-  geom_histogram(alpha = 0.6, position = 'identity') +
+  geom_histogram(alpha = 0.6, position = 'identity', binwidth = 0.25) +
   xlab("Tweeter ideology") +
   ylab("Log count") +
-  scale_fill_manual(values = pal, name = "Article type", labels = c("False, Conservative source", "False, Liberal source", "False, Unclear source")) +
+  scale_fill_manual(values = source_pal[c(1,2,4)], name = "Article type", labels = c("False, Conservative source", "False, Liberal source", "False, Unclear source")) +
   scale_x_continuous(limits = c(-4, 4), expand = c(0, 0)) +
   scale_y_continuous(trans = "log10", limits = c(1, 12000), expand = c(0,0)) +
   theme_ctokita() +
@@ -57,7 +71,7 @@ gg_fmtweeters_libcon <- tweeter_scores %>%
   filter(source_lean %in% c("C", "L"),
          article_fc_rating == "FM") %>% 
   ggplot(., aes(x = user_ideology, group = source_lean, fill = source_lean)) +
-  geom_histogram(alpha = 0.6, position = 'identity') +
+  geom_histogram(alpha = 0.6, position = 'identity', binwidth = 0.25) +
   xlab("Tweeter ideology") +
   ylab("Count") +
   scale_fill_manual(values = pal, name = "Article type", labels = c("False, Conservative source", "False, Liberal source")) +
@@ -71,24 +85,22 @@ ggsave(gg_fmtweeters_libcon, file = paste0(outpath, "FMtweeters_ideologies_lib-c
 ####################
 # Plot: Tweeter ideology by article lean
 ####################
-# Plot colors
-pal <- c("#d54c54", "#006195", "#9D69A3", "#C5CBD3")
 
 ###### All articles #####
 # Distribution of user ideology by article lean
 gg_articlelean <- ggplot(data = tweeter_scores, aes(x = user_ideology, group = article_lean, fill = article_lean)) +
-  geom_histogram(position = 'identity') +
+  geom_histogram(position = 'identity', binwidth = 0.25) +
   xlab("Tweeter ideology") +
   ylab("Count") +
   scale_x_continuous(limits = c(-4, 4), expand = c(0, 0)) +
-  scale_fill_manual(values = pal, name = "Article lean", labels = c("Conservative", "Liberal", "Neutral", "Unclear")) +
+  scale_fill_manual(values = source_pal, name = "Article lean", labels = c("Conservative", "Liberal", "Neutral", "Unclear")) +
   facet_wrap(~article_lean, scales = 'free', ncol = 1) +
   theme_ctokita() +
   theme(strip.background = element_blank(),
         strip.text = element_blank(),
         aspect.ratio = 0.2)
 gg_articlelean
-ggsave(gg_articlelean, file = paste0(outpath, "alltweeters_ideologies_byarticlelean.png"), width = 90, height = 70, units = "mm", dpi = 400)
+ggsave(gg_articlelean, file = paste0(outpath, "ideologies_byarticlelean.png"), width = 90, height = 70, units = "mm", dpi = 400)
 
 # Tweeter ideology vs article ideology
 gg_articleideol <- tweeter_scores %>% 
@@ -103,24 +115,24 @@ gg_articleideol <- tweeter_scores %>%
              position = position_jitter(0.1)) +
   xlab("Tweeter ideology") +
   ylab("Article ideology") +
-  scale_color_manual(values = pal, name = "Article lean", labels = c("Conservative", "Liberal", "Neutral", "Unclear")) +
+  scale_color_manual(values = source_pal, name = "Article lean", labels = c("Conservative", "Liberal", "Neutral", "Unclear")) +
   scale_x_continuous(breaks = seq(-6, 6, 2), limits = c(-4.7, 4.7)) +
   scale_y_continuous(breaks = seq(-6, 6, 2), limits = c(-4.6, 4.6)) +
   theme_ctokita() +
   facet_wrap(~article_fc_rating, scales = "free")
 gg_articleideol
-ggsave(gg_articleideol, file = paste0(outpath, "tweeterideology_vs_articleideology.png"), width = 100, height = 45, units = "mm", dpi = 400)
+ggsave(gg_articleideol, file = paste0(outpath, "ideology_vs_articleideology.png"), width = 100, height = 45, units = "mm", dpi = 400)
 
 
 ###### Just FM articles #####
 gg_articlelean <- tweeter_scores %>% 
   filter(article_fc_rating == "FM") %>% 
   ggplot(., aes(x = user_ideology, group = article_lean, fill = article_lean)) +
-  geom_histogram(position = 'identity') +
+  geom_histogram(position = 'identity', binwidth = 0.25) +
   xlab("Tweeter ideology") +
   ylab("Count") +
   scale_x_continuous(limits = c(-4, 4), expand = c(0, 0)) +
-  scale_fill_manual(values = pal, name = "Article lean", labels = c("Conservative", "Liberal", "Neutral", "Unclear")) +
+  scale_fill_manual(values = source_pal, name = "Article lean", labels = c("Conservative", "Liberal", "Neutral", "Unclear")) +
   facet_wrap(~article_lean, scales = 'free', ncol = 1) +
   theme_ctokita() +
   theme(strip.background = element_blank(),
@@ -131,7 +143,7 @@ ggsave(gg_articlelean, file = paste0(outpath, "FMtweeters_ideologies_byarticlele
 
 
 
-############################## Summary of ideology by article type ##############################
+############################## Summary of ideology by article veracity ##############################
 
 ####################
 # Plot: Ideology by article veracity
@@ -139,16 +151,36 @@ ggsave(gg_articlelean, file = paste0(outpath, "FMtweeters_ideologies_byarticlele
 # Summarise data
 tweeter_veracity <- tweeter_scores %>% 
   group_by(article_fc_rating) %>% 
-  summarise(ideological_extremity = mean(user_ideological_extremity, na.rm = TRUE))
+  summarise(ideological_extremity = mean(user_ideol_extremity, na.rm = TRUE)) %>% 
+  filter(article_fc_rating %in% c("FM", "T"))
 
-# Plot 
-gg_veracityextr <- ggplot() +
-  geom_point(data = tweeter_scores,  aes(x = article_fc_rating, y = user_ideology),
-             size = 0.1, stroke = 0, alpha = 0.3,
+# Plot ideological distribution
+gg_veracityideo <- tweeter_scores %>% 
+  filter(!is.na(user_ideology)) %>% 
+  ggplot(., aes(x = user_ideology, fill = ..x..)) +
+  geom_histogram(position = 'identity', binwidth = 0.25) +
+  xlab("Tweeter ideology") +
+  ylab("Count") +
+  scale_x_continuous(limits = c(-4, 4), expand = c(0, 0)) +
+  scale_fill_gradientn(colors = ideol_pal) +
+  theme_ctokita() +
+  theme(aspect.ratio = 0.2, 
+        legend.position = "none") +
+  facet_wrap(~article_fc_rating, 
+             scales = 'free', 
+             ncol = 1, 
+             strip.position = "right")
+gg_veracityideo
+ggsave(gg_veracityideo, file = paste0(outpath, "ideologies_byveracity.png"), width = 90, height = 70, units = "mm", dpi = 400)
+
+
+# Plot ideological extremity
+gg_veracityextr <- ggplot(.) +
+  geom_point(data = tweeter_scores,  aes(x = article_fc_rating, y = user_ideol_extremity),
+             size = 0.5, stroke = 0, alpha = 0.3, color = plot_color,
              position = position_jitter(width = 0.1)) +
   theme_ctokita()
 gg_veracityextr
-
 
 ####################
 # Plot: Ideological diversity by article veracity
@@ -164,8 +196,10 @@ article_diversity <- tweeter_scores %>%
 gg_ideodiversity <- ggplot() +
   geom_point(data = article_diversity,  aes(x = article_fc_rating, y = ideology_sd),
              size = 1, stroke = 0, alpha = 0.5,
-             position = position_jitter(width = 0.05)) +
-  # geom_histogram(data = article_diversity,  aes(x = ideology_sd), binwidth = 0.2) +
-  # facet_grid(article_fc_rating~.) +
+             position = position_jitter(width = 0.03)) +
+  scale_x_discrete(labels = c("Fake news", "Real news")) +
+  ylab("Ideol. diversity of article tweeters") +
+  xlab("") +
   theme_ctokita()
 gg_ideodiversity
+ggsave(gg_ideodiversity, filename = paste0(outpath, "ideodiversity_byveracity.png"), width = 45, height = 45, units = "mm")
