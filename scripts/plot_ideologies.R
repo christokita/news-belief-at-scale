@@ -16,7 +16,7 @@ source("scripts/_plot_themes/theme_ctokita.R")
 ####################
 # Paramters for analysis: paths to data, paths for output, and filename
 ####################
-tweeter_score_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/all_tweets_labeled.csv' #path to fitness cascade data
+tweeter_score_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/all_tweets_labeled.csv' 
 outpath <- 'output/ideology/'
 
 # For labeling facet plots
@@ -181,25 +181,3 @@ gg_veracityextr <- ggplot(.) +
              position = position_jitter(width = 0.1)) +
   theme_ctokita()
 gg_veracityextr
-
-####################
-# Plot: Ideological diversity by article veracity
-####################
-# Summarise data
-article_diversity <- tweeter_scores %>% 
-  group_by(total_article_number, article_fc_rating) %>% 
-  summarise(ideology_sd = sd(user_ideology, na.rm = TRUE),
-            ideology_mean = mean(user_ideology, na.rm = TRUE)) %>% 
-  filter(article_fc_rating %in% c("T", "FM"))
-
-# Plot
-gg_ideodiversity <- ggplot() +
-  geom_point(data = article_diversity,  aes(x = article_fc_rating, y = ideology_sd),
-             size = 1, stroke = 0, alpha = 0.5,
-             position = position_jitter(width = 0.03)) +
-  scale_x_discrete(labels = c("Fake news", "Real news")) +
-  ylab("Ideol. diversity of article tweeters") +
-  xlab("") +
-  theme_ctokita()
-gg_ideodiversity
-ggsave(gg_ideodiversity, filename = paste0(outpath, "ideodiversity_byveracity.png"), width = 45, height = 45, units = "mm")
