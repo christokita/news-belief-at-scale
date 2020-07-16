@@ -123,9 +123,9 @@ count_no_friends = no_friends.shape[0]
 no_friends = pd.DataFrame(no_friends, columns = ["user_id"], dtype = int)
 
 # Save
-all_friends.to_csv(outpath_friend_data + "friends_fm_tweeters.csv", index = False)
-all_friends_minus_tweeters.to_csv(outpath_friend_data + "friends_fm_tweeters_excl_fmtweeters.csv", index = False)
-no_friends.to_csv(outpath_friend_data + "fm_tweeter_nofriends.csv", index = False)
+all_friends.to_csv(outpath_friend_data + "unique_friends.csv", index = False)
+all_friends_minus_tweeters.to_csv(outpath_friend_data + "unique_followers_excl_tweeters.csv", index = False)
+no_friends.to_csv(outpath_friend_data + "tweeters_nofriends.csv", index = False)
 del all_friends, all_friends_minus_tweeters, no_friends
 
 ####################
