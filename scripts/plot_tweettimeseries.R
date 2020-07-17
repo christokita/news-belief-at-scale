@@ -175,7 +175,8 @@ ggsave(gg_saturationcount, filename = paste0("output/timeseries/story_saturation
 ####################
 # Calculate distance between ideological category of user and article
 # Filter out users without ideological scores, bin by hour
-ideol_dist_time <- tweeter_scores %>% 
+gg_ideoldisttime <- tweeter_scores %>% 
+  #data processing
   filter(!is.na(user_ideology)) %>% 
   mutate(article_ideol_category = ifelse(article_lean == "L", -1, ifelse(article_lean == "C", 1, 0))) %>% 
   mutate(ideol_diff = user_ideol_category - article_ideol_category) %>% 
@@ -184,13 +185,13 @@ ideol_dist_time <- tweeter_scores %>%
   count(ideol_distance) %>% 
   mutate(freq_ideol_distance = n / sum(n)) %>% 
   group_by(article_fc_rating, hour_bin, ideol_distance) %>% 
-  summarise(freq_ideol_distance = mean(freq_ideol_distance))
-
-gg_ideoldisttime <- ideol_dist_time %>% 
+  summarise(freq_ideol_distance = mean(freq_ideol_distance)) %>% 
   filter(article_fc_rating %in% c("FM", "T"),
          hour_bin >= 0) %>%
+  #graph
   ggplot(., aes(x = hour_bin, y = freq_ideol_distance, fill = factor(ideol_distance, levels = c(1, 0, -1)))) +
   geom_bar(position = "fill", stat = "identity", width = 1) +
+  geom_line() +
   scale_x_continuous(breaks = seq(0, 48, 6)) +
   scale_fill_manual(values = rev(ideol_dist_pal[c(1,3,5)]),
                     name = NULL,
@@ -215,17 +216,17 @@ ggsave(gg_ideoldisttime, filename = "output/timeseries/ideology_relative_tweeter
 ####################
 # Calculate average ideological distribution of tweeters over time
 # Bin ideologies, filter out users without ideological scores, bin by hour
-ideol_time <- tweeter_scores %>% 
+gg_ideoltime <- tweeter_scores %>% 
+  #data processing
   filter(!is.na(user_ideology)) %>% 
   mutate(ideol_bin = cut(user_ideology, breaks = c(-6, -1, 1, 6), labels = c(-1, 0, 1), right = FALSE, include.lowest = TRUE)) %>%
   group_by(article_fc_rating, article_lean, total_article_number, hour_bin) %>% 
   count(ideol_bin) %>% 
   mutate(freq_ideol_bin = n / sum(n)) %>% 
   group_by(article_fc_rating, article_lean, hour_bin, ideol_bin) %>% 
-  summarise(freq_ideol_bin = mean(freq_ideol_bin))
-
-gg_ideoltime <- ideol_time %>% 
+  summarise(freq_ideol_bin = mean(freq_ideol_bin)) %>% 
   filter(article_fc_rating %in% c("FM", "T")) %>%
+  # graph
   ggplot(., aes(x = hour_bin, y = freq_ideol_bin, fill = factor(ideol_bin, levels = c(1, 0, -1)))) +
   geom_bar(position = "fill", stat = "identity", width = 1) +
   scale_x_continuous(breaks = seq(0, 48, 6), limits = c(-1, 32)) +
@@ -260,6 +261,32 @@ gg_ideoltime_raw <- tweeter_scores %>%
 gg_ideoltime_raw
 ggsave(gg_ideoltime_raw, filename = "output/timeseries/ideology_raw_tweeters.png", width = 90, height = 45, units = "mm", dpi = 400)
 
+# Calculate average ideological distribution of tweeters over time, broken out by source and article veracity
+# Bin ideologies, filter out users without ideological scores, bin by hour
+gg_ideoltimesource <- tweeter_scores %>% 
+  filter(!is.na(user_ideology),
+         article_fc_rating %in% c("FM", "T")) %>% 
+  mutate(ideol_bin = cut(user_ideology, breaks = c(-6, -1, 1, 6), labels = c(-1, 0, 1), right = FALSE, include.lowest = TRUE)) %>%
+  group_by(article_fc_rating, source_type, article_fc_rating, total_article_number, hour_bin) %>% 
+  count(ideol_bin) %>% 
+  mutate(freq_ideol_bin = n / sum(n)) %>% 
+  group_by(article_fc_rating, source_type, article_fc_rating, hour_bin, ideol_bin) %>% 
+  summarise(freq_ideol_bin = mean(freq_ideol_bin)) %>% 
+  ggplot(., aes(x = hour_bin, y = freq_ideol_bin, fill = factor(ideol_bin, levels = c(1, 0, -1)))) +
+  geom_bar(position = "fill", stat = "identity", width = 1) +
+  scale_x_continuous(breaks = seq(0, 48, 6), limits = c(-1, 32)) +
+  scale_fill_manual(values = rev(ideol_pal[c(1,3,5)]),
+                    name = "User ideology",
+                    labels = c("Conservative", "Moderate", "Liberal")) +
+  xlab("Time since first article share (hrs)") +
+  ylab("Prop. of tweeters") +
+  theme_ctokita() +
+  theme(aspect.ratio = NULL, 
+        legend.box.margin = unit(c(0, 0, 0, 0), "mm")) +
+  facet_grid(article_fc_rating~source_type,
+             labeller = labeller(article_fc_rating = label_veracity))
+gg_ideoltimesource
+ggsave(gg_ideoltimesource, filename = "output/timeseries/ideology_tweeters_bysourceandveracity.png", width = 120, height = 45, units = "mm", dpi = 400)
 
 
 ############################## Plot time series of article exposure ##############################
