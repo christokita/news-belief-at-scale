@@ -36,7 +36,14 @@ articles = articles.rename(columns = {'total article number': 'total_article_num
 articles['source_lean'] = articles['source'].str.replace('rss_|ct_', '')
 lean_dict = {'con': 'C', 'lib': 'L', 'unclear': 'U'}
 articles['source_lean'] = articles['source_lean'].map(lean_dict)
-articles = articles[['total_article_number', 'source_lean']]
+
+# Get source veracity (mainstream or fringe)
+articles['source_type'] = articles['source'].str.replace('_con|_lib|_unclear', '')
+articles['source_type'] = articles['source_type'].str.replace('rss', 'fringe')
+articles['source_type'] = articles['source_type'].str.replace('ct', 'mainstream')
+
+# Filter down article metadata to columns of interest
+articles = articles[['total_article_number', 'source_lean', 'source_type']]
 
 # Load and prepare article veracity evaluations
 news_evaluations = pd.read_csv(data_directory + "data/articles/evaluations.csv")
