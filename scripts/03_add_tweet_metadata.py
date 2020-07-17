@@ -6,7 +6,7 @@ Created on Thu Apr 30 16:15:11 2020
 @author: ChrisTokita
 
 SCRIPT:
-Analyze ideological scores of tweeters
+Add user ideology and article-level data to tweet data.
 """
 
 ####################
