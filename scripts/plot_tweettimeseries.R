@@ -19,7 +19,7 @@ source("scripts/_plot_themes/theme_ctokita.R")
 # Paramters for analysis: paths to data, paths for output, and filename
 ####################
 tweeter_score_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/all_tweets_labeled.csv' #path to fitness cascade data
-outpath <- 'output/ideology/'
+outpath <- 'output/timeseries/'
 
 # For labeling facet plots
 label_veracity <- c("T" = "True news", 
@@ -63,7 +63,7 @@ dummy_rows <- data.frame(matrix(NA, ncol = ncol(tweeter_scores), nrow = 2*n_arti
 names(dummy_rows) <- names(tweeter_scores) #give same column names
 # (2) Create unique set of article IDs and fact-check rating to add to our dummy rows
 unique_article_ratings <- tweeter_scores %>% 
-  select(total_article_number, article_fc_rating) %>% 
+  select(source_type, source_lean, total_article_number, article_fc_rating) %>% 
   unique()
 # (3) Join together
 tweeter_scores <- dummy_rows %>% 
@@ -86,7 +86,7 @@ tweet_perhour$n[tweet_perhour$hour_bin %in% c(-2, -1)] <- 0 #zero out the count 
 ####################
 # Plot tweeting of stories over time
 ####################
-# New tweets over time
+# New tweets per hour over time
 gg_tweettime <- tweet_perhour %>% 
   filter(article_fc_rating %in% c("T", "FM")) %>% 
   ggplot(., aes(x = hour_bin, y = n, group = total_article_number)) +
@@ -125,7 +125,7 @@ gg_totaltweets <- tweeter_scores %>%
              strip.position = "right",
              labeller = labeller(article_fc_rating = label_veracity))
 gg_totaltweets
-ggsave(gg_totaltweets, filename = "output/timeseries/total_tweet_count.png", width = 90, height = 45, units = "mm", dpi = 400)
+ggsave(gg_totaltweets, filename = paste0(outpath,"total_tweetcount_time.png"), width = 90, height = 45, units = "mm", dpi = 400)
 
 # Percentiage of tweets per story
 gg_perctweets <- tweeter_scores %>% 
@@ -146,7 +146,7 @@ gg_perctweets <- tweeter_scores %>%
              strip.position = "right",
              labeller = labeller(article_fc_rating = label_veracity))
 gg_perctweets
-ggsave(gg_perctweets, filename = "output/timeseries/percentage_story_tweets.png", width = 90, height = 45, units = "mm", dpi = 400)
+ggsave(gg_perctweets, filename = paste0(outpath, "percentage_story_tweets.png"), width = 90, height = 45, units = "mm", dpi = 400)
 
 ####################
 # Plot saturation time of stories
@@ -167,9 +167,42 @@ gg_saturationcount <- tweeter_scores %>%
              strip.position = "right",
              labeller = labeller(article_fc_rating = label_veracity))
 gg_saturationcount
-ggsave(gg_saturationcount, filename = paste0("output/timeseries/story_saturation", percentile*100, ".png"), width = 55, height = 90, units = "mm", dpi = 400)
+ggsave(gg_saturationcount, filename = paste0(outpath, "story_saturation", percentile*100, ".png"), width = 55, height = 90, units = "mm", dpi = 400)
 
 
+####################
+# Plot new vs retweets over time
+####################
+gg_tweetype <- tweeter_scores %>% 
+  # data processing
+  filter(hour_bin >= 0,
+         article_fc_rating %in% c("T", "FM")) %>% 
+  group_by(article_fc_rating, total_article_number, hour_bin) %>% 
+  summarize(RTs = sum(as.logical(is_retweet)),
+            total_tweets = length(is_retweet)) %>% 
+  mutate(perc_RTs = RTs / total_tweets) %>% 
+  group_by(article_fc_rating, hour_bin) %>% 
+  summarise(mean_perc_RTs = mean(perc_RTs),
+            sd_perc_RTs = sd(perc_RTs)) %>% 
+  # graph
+  ggplot(., aes(x = hour_bin, y = mean_perc_RTs)) +
+  geom_ribbon(aes(ymin = ifelse((mean_perc_RTs - sd_perc_RTs) < 0, 0, mean_perc_RTs - sd_perc_RTs),
+                  ymax = ifelse((mean_perc_RTs + sd_perc_RTs) > 1, 1, mean_perc_RTs + sd_perc_RTs)),
+              fill = line_color, alpha = 0.2) +
+  geom_line(color = line_color) +
+  # scale_x_continuous(breaks = seq(0, 48, 6), limits = c(-1, 32)) +
+  # scale_y_continuous(limits = c(0, 1)) +
+  xlab("Time since first article share (hrs)") +
+  ylab("Prop. retweets") +
+  theme_ctokita() +
+  theme(aspect.ratio = NULL, 
+        legend.box.margin = unit(c(0, 0, 0, 0), "mm")) +
+  facet_grid(article_fc_rating~., 
+             # strip.position = "right",
+             labeller = labeller(article_fc_rating = label_veracity))
+gg_tweetype
+ggsave(gg_tweetype, filename = paste0(outpath, "percentRT.png"), width = 55, height = 45, units = "mm", dpi = 400)
+  
 ####################
 # Plot ideology distance of tweeters relative to article content
 ####################
@@ -191,7 +224,6 @@ gg_ideoldisttime <- tweeter_scores %>%
   #graph
   ggplot(., aes(x = hour_bin, y = freq_ideol_distance, fill = factor(ideol_distance, levels = c(1, 0, -1)))) +
   geom_bar(position = "fill", stat = "identity", width = 1) +
-  geom_line() +
   scale_x_continuous(breaks = seq(0, 48, 6)) +
   scale_fill_manual(values = rev(ideol_dist_pal[c(1,3,5)]),
                     name = NULL,
@@ -208,7 +240,7 @@ gg_ideoldisttime <- tweeter_scores %>%
              ncol = 1,
              labeller = labeller(article_fc_rating = label_veracity))
 gg_ideoldisttime
-ggsave(gg_ideoldisttime, filename = "output/timeseries/ideology_relative_tweeters.png", width = 120, height = 45, units = "mm", dpi = 400)
+ggsave(gg_ideoldisttime, filename = paste0(outpath, "ideology_relative_tweeters.png"), width = 120, height = 45, units = "mm", dpi = 400)
 
 
 ####################
@@ -241,7 +273,7 @@ gg_ideoltime <- tweeter_scores %>%
   facet_grid(article_fc_rating~article_lean,
              labeller = labeller(article_fc_rating = label_veracity))
 gg_ideoltime
-ggsave(gg_ideoltime, filename = "output/timeseries/ideology_tweeters.png", width = 120, height = 45, units = "mm", dpi = 400)
+ggsave(gg_ideoltime, filename = paste0(outpath,"ideology_tweeters.png"), width = 120, height = 45, units = "mm", dpi = 400)
 
 gg_ideoltime_raw <- tweeter_scores %>% 
   filter(article_fc_rating %in% c("FM", "T"),
@@ -259,7 +291,7 @@ gg_ideoltime_raw <- tweeter_scores %>%
   facet_grid(article_fc_rating~article_lean,
              labeller = labeller(article_fc_rating = label_veracity))
 gg_ideoltime_raw
-ggsave(gg_ideoltime_raw, filename = "output/timeseries/ideology_raw_tweeters.png", width = 90, height = 45, units = "mm", dpi = 400)
+ggsave(gg_ideoltime_raw, filename = paste0(outpath, "ideology_raw_tweeters.png"), width = 90, height = 45, units = "mm", dpi = 400)
 
 # Calculate average ideological distribution of tweeters over time, broken out by source and article veracity
 # Bin ideologies, filter out users without ideological scores, bin by hour
@@ -286,7 +318,9 @@ gg_ideoltimesource <- tweeter_scores %>%
   facet_grid(article_fc_rating~source_type,
              labeller = labeller(article_fc_rating = label_veracity))
 gg_ideoltimesource
-ggsave(gg_ideoltimesource, filename = "output/timeseries/ideology_tweeters_bysourceandveracity.png", width = 120, height = 45, units = "mm", dpi = 400)
+ggsave(gg_ideoltimesource, filename = paste0(outpath, "ideology_tweeters_bysourceandveracity.png"), width = 120, height = 45, units = "mm", dpi = 400)
+
+
 
 
 ############################## Plot time series of article exposure ##############################
@@ -294,20 +328,20 @@ ggsave(gg_ideoltimesource, filename = "output/timeseries/ideology_tweeters_bysou
 ####################
 # Load data
 ####################
-# TEMP: Load data and bind
-files <- list.files('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/timeseries/individual_articles/', full.names = TRUE)
-for (file in files) {
-  story_data <- read.csv(file) 
-  story_data <- story_data %>%
-    mutate(tweet_number = tweet_number+1) %>% 
-    # add dummy rows of pre-tweet data for plotting purposes
-    add_row(time = c(-2, -0.01), tweet_number = c(-1, 0), user_id = min(story_data$user_id), new_exposed_users = 0, cumulative_exposed = 0, total_article_number = unique(story_data$total_article_number))
-  if (!exists("exposure_data")) {
-    exposure_data <- story_data
-  } else {
-    exposure_data <- rbind(exposure_data, story_data)
-  }
-}
+# Load exposure data 
+exposure_data <- read.csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/timeseries/users_exposed_over_time.csv') %>% 
+  mutate(tweet_number = tweet_number+1) #python zero index
+
+# Create dummy rows of pre-tweet data for plotting purposes
+n_articles <- length(unique(exposure_data$total_article_number))
+dummy_exposure <- data.frame(time = rep(c(-2, -0.01), n_articles),
+                             tweet_number = rep(c(-1, 0), n_articles),
+                             user_id = rep(exposure_data$user_id[exposure_data$tweet_number == 1], each = 2),
+                             new_exposed_users = 0, 
+                             cumulative_exposed = 0, 
+                             total_article_number = rep(unique(exposure_data$total_article_number), each = 2)) 
+exposure_data <- rbind(exposure_data, dummy_exposure) %>% 
+  arrange(total_article_number,tweet_number)
 
 # Merge in relevant article level data
 article_data <- tweeter_scores %>% 
@@ -338,7 +372,7 @@ gg_exposuretime <- exposure_timeseries %>%
              strip.position = "right",
              labeller = labeller(article_fc_rating = label_veracity))
 gg_exposuretime
-ggsave(gg_exposuretime, filename = "output/timeseries/total_exposure.png", width = 90, height = 45, units = "mm", dpi = 400)
+ggsave(gg_exposuretime, filename = paste0(outpath, "total_exposure_time.png"), width = 90, height = 45, units = "mm", dpi = 400)
 
 # Percentiage of tweets per story
 gg_relexpostime <- exposure_timeseries %>% 
@@ -356,7 +390,30 @@ gg_relexpostime <- exposure_timeseries %>%
              strip.position = "right",
              labeller = labeller(article_fc_rating = label_veracity))
 gg_relexpostime
-ggsave(gg_relexpostime, filename = "output/timeseries/timeseries_percentageexposure.png", width = 90, height = 45, units = "mm", dpi = 400)
+ggsave(gg_relexpostime, filename = paste0(outpath, "percentag_eexposure_time.png"), width = 90, height = 45, units = "mm", dpi = 400)
+
+####################
+# Plot user exposed to stories by tweet number
+####################
+# Total cumulative exposed
+gg_exposuretweet <- exposure_timeseries %>% 
+  filter(article_fc_rating %in% c("T", "FM")) %>% 
+  ggplot(., aes(x = tweet_number, y = cumulative_exposed, group = total_article_number)) +
+  geom_step(size = 0.3, alpha = 0.5, color = line_color) +
+  # scale_y_log10() +
+  scale_y_continuous(breaks = c(10^seq(1, 7, 2)),
+                     labels = scales::trans_format("log10", scales::math_format(10^.x)),
+                     trans = scales::pseudo_log_trans(base = 10)) +
+  xlab("Tweet number") +
+  ylab("Log users exposed") +
+  theme_ctokita() +
+  theme(aspect.ratio = NULL) +
+  facet_wrap(~article_fc_rating, 
+             ncol = 1,
+             strip.position = "right",
+             labeller = labeller(article_fc_rating = label_veracity))
+gg_exposuretweet
+ggsave(gg_exposuretweet, filename = paste0(outpath, "total_exposure_tweetnumber.png"), width = 90, height = 45, units = "mm", dpi = 400)
 
 ####################
 # Plot time tweet number vs exposure
@@ -383,4 +440,7 @@ gg_expVnum <- exposure_vs_tweet %>%
              labeller = labeller(article_fc_rating = label_veracity),
              scales = "free_x")
 gg_expVnum
-ggsave(gg_expVnum, filename = "output/timeseries/tweetcount_vs_exposure.png", width = 50, height = 90, units = "mm", dpi = 400)
+ggsave(gg_expVnum, filename = paste0(outpath, "tweetcount_vs_exposure.png"), width = 50, height = 90, units = "mm", dpi = 400)
+
+
+
