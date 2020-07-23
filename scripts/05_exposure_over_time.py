@@ -86,8 +86,9 @@ if __name__ == '__main__':
 #    data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
     
     # Load tweet data, esnure in proper format
-    labeled_tweets = pd.read_csv(data_directory + "data_derived/ideological_scores/labeled_tweets.csv",
-                                 dtype = {'quoted_urls': object, 'quoted_urls_expanded': object}) #these two columns cause memory issues if not pre-specified dtype
+    labeled_tweets = pd.read_csv(data_directory + "data_derived/tweets/all_tweets_labeled.csv",
+                                 dtype = {'user_id': int,
+                                 'quoted_urls': object, 'quoted_urls_expanded': object}) #these two columns cause memory issues if not pre-specified dtype
     
     # Get unique articles
     unique_articles = labeled_tweets['total_article_number'].unique()
@@ -116,6 +117,7 @@ if __name__ == '__main__':
     article_files = os.listdir(data_directory + "data_derived/timeseries/individual_articles/")
     article_files = [file for file in article_files if re.match('^article', file)] #filter out hidden copies of same files
     for file in article_files:
-        story_exposed = pd.read_csv(data_directory + "data_derived/timeseries/individual_articles/" + file)
+        story_exposed = pd.read_csv(data_directory + "data_derived/timeseries/individual_articles/" + file,
+                                    dtype = {'user_id': int})
         exposed_timeseries = exposed_timeseries.append(story_exposed, sort = False)
     exposed_timeseries = exposed_timeseries.to_csv(data_directory + "data_derived/timeseries/users_exposed_over_time.csv", index = False)
