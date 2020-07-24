@@ -23,10 +23,10 @@ def clean_ideology_scores(scores):
 # Load, process, write data
 followers = pd.read_csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ideological_scores/unique_followers_excl_tweeters--with_scores.csv')
 followers_cleaned = clean_ideology_scores(followers)
-followers_cleaned.to_csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ideological_scores/cleaned_followers_ideology_scores.csv')
+followers_cleaned.to_csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ideological_scores/cleaned_followers_ideology_scores.csv', index = False)
 del followers, followers_cleaned
 
 friends = pd.read_csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ideological_scores/unique_friends_excl_tweeters--with_scores.csv')
 friends_cleaned = clean_ideology_scores(friends)
-friends_cleaned.to_csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ideological_scores/cleaned_friends_ideology_scores.csv')
+friends_cleaned.to_csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ideological_scores/cleaned_friends_ideology_scores.csv', index = False)
 del friends, friends_cleaned
