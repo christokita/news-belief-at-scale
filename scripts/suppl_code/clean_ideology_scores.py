@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Jul 24 12:36:49 2020
+
+@author: ChrisTokita
+"""
+
+import pandas as pd
+
+# Define function to clean the dataframes
+def clean_ideology_scores(scores):
+    # This function will intake the raw files as handed to me and will:
+    # (1) Remove the index column
+    # (2) Rename columns for consistency--user_id, accounts_followed, pablo_score
+    # (3) Drop rows that have NA values for the score, as to shrink the size of the data
+    
+    scores = scores.drop(columns = ['Unnamed: 0'])
+    scores = scores.rename(columns = {'0_norm': 'pablo_score'})
+    scores = scores.dropna(subset = ['pablo_score'])
+    return scores
+    
+# Load, process, write data
+followers = pd.read_csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ideological_scores/unique_followers_excl_tweeters--with_scores.csv')
+followers_cleaned = clean_ideology_scores(followers)
+followers_cleaned.to_csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ideological_scores/cleaned_followers_ideology_scores.csv')
+del followers, followers_cleaned
+
+friends = pd.read_csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ideological_scores/unique_friends_excl_tweeters--with_scores.csv')
+friends_cleaned = clean_ideology_scores(friends)
+friends_cleaned.to_csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ideological_scores/cleaned_friends_ideology_scores.csv')
+del friends, friends_cleaned
