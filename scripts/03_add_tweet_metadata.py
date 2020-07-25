@@ -18,8 +18,8 @@ import re
 import os
     
 # high level directory (external HD or cluster storage)
-data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster storage
-#data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
+#data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster storage
+data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
 
 
 ####################
@@ -63,9 +63,10 @@ article_ratings = article_ratings.drop(columns = ['daily article number', 'parti
                                                   'Unnamed: 10', 'Unnamed: 11'])
 
 # Merge in article and source info
-labeled_tweeters = tweets.merge(articles, how = 'left', on = 'total_article_number')
-labeled_tweeters = labeled_tweeters.merge(news_evaluations, how = 'left', on = 'total_article_number')
-labeled_tweeters = labeled_tweeters.merge(article_ratings, how = 'left', on = 'total_article_number')
+labeled_tweets = tweets.merge(articles, how = 'left', on = 'total_article_number')
+labeled_tweets = labeled_tweets.merge(news_evaluations, how = 'left', on = 'total_article_number')
+labeled_tweets = labeled_tweets.merge(article_ratings, how = 'left', on = 'total_article_number')
+
 
 ####################
 # Add user-level information
@@ -73,17 +74,10 @@ labeled_tweeters = labeled_tweeters.merge(article_ratings, how = 'left', on = 't
 # Load and prepare ideological scores
 ideological_scores = pd.read_csv(data_directory + "data_derived/ideological_scores/unique_tweeters_ideology_scores.csv")
 ideological_scores = ideological_scores.rename(columns = {'id_str': 'user_id', 'pablo_score': 'user_ideology'})
-ideological_scores['user_ideol_extremity'] = abs(ideological_scores['user_ideology'])
-
-# Create broad ideological categories: Liberal, Moderate, Conservative
-ideo_threshold = 1 #how far from zero is the cutoff for non-Moderates?
-ideological_scores.loc[ideological_scores.user_ideology < -ideo_threshold, 'user_ideol_category'] = -1 #liberal
-ideological_scores.loc[ideological_scores.user_ideology > ideo_threshold, 'user_ideol_category'] = 1 #conservative
-ideological_scores.loc[ideological_scores['user_ideology'].between(-ideo_threshold, ideo_threshold, inclusive = True), 'user_ideol_category'] = 0 #moderate
-
 
 # Merge in ideological scores
-labeled_tweeters = labeled_tweeters.merge(ideological_scores, how = 'left', on = 'user_id')
+labeled_tweets = labeled_tweets.merge(ideological_scores, how = 'left', on = 'user_id')
+
 
 ####################
 # Calculate missing ideologies for tweeters 
@@ -92,7 +86,7 @@ labeled_tweeters = labeled_tweeters.merge(ideological_scores, how = 'left', on =
 # We will calculate their ideology using a simple mean of their friends
 
 # Determine missing ideologies
-missing_ideologies = labeled_tweeters[['user_id', 'user_ideology']].drop_duplicates()
+missing_ideologies = labeled_tweets[['user_id', 'user_ideology']].drop_duplicates()
 missing_ideologies = missing_ideologies[pd.isna(missing_ideologies.user_ideology)]
 
 # Load friend ideology scores
@@ -100,11 +94,9 @@ friend_ideologies = pd.read_csv(data_directory + "data_derived/ideological_score
 
 # For each tweeter, calculate mean ideology of friends
 friend_files = os.listdir(data_directory + "data/friends/")
-#for i in np.arange(missing_ideologies.shape[0]):
-for i in np.arange(300):
+for user in missing_ideologies['user_id']:
 
     # Get user ID and load followers
-    user = missing_ideologies['user_id'].iloc[i]
     regex = re.compile(r"[0-9].*_%s.csv" % user)
     file = list(filter(regex.match, friend_files))
     
@@ -116,17 +108,30 @@ for i in np.arange(300):
             follower_list = np.genfromtxt(data_directory + "data/followers/" + file[0], dtype = int)
             follower_list = follower_list[1:len(follower_list)] #remove header, will raise error if empty
             friend_scores = friend_ideologies[friend_ideologies['user_id'].isin(follower_list)]
-            avg_score = np.mean(friend_scores['pablo_score'])
-            missing_ideologies['user_ideology'].iloc[i] = avg_score
+            missing_ideologies.loc[missing_ideologies.user_id == user, 'user_ideology'] =  np.mean(friend_scores['pablo_score'])
         except:
             next
     
 # Merge in new scores
-labeled_tweeters = labeled_tweeters.set_index('user_id').user_ideology.fillna(missing_ideologies.set_index('user_id').user_ideology).reset_index()
-labeled_tweeters['manual_ideology_score'] = labeled_tweeters['user_id'].isin(missing_ideologies['user_id'])
+labeled_tweets[['user_id', 'user_ideology']] = labeled_tweets.set_index('user_id').user_ideology.fillna(missing_ideologies.set_index('user_id').user_ideology).reset_index()
+labeled_tweets['manual_ideology_score'] = labeled_tweets['user_id'].isin(missing_ideologies['user_id'])
+
+
+####################
+# Calculate additional ideological metrics
+####################
+# Calculate ideological extremity
+labeled_tweets['user_ideol_extremity'] = abs(labeled_tweets['user_ideology'])
+
+# Create broad ideological categories: Liberal, Moderate, Conservative
+ideo_threshold = 1 #how far from zero is the cutoff for non-Moderates?
+labeled_tweets.loc[labeled_tweets.user_ideology < -ideo_threshold, 'user_ideol_category'] = -1 #liberal
+labeled_tweets.loc[labeled_tweets.user_ideology > ideo_threshold, 'user_ideol_category'] = 1 #conservative
+labeled_tweets.loc[labeled_tweets['user_ideology'].between(-ideo_threshold, ideo_threshold, inclusive = True), 'user_ideol_category'] = 0 #moderate
+
 
 ####################
 # Write to file
 ####################
 # Save
-labeled_tweeters.to_csv(data_directory + "data_derived/tweets/tweets_labeled.csv", index = False)
+labeled_tweets.to_csv(data_directory + "data_derived/tweets/tweets_labeled.csv", index = False)
