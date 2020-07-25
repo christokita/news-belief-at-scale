@@ -46,7 +46,7 @@ def simplify_link(link):
     return link
 
 # Load and parse tweets according to full and shortened URLs, assigning article number ID
-tweets = pd.read_csv(data_directory + "data_derived/tweets/parsed_tweets.csv")
+tweets = pd.read_csv(data_directory + "data_derived/tweets/tweets_parsed.csv")
 tweets = tweets.drop(['total_article_number'], axis=1, errors='ignore') #drop article ID column if it had previously been assigned
 tweets = tweets.join(pd.DataFrame(np.repeat(np.nan, tweets.shape[0]), columns = ['total_article_number']))
 for j in range(articles.shape[0]):

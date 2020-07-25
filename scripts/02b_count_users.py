@@ -36,7 +36,7 @@ outpath_friend_data = data_directory + "data_derived/friends/"
 # Count up tweeters
 ####################
 # Load tweets
-tweets = pd.read_csv(path_to_tweets + "parsed_tweets.csv")
+tweets = pd.read_csv(path_to_tweets + "tweets_parsed.csv")
     
 # Get user IDs of tweeters
 tweeters = tweets['user_id'].astype(int)

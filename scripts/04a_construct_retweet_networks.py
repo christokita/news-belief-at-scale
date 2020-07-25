@@ -207,7 +207,7 @@ if __name__ == '__main__':
 #    data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
     
     # Load tweet data, esnure in proper format
-    tweets = pd.read_csv(data_directory + "data_derived/tweets/all_tweets_labeled.csv",
+    tweets = pd.read_csv(data_directory + "data_derived/tweets/tweets_labeled.csv",
                          dtype = {'quoted_urls': object, 'quoted_urls_expanded': object, #these two columns cause memory issues if not pre-specified dtype
                                   'user_id': 'Int64', 'tweet_id': 'Int64', 
                                   'retweeted_user_id': 'Int64', 'retweet_id': 'Int64',
