@@ -4,6 +4,9 @@
 Created on Fri Jul 24 12:36:49 2020
 
 @author: ChrisTokita
+
+SCRIPT:
+Take in the ideology scores of followers/friends from SMAPP and format for use in this project.
 """
 
 import pandas as pd
