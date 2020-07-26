@@ -26,7 +26,11 @@ data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster stora
 # Add article-level information
 ####################
 # Load tweets
-tweets = pd.read_csv(data_directory + "data_derived/tweets/tweets_parsed.csv")
+tweets = pd.read_csv(data_directory + "data_derived/tweets/tweets_parsed.csv",
+                     dtype = {'quoted_urls': object, 'quoted_urls_expanded': object, #these two columns cause memory issues if not pre-specified dtype
+                              'user_id': 'Int64', 'tweet_id': 'Int64', 
+                              'retweeted_user_id': 'Int64', 'retweet_id': 'Int64',
+                              'quoted_user_id': 'Int64', 'quoted_id': 'Int64'})
 
 # Get source lean ratings
 articles = pd.read_csv(data_directory + "data/articles/daily_articles.csv")
