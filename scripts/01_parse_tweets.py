@@ -192,6 +192,9 @@ for file in json_files:
         tweet_data = copy.deepcopy(data)
     del data
 
+# Drop duplicate tweets (~5,800 discovered)
+tweet_data = tweet_data.drop_duplicates()
+
 # Save
 out_path = source_directory + "data_derived/tweets/" + save_file_name + ".csv"
 tweet_data.to_csv(out_path, index = False)
