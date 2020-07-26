@@ -18,7 +18,7 @@ source("scripts/_plot_themes/theme_ctokita.R")
 ####################
 # Paramters for analysis: paths to data, paths for output, and filename
 ####################
-tweeter_score_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/all_tweets_labeled.csv' #path to fitness cascade data
+tweet_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv' #path to fitness cascade data
 outpath <- 'output/timeseries/veracity/'
 
 # For labeling facet plots
@@ -44,7 +44,7 @@ ideol_dist_pal[3] <- "#e0e0e0"
 # Load data 
 ####################
 # Read in data, Calculate time since first sharing of the story
-tweeter_scores <- read.csv(tweeter_score_path, header = TRUE, colClasses = c("user_id"="character")) %>% 
+tweets <- read.csv(tweet_path, header = TRUE, colClasses = c("user_id"="character")) %>% 
   mutate(article_ideology = article_con_feel - article_lib_feel,
          tweet_time_text = tweet_time,
          tweet_time = as.POSIXct(tweet_time, format = "%a %b %d %H:%M:%S %z %Y")) %>% 
@@ -58,27 +58,27 @@ tweeter_scores <- read.csv(tweeter_score_path, header = TRUE, colClasses = c("us
 
 # Add dummy rows of pre-first share for plotting purposes
 # (1) Create empty dataframe for dummy rows
-n_articles <- length(unique(tweeter_scores$total_article_number)) #number of unique articles
-dummy_rows <- data.frame(matrix(NA, ncol = ncol(tweeter_scores), nrow = 2*n_articles))  #create empty dataframe
-names(dummy_rows) <- names(tweeter_scores) #give same column names
+n_articles <- length(unique(tweets$total_article_number)) #number of unique articles
+dummy_rows <- data.frame(matrix(NA, ncol = ncol(tweets), nrow = 2*n_articles))  #create empty dataframe
+names(dummy_rows) <- names(tweets) #give same column names
 # (2) Create unique set of article IDs and fact-check rating to add to our dummy rows
-unique_article_ratings <- tweeter_scores %>% 
+unique_article_ratings <- tweets %>% 
   select(source_type, source_lean, total_article_number, article_fc_rating) %>% 
   unique()
 # (3) Join together
-tweeter_scores <- dummy_rows %>% 
-  select(-article_fc_rating) %>% 
+tweets <- dummy_rows %>% 
+  select(-article_fc_rating, -source_type, -source_lean) %>% 
   mutate(relative_tweet_time = rep(c(-2, -0.01), n_articles),
-         tweet_number = 0,
+         tweet_number = rep(c(-1, 0), n_articles),
          relative_tweet_count = 0,
-         total_article_number = rep(unique(tweeter_scores$total_article_number), each = 2)) %>% 
-  merge(., unique_article_ratings) %>% 
-  rbind(tweeter_scores, .) %>% 
+         total_article_number = rep(unique(tweets$total_article_number), each = 2)) %>% 
+  merge(unique_article_ratings, by = "total_article_number") %>% 
+  rbind(tweets, .) %>% 
   mutate(hour_bin = cut(relative_tweet_time, breaks = seq(-2, 50, 1), include.lowest = TRUE, right = FALSE, labels = seq(-2, 49))) %>%  #bin by hour tweet appeared
   mutate(hour_bin = as.numeric(as.character(hour_bin))) #convert from factor to plain number
   
 # Calculate new tweets per hour
-tweet_perhour <- tweeter_scores %>% 
+tweet_perhour <- tweets %>% 
   group_by(article_fc_rating, total_article_number, hour_bin) %>% 
   count(.)
 tweet_perhour$n[tweet_perhour$hour_bin %in% c(-2, -1)] <- 0 #zero out the count of dummy rows
@@ -103,7 +103,7 @@ gg_tweettime <- tweet_perhour %>%
 gg_tweettime
 
 # cumulative tweets
-gg_totaltweets <- tweeter_scores %>% 
+gg_totaltweets <- tweets %>% 
   filter(article_fc_rating %in% c("T", "FM")) %>% 
   ggplot(., aes(x = relative_tweet_time, y = tweet_number, group = total_article_number)) +
   geom_vline(aes(xintercept = 24), 
@@ -128,7 +128,7 @@ gg_totaltweets
 ggsave(gg_totaltweets, filename = paste0(outpath,"total_tweetcount_time.png"), width = 90, height = 45, units = "mm", dpi = 400)
 
 # Percentiage of tweets per story
-gg_perctweets <- tweeter_scores %>% 
+gg_perctweets <- tweets %>% 
   filter(article_fc_rating %in% c("T", "FM")) %>% 
   ggplot(., aes(x = relative_tweet_time, y = relative_tweet_count, group = total_article_number)) +
   geom_vline(aes(xintercept = 24), 
@@ -153,7 +153,7 @@ ggsave(gg_perctweets, filename = paste0(outpath, "percentage_story_tweets.png"),
 ####################
 percentile <- 0.5
   
-gg_saturationcount <- tweeter_scores %>% 
+gg_saturationcount <- tweets %>% 
   filter(relative_tweet_count >= percentile,
          article_fc_rating %in% c("T", "FM")) %>% 
   group_by(total_article_number) %>% 
@@ -173,7 +173,7 @@ ggsave(gg_saturationcount, filename = paste0(outpath, "story_saturation", percen
 ####################
 # Plot new vs retweets over time
 ####################
-gg_tweetype <- tweeter_scores %>% 
+gg_tweetype <- tweets %>% 
   # data processing
   filter(hour_bin >= 0,
          article_fc_rating %in% c("T", "FM")) %>% 
@@ -208,7 +208,7 @@ ggsave(gg_tweetype, filename = paste0(outpath, "percentRT.png"), width = 55, hei
 ####################
 # Calculate distance between ideological category of user and article
 # Filter out users without ideological scores, bin by hour
-gg_ideoldisttime <- tweeter_scores %>% 
+gg_ideoldisttime <- tweets %>% 
   #data processing
   filter(!is.na(user_ideology)) %>% 
   mutate(article_ideol_category = ifelse(article_lean == "L", -1, ifelse(article_lean == "C", 1, 0))) %>% 
@@ -248,7 +248,7 @@ ggsave(gg_ideoldisttime, filename = paste0(outpath, "ideology_relative_tweeters.
 ####################
 # Calculate average ideological distribution of tweeters over time
 # Bin ideologies, filter out users without ideological scores, bin by hour
-gg_ideoltime <- tweeter_scores %>% 
+gg_ideoltime <- tweets %>% 
   #data processing
   filter(!is.na(user_ideology)) %>% 
   mutate(ideol_bin = cut(user_ideology, breaks = c(-6, -1, 1, 6), labels = c(-1, 0, 1), right = FALSE, include.lowest = TRUE)) %>%
@@ -261,7 +261,7 @@ gg_ideoltime <- tweeter_scores %>%
   # graph
   ggplot(., aes(x = hour_bin, y = freq_ideol_bin, fill = factor(ideol_bin, levels = c(1, 0, -1)))) +
   geom_bar(position = "fill", stat = "identity", width = 1) +
-  scale_x_continuous(breaks = seq(0, 48, 6), limits = c(-1, 32)) +
+  scale_x_continuous(breaks = seq(0, 48, 12)) +
   scale_fill_manual(values = rev(ideol_pal[c(1,3,5)]),
                     name = "User ideology",
                     labels = c("Conservative", "Moderate", "Liberal")) +
@@ -275,7 +275,7 @@ gg_ideoltime <- tweeter_scores %>%
 gg_ideoltime
 ggsave(gg_ideoltime, filename = paste0(outpath,"ideology_tweeters.png"), width = 120, height = 45, units = "mm", dpi = 400)
 
-gg_ideoltime_raw <- tweeter_scores %>% 
+gg_ideoltime_raw <- tweets %>% 
   filter(article_fc_rating %in% c("FM", "T"),
          !is.na(user_ideology)) %>%
   ggplot(., aes(x = relative_tweet_time, y = user_ideology, color = user_ideology)) +
@@ -295,7 +295,7 @@ ggsave(gg_ideoltime_raw, filename = paste0(outpath, "ideology_raw_tweeters.png")
 
 # Calculate average ideological distribution of tweeters over time, broken out by source and article veracity
 # Bin ideologies, filter out users without ideological scores, bin by hour
-gg_ideoltimesource <- tweeter_scores %>% 
+gg_ideoltimesource <- tweets %>% 
   filter(!is.na(user_ideology),
          article_fc_rating %in% c("FM", "T")) %>% 
   mutate(ideol_bin = cut(user_ideology, breaks = c(-6, -1, 1, 6), labels = c(-1, 0, 1), right = FALSE, include.lowest = TRUE)) %>%
@@ -306,7 +306,7 @@ gg_ideoltimesource <- tweeter_scores %>%
   summarise(freq_ideol_bin = mean(freq_ideol_bin)) %>% 
   ggplot(., aes(x = hour_bin, y = freq_ideol_bin, fill = factor(ideol_bin, levels = c(1, 0, -1)))) +
   geom_bar(position = "fill", stat = "identity", width = 1) +
-  scale_x_continuous(breaks = seq(0, 48, 6), limits = c(-1, 32)) +
+  scale_x_continuous(breaks = seq(0, 48, 12)) +
   scale_fill_manual(values = rev(ideol_pal[c(1,3,5)]),
                     name = "User ideology",
                     labels = c("Conservative", "Moderate", "Liberal")) +
@@ -344,7 +344,7 @@ exposure_data <- rbind(exposure_data, dummy_exposure) %>%
   arrange(total_article_number,tweet_number)
 
 # Merge in relevant article level data
-article_data <- tweeter_scores %>% 
+article_data <- tweets %>% 
   select(user_id, total_article_number, source_lean, article_fc_rating, article_lean, user_ideology, article_ideology) 
 exposure_timeseries <- merge(exposure_data, article_data, by = c("user_id", "total_article_number"), all = TRUE) %>% 
   group_by(total_article_number) %>% 
@@ -420,7 +420,7 @@ ggsave(gg_exposuretweet, filename = paste0(outpath, "total_exposed_tweetnumber.p
 # Plot time tweet number vs exposure
 ####################
 # Merge data to create relevant dataset
-exposure_vs_tweet <- tweeter_scores %>% 
+exposure_vs_tweet <- tweets %>% 
   select(total_article_number, tweet_number, relative_tweet_count) %>% 
   merge(exposure_timeseries, ., all.x = TRUE)
 
