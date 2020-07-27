@@ -46,15 +46,62 @@ unmatched = unmatched.drop_duplicates() #duplicate tweets from previous version 
 good_matches = good_matches.merge(unmatched.drop(columns = ['total_article_number']), on = ['tweet_text', 'user_id']) #NOTE: this doesn't match all tweets as of now
 good_matches = good_matches[['tweet_id', 'total_article_number']]
 
-# Load labeled tweets, which already have metadata attached
+# Load labeled tweets, which already have metadata attached, and add in article IDs for good fuzzy-matched articles
 tweets = pd.read_csv(data_directory + "data_derived/tweets/tweets_labeled.csv",
                      dtype = {'quoted_urls': object, 'quoted_urls_expanded': object, #these two columns cause memory issues if not pre-specified dtype
                               'user_id': 'Int64', 'tweet_id': 'Int64', 
                               'retweeted_user_id': 'Int64', 'retweet_id': 'Int64',
                               'quoted_user_id': 'Int64', 'quoted_id': 'Int64'}) 
-
-# Add in article IDs for good fuzzy-matched articles and save!
 tweets[['tweet_id', 'total_article_number']] = tweets.set_index('tweet_id').total_article_number.fillna(good_matches.set_index('tweet_id').total_article_number).reset_index()
+articles = pd.read_csv(data_directory + 'data/articles/daily_articles.csv')
+articles = articles.rename(columns = {'total article number': 'total_article_number'})
+
+# Load metadata for articles
+articles = pd.read_csv(data_directory + "data/articles/daily_articles.csv")
+articles = articles.rename(columns = {'total article number': 'total_article_number'})
+articles['source_lean'] = articles['source'].str.replace('rss_|ct_', '')
+lean_dict = {'con': 'C', 'lib': 'L', 'unclear': 'U'}
+articles['source_lean'] = articles['source_lean'].map(lean_dict)
+articles['source_type'] = articles['source'].str.replace('_con|_lib|_unclear', '')
+articles['source_type'] = articles['source_type'].str.replace('rss', 'fringe')
+articles['source_type'] = articles['source_type'].str.replace('ct', 'mainstream')
+articles = articles[['total_article_number', 'source_lean', 'source_type']]
+
+news_evaluations = pd.read_csv(data_directory + "data/articles/evaluations.csv")
+news_evaluations = news_evaluations.rename(columns = {'article_num': 'total_article_number',
+                                                      'mode of FC': 'article_fc_rating'})
+news_evaluations = news_evaluations[['total_article_number', 'article_fc_rating']]
+news_evaluations = news_evaluations.dropna()
+
+article_ratings = pd.read_csv(data_directory + "data/articles/article_level.csv")
+article_ratings = article_ratings.rename(columns = {'article_num': 'total_article_number', 
+                                                    'main_tag': 'article_main_tag',
+                                                    'lean': 'article_lean',
+                                                    'other_tags': 'article_other_tags',
+                                                    'con_feel': 'article_con_feel',
+                                                    'lib_feel': 'article_lib_feel'})
+article_ratings = article_ratings.drop(columns = ['daily article number', 'partisan_diff', 
+                                                  'Unnamed: 8', 'Unnamed: 9', 
+                                                  'Unnamed: 10', 'Unnamed: 11'])
+# Function to add metadata
+def update_tweet_article_metadata(manually_matched_tweets, all_tweets, article_data):
+    cols_of_interest = ['source_lean', 'source_type', 'article_fc_rating', 'article_main_tag', 'article_other_tags', 'article_lean', 'article_con_feel', 'article_lib_feel']
+    articles_to_add_metadata = manually_matched_tweets['total_article_number'].unique()
+    for article_num in articles_to_add_metadata:
+        which_rows = all_tweets['tweet_id'].isin(manually_matched_tweets['tweet_id']) & (all_tweets['total_article_number'] == article_num)
+        metadata = article_data[article_data['total_article_number'] == article_num]
+        metadata = metadata[cols_of_interest]
+        all_tweets.loc[which_rows, cols_of_interest] = metadata.values
+    return all_tweets
+    
+# Add metadata for newly matched articles
+article_metadata = articles.merge(news_evaluations, on = 'total_article_number')
+article_metadata = article_metadata.merge(article_ratings, on = 'total_article_number')
+tweets =  update_tweet_article_metadata(manually_matched_tweets = good_matches, 
+                                        all_tweets = tweets, 
+                                        article_data = article_metadata)
+
+# Save
 tweets['manual_article_assignment'] = False
 tweets.loc[tweets['tweet_id'].isin(good_matches.tweet_id), 'manual_article_assignment'] = True
 tweets.to_csv(data_directory + "data_derived/tweets/tweets_labeled.csv", index = False)
@@ -169,10 +216,15 @@ for j in range(confirmed_matches.shape[0]):
     article_id = confirmed_matches['total_article_number'].iloc[j]
     still_unmatched.loc[has_link, 'total_article_number'] = article_id
     
-# Merge in and save!
+# Merge in and add metadata
 round2_matched = still_unmatched[~pd.isna(still_unmatched['total_article_number'])]
 tweets[['tweet_id', 'total_article_number']] = tweets.set_index('tweet_id').total_article_number.fillna(round2_matched.set_index('tweet_id').total_article_number).reset_index()
 tweets.loc[tweets['tweet_id'].isin(round2_matched.tweet_id), 'manual_article_assignment'] = True
+tweets =  update_tweet_article_metadata(manually_matched_tweets = round2_matched, 
+                                        all_tweets = tweets, 
+                                        article_data = article_metadata)
+
+# Save!
 tweets.to_csv(data_directory + "data_derived/tweets/tweets_labeled.csv", index = False)
 
 
