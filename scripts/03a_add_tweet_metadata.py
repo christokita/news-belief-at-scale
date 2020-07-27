@@ -27,7 +27,7 @@ data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster stora
 # Load articles dataset to get their URLs
 articles = pd.read_csv(data_directory + "data/articles/daily_articles.csv")
 
-# Function to clean up links for better matching
+# Function to clean up article links in our dataset for better matching
 def simplify_link(link):
     if not pd.isnull(link):
         link = re.sub('http.*//', '', link)

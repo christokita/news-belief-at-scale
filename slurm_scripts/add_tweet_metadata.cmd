@@ -9,4 +9,4 @@
 ##Load anaconda python packages
 module load anaconda3 
 ##Run script
-srun python3 scripts/03_add_tweet_metadata.py
+srun python3 scripts/03a_add_tweet_metadata.py

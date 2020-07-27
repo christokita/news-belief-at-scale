@@ -1,0 +1,182 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Jul 26 12:11:34 2020
+
+@author: ChrisTokita
+
+Script:
+Add in missing article IDs to tweets that were not matched in the first pass.
+"""
+
+import pandas as pd
+import re
+import numpy as np
+import requests
+from bs4 import BeautifulSoup
+from fuzzywuzzy import fuzz
+
+# high level directory (external HD or cluster storage)
+#data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster storage
+data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
+
+
+####################
+# Step 1: Add in tweets with good fuzzy match score to headline in our article set
+####################
+"""
+This fuzzy matching was carried out by Will Godel
+The text of a tweet was compared with the headline of the article, as listed in our dataset.
+After manually checking these matches, it appears that all headlines with scores >=87 are good matches.
+"""
+
+# Load fuzzy match scores, filter to good match scores
+fuzzy_matches = pd.read_csv(data_directory + '/data_derived/tweets/noarticleID_tweets_with_score.csv',
+                            dtype ={'user_id': 'Int64'})
+fuzzy_matches = fuzzy_matches.drop_duplicates()
+fuzzy_matches = fuzzy_matches.rename(columns = {'total article number': 'total_article_number'})
+good_matches = fuzzy_matches[fuzzy_matches.fuzzy_score >= 87]
+good_matches = good_matches[['tweets', 'user_id', 'total_article_number']].drop_duplicates() #duplicate tweets from previous version of tweets_parsed that had duplicates
+good_matches = good_matches.rename(columns = {'tweets': 'tweet_text'})
+
+# Load originally unmatched articles, merge with good_matches to get proper tweet_id
+unmatched = pd.read_csv(data_directory + '/data_derived/tweets/noarticleID_tweets.csv',
+                            dtype = {'user_id': 'Int64'})
+unmatched = unmatched.drop_duplicates() #duplicate tweets from previous version of tweets_parsed that had duplicates
+good_matches = good_matches.merge(unmatched.drop(columns = ['total_article_number']), on = ['tweet_text', 'user_id']) #NOTE: this doesn't match all tweets as of now
+good_matches = good_matches[['tweet_id', 'total_article_number']]
+
+# Load labeled tweets, which already have metadata attached
+tweets = pd.read_csv(data_directory + "data_derived/tweets/tweets_labeled.csv",
+                     dtype = {'quoted_urls': object, 'quoted_urls_expanded': object, #these two columns cause memory issues if not pre-specified dtype
+                              'user_id': 'Int64', 'tweet_id': 'Int64', 
+                              'retweeted_user_id': 'Int64', 'retweet_id': 'Int64',
+                              'quoted_user_id': 'Int64', 'quoted_id': 'Int64'}) 
+
+# Add in article IDs for good fuzzy-matched articles and save!
+tweets[['tweet_id', 'total_article_number']] = tweets.set_index('tweet_id').total_article_number.fillna(good_matches.set_index('tweet_id').total_article_number).reset_index()
+tweets['manual_article_assignment'] = False
+tweets.loc[tweets['tweet_id'].isin(good_matches.tweet_id), 'manual_article_assignment'] = True
+tweets.to_csv(data_directory + "data_derived/tweets/tweets_labeled.csv", index = False)
+
+####################
+# Step 2: Get list of unique URLs and try to match headline from fetched URL to headline in dataset
+####################
+# Load labeled tweets, which already have metadata attached
+tweets = pd.read_csv(data_directory + "data_derived/tweets/tweets_labeled.csv",
+                     dtype = {'quoted_urls': object, 'quoted_urls_expanded': object, #these two columns cause memory issues if not pre-specified dtype
+                              'user_id': 'Int64', 'tweet_id': 'Int64', 
+                              'retweeted_user_id': 'Int64', 'retweet_id': 'Int64',
+                              'quoted_user_id': 'Int64', 'quoted_id': 'Int64'}) 
+
+########## Pre-manual confirmation ##########
+
+# Function to clean up links for better matching
+def simplify_link(link):
+    if not pd.isnull(link):
+        link = re.sub('http.*//', '', link)
+        link = re.sub('^www\.', '', link)
+        link = re.sub('\?.*$', '', link)
+        link = re.sub('/$', '', link)
+    return link
+
+# Get list of URLs,
+still_unmatched = unmatched[~unmatched['tweet_id'].isin(good_matches['tweet_id'])]
+unique_unmatched_urls = still_unmatched['urls_expanded'].str.split(',').tolist()
+unique_unmatched_urls = pd.DataFrame(unique_unmatched_urls).stack()
+umatched_quoted_urls = still_unmatched['quoted_urls_expanded'].str.split(',').tolist()
+umatched_quoted_urls = [x for x in umatched_quoted_urls if str(x) != 'nan']
+umatched_quoted_urls = pd.DataFrame(umatched_quoted_urls).stack()
+unique_unmatched_urls = unique_unmatched_urls.append(umatched_quoted_urls)
+
+# Clean, count unique URLs
+for i in range(len(unique_unmatched_urls)):
+    unique_unmatched_urls.iloc[i] = simplify_link(unique_unmatched_urls.iloc[i])
+unique_unmatched_urls = pd.DataFrame(unique_unmatched_urls.value_counts().reset_index())
+unique_unmatched_urls.columns = ['urls_expanded', 'count']
+
+# Function to fetch headline from URL
+def fetch_headline(url):
+    try:
+        url_request = requests.get("http://" + url,  timeout = 10)
+        contents = BeautifulSoup(url_request.text)
+        headline = contents.find('title')
+        headline = headline.text
+        if headline == '403 - Forbidden':
+           headline = '' 
+    except:
+        headline = ''
+    return headline
+    
+# Get headlines
+headlines = np.array([])  
+for url in unique_unmatched_urls['urls_expanded']:
+    headline = fetch_headline(url)
+    headlines = np.append(headlines, headline)
+unique_unmatched_urls['fetched_headline'] = headlines
+    
+# Function to compute best match headline in fuzzy match
+def best_fuzzy_match(headline, articles):
+    best_match_score = 0
+    best_match_headline = None
+    best_match_articleID = None
+    for j in range(articles.shape[0]):
+        text = articles.headline[j]
+        match_score = fuzz.ratio(headline, text)
+        if match_score > best_match_score:
+            best_match_score = match_score
+            best_match_headline = articles.headline[j]
+            best_match_articleID = articles.total_article_number[j]
+    return best_match_score, best_match_headline, best_match_articleID
+
+# Match up to headlines with fuzzy match
+articles = pd.read_csv(data_directory + 'data/articles/daily_articles.csv')
+articles = articles.rename(columns = {'total article number': 'total_article_number'})
+unique_unmatched_urls['fuzzy_match_score'] = np.nan
+unique_unmatched_urls['matched_headline'] = np.nan
+unique_unmatched_urls['total_article_number'] = np.nan
+
+for headline in unique_unmatched_urls['fetched_headline']:
+    if pd.isna(headline):
+        continue
+    which_row = unique_unmatched_urls['fetched_headline'] == headline
+    score, matched, articledID = best_fuzzy_match(headline = headline, articles = articles)
+    unique_unmatched_urls.loc[which_row, 'fuzzy_match_score'] = score
+    unique_unmatched_urls.loc[which_row, 'matched_headline'] = matched
+    unique_unmatched_urls.loc[which_row, 'total_article_number'] = articledID
+    
+# Output for manual confirmation
+unique_unmatched_urls['good_match'] = False
+unique_unmatched_urls.loc[unique_unmatched_urls['fuzzy_match_score'] >= 49, 'good_match'] = True #these appear to be good matches    
+unique_unmatched_urls.to_csv(data_directory + 'data_derived/articles/unique_unmatched_urls.csv', index = False)
+
+
+########## Post-manual confirmation ##########
+
+# Take in mannually confirmed matches, account for manual edits to article assignment
+# T/F good match was changed for one article about Caroll Spinney
+checked_unmatched_urls = pd.read_csv(data_directory + 'data_derived/articles/manuallyconfirmed_unmatched_urls.csv') 
+checked_unmatched_urls.loc[~pd.isna(checked_unmatched_urls['manual_matched_ID']), 'total_article_number'] = checked_unmatched_urls.loc[~pd.isna(checked_unmatched_urls['manual_matched_ID']), 'manual_matched_ID']
+
+# Filter to good matches and assign article ID
+confirmed_matches =  checked_unmatched_urls[checked_unmatched_urls['good_match'] == True]
+for j in range(confirmed_matches.shape[0]):
+    # Prep links for pattern matching
+    link = confirmed_matches['urls_expanded'].iloc[j]
+    # Search through URLS
+    has_link = still_unmatched['urls_expanded'].str.contains(link, na = False) | tweets['quoted_urls_expanded'].str.contains(link, na = False)
+    # Assign article number ID
+    article_id = confirmed_matches['total_article_number'].iloc[j]
+    still_unmatched.loc[has_link, 'total_article_number'] = article_id
+    
+# Merge in and save!
+round2_matched = still_unmatched[~pd.isna(still_unmatched['total_article_number'])]
+tweets[['tweet_id', 'total_article_number']] = tweets.set_index('tweet_id').total_article_number.fillna(round2_matched.set_index('tweet_id').total_article_number).reset_index()
+tweets.loc[tweets['tweet_id'].isin(round2_matched.tweet_id), 'manual_article_assignment'] = True
+tweets.to_csv(data_directory + "data_derived/tweets/tweets_labeled.csv", index = False)
+
+
+####################
+# Step 3: Output list of unique unmathed URLs, manually tag each, and use this set to 
+####################
+unique_unmatched_urls = pd.read_csv(data_directory + 'data_derived/articles/unique_unmatched_urls.csv')
