@@ -31,53 +31,9 @@ i = int(sys.argv[1]) # get which chunk of the
 data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/"
 
 ####################
-# Parse articles to assign article number to tweet and filter to fake news tweets
+# load data
 ####################
-# Load articles dataset to get their URLs
-articles = pd.read_csv(data_directory + "data/articles/daily_articles.csv")
-
-# Function to clean up links for better matching
-def simplify_link(link):
-    if not pd.isnull(link):
-        link = re.sub('http.*//', '', link)
-        link = re.sub('^www\.', '', link)
-        link = re.sub('\?.*$', '', link)
-        link = re.sub('/$', '', link)
-    return link
-
-# Load and parse tweets according to full and shortened URLs, assigning article number ID
 tweets = pd.read_csv(data_directory + "data_derived/tweets/tweets_parsed.csv")
-tweets = tweets.drop(['total_article_number'], axis=1, errors='ignore') #drop article ID column if it had previously been assigned
-tweets = tweets.join(pd.DataFrame(np.repeat(np.nan, tweets.shape[0]), columns = ['total_article_number']))
-for j in range(articles.shape[0]):
-    # Prep links for pattern matching
-    link = simplify_link( articles['link'].iloc[j] )
-    shortlink = simplify_link( articles['short link'].iloc[j] )
-    # Search through URLS
-    has_full_link = tweets['urls_expanded'].str.contains(link, na = False) | tweets['quoted_urls_expanded'].str.contains(link, na = False)
-    if not pd.isna(shortlink):
-        has_short_link_main = tweets['urls_expanded'].str.contains(shortlink, na = False) | tweets['urls'].str.contains(shortlink, na = False)
-        has_short_link_quoted = tweets['quoted_urls_expanded'].str.contains(shortlink, na = False) | tweets['quoted_urls'].str.contains(shortlink, na = False)
-        has_short_link = has_short_link_main | has_short_link_quoted
-    elif pd.isna(shortlink):
-        has_short_link = pd.Series(np.repeat(False, tweets.shape[0])) #if shortlink is nan
-    has_link = has_full_link | has_short_link #boolean operator to find which indices have one of the two possible links
-    # Assign article number ID
-    tweets.loc[has_link, 'total_article_number'] = articles['total article number'].iloc[j]
-    
-# To prevent too many read/writes, only if the first batch of this code:
-if i == 0:
-    #write tweets with article number ID
-    tweets.to_csv(data_directory + "data_derived/tweets/parsed_tweets.csv", index = False)
-    # find and save tweets without article IDs
-    missing_ids = tweets[pd.isnull(tweets['total_article_number'])]
-    if missing_ids.shape[0] > 0:
-        missing_article_ids = [x  for x in  np.arange(1, 166) if x not in np.unique(tweets['total_article_number'])]
-        missing_articles = articles[articles['total article number'].isin(missing_article_ids)]
-        missing_articles.to_csv(data_directory + "data_derived/articles/articles_notfoundintweets.csv", index = False)
-        missing_ids.to_csv(data_directory + "data_derived/tweets/noarticleID_tweets.csv", index = False)
-     
-# Get user IDs of tweeters of articles 
 tweeters = tweets['user_id']
 
 ####################
