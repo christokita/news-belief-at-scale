@@ -148,13 +148,14 @@ ggsave(gg_perctweets, filename = paste0(outpath, "percentage_story_tweets.png"),
 ####################
 # Plot saturation time of stories
 ####################
-percentile <- 0.8
+percentile <- 0.5
   
-gg_saturationcount <- tweets %>% 
+percentile_data <- tweets %>% 
   filter(relative_tweet_count >= percentile) %>% 
   group_by(total_article_number) %>% 
-  filter(relative_tweet_count == min(relative_tweet_count)) %>% 
-  ggplot(., aes(x = relative_tweet_time)) +
+  filter(relative_tweet_count == min(relative_tweet_count)) 
+
+gg_saturationcount <- ggplot(percentile_data, aes(x = relative_tweet_time)) +
   geom_histogram(aes(y = stat(density)), binwidth = 2, color = 'white', fill = line_color) +
   xlab(paste0("Time to ", percentile*100, "% sharing saturation (hrs.)")) +
   theme_ctokita() +
@@ -165,6 +166,7 @@ gg_saturationcount <- tweets %>%
 gg_saturationcount
 ggsave(gg_saturationcount, filename = paste0(outpath, "story_saturation", percentile*100, ".png"), width = 55, height = 90, units = "mm", dpi = 400)
 
+t.test(relative_tweet_time~source_type, data = percentile_data)
 
 ####################
 # Plot new vs retweets over time
