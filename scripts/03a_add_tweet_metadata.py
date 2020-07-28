@@ -39,9 +39,9 @@ def simplify_link(link):
 # Load and parse tweets according to full and shortened URLs, assigning article number ID
 tweets = pd.read_csv(data_directory + "data_derived/tweets/tweets_parsed.csv",
                      dtype = {'quoted_urls': object, 'quoted_urls_expanded': object, #these two columns cause memory issues if not pre-specified dtype
-                              'user_id': 'Int64', 'tweet_id': 'Int64', 
-                              'retweeted_user_id': 'Int64', 'retweet_id': 'Int64',
-                              'quoted_user_id': 'Int64', 'quoted_id': 'Int64'})
+                              'user_id': object, 'tweet_id': object, 
+                              'retweeted_user_id': object, 'retweet_id': object,
+                              'quoted_user_id': object, 'quoted_id': object})
 tweets = tweets.drop(['total_article_number'], axis=1, errors='ignore') #drop article ID column if it had previously been assigned
 tweets = tweets.join(pd.DataFrame(np.repeat(np.nan, tweets.shape[0]), columns = ['total_article_number']))
 for j in range(articles.shape[0]):
@@ -116,7 +116,8 @@ labeled_tweets = labeled_tweets.merge(article_ratings, how = 'left', on = 'total
 # Add user-level information
 ####################
 # Load and prepare ideological scores
-ideological_scores = pd.read_csv(data_directory + "data_derived/ideological_scores/unique_tweeters_ideology_scores.csv")
+ideological_scores = pd.read_csv(data_directory + "data_derived/ideological_scores/unique_tweeters_ideology_scores.csv",
+                                 dtype = {'id_str': object})
 ideological_scores = ideological_scores.rename(columns = {'id_str': 'user_id', 'pablo_score': 'user_ideology'})
 
 # Merge in ideological scores
@@ -134,7 +135,8 @@ missing_ideologies = labeled_tweets[['user_id', 'user_ideology']].drop_duplicate
 missing_ideologies = missing_ideologies[pd.isna(missing_ideologies.user_ideology)]
 
 # Load friend ideology scores
-friend_ideologies = pd.read_csv(data_directory + "data_derived/ideological_scores/cleaned_friends_ideology_scores.csv")
+friend_ideologies = pd.read_csv(data_directory + "data_derived/ideological_scores/cleaned_friends_ideology_scores.csv",
+                                dtype = {'user_id': object})
 
 # For each tweeter, calculate mean ideology of friends
 friend_files = os.listdir(data_directory + "data/friends/")
@@ -149,7 +151,7 @@ for user in missing_ideologies['user_id']:
             next
     else:
         try:
-            follower_list = np.genfromtxt(data_directory + "data/followers/" + file[0], dtype = int)
+            follower_list = np.genfromtxt(data_directory + "data/followers/" + file[0], dtype = object)
             follower_list = follower_list[1:len(follower_list)] #remove header, will raise error if empty
             friend_scores = friend_ideologies[friend_ideologies['user_id'].isin(follower_list)]
             missing_ideologies.loc[missing_ideologies.user_id == user, 'user_ideology'] =  np.mean(friend_scores['pablo_score'])

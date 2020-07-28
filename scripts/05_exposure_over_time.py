@@ -88,9 +88,9 @@ if __name__ == '__main__':
     # Load tweet data, esnure in proper format
     labeled_tweets = pd.read_csv(data_directory + "data_derived/tweets/tweets_labeled.csv",
                                  dtype = {'quoted_urls': object, 'quoted_urls_expanded': object, #these two columns cause memory issues if not pre-specified dtype
-                                          'user_id': 'Int64', 'tweet_id': 'Int64', 
-                                          'retweeted_user_id': 'Int64', 'retweet_id': 'Int64',
-                                          'quoted_user_id': 'Int64', 'quoted_id': 'Int64'})
+                                          'user_id': object, 'tweet_id': object, 
+                                          'retweeted_user_id': object, 'retweet_id': object,
+                                          'quoted_user_id': object, 'quoted_id': object})
     
     # Get unique articles
     unique_articles = labeled_tweets['total_article_number'].unique()

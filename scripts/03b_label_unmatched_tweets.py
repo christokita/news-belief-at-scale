@@ -32,7 +32,7 @@ After manually checking these matches, it appears that all headlines with scores
 
 # Load fuzzy match scores, filter to good match scores
 fuzzy_matches = pd.read_csv(data_directory + '/data_derived/tweets/noarticleID_tweets_with_score.csv',
-                            dtype ={'user_id': 'Int64'})
+                            dtype ={'user_id': object})
 fuzzy_matches = fuzzy_matches.drop_duplicates()
 fuzzy_matches = fuzzy_matches.rename(columns = {'total article number': 'total_article_number'})
 good_matches = fuzzy_matches[fuzzy_matches.fuzzy_score >= 87]
@@ -41,7 +41,7 @@ good_matches = good_matches.rename(columns = {'tweets': 'tweet_text'})
 
 # Load originally unmatched articles, merge with good_matches to get proper tweet_id
 unmatched = pd.read_csv(data_directory + '/data_derived/tweets/noarticleID_tweets.csv',
-                            dtype = {'user_id': 'Int64'})
+                            dtype = {'user_id': object})
 unmatched = unmatched.drop_duplicates() #duplicate tweets from previous version of tweets_parsed that had duplicates
 good_matches = good_matches.merge(unmatched.drop(columns = ['total_article_number']), on = ['tweet_text', 'user_id']) #NOTE: this doesn't match all tweets as of now
 good_matches = good_matches[['tweet_id', 'total_article_number']]
@@ -49,9 +49,9 @@ good_matches = good_matches[['tweet_id', 'total_article_number']]
 # Load labeled tweets, which already have metadata attached, and add in article IDs for good fuzzy-matched articles
 tweets = pd.read_csv(data_directory + "data_derived/tweets/tweets_labeled.csv",
                      dtype = {'quoted_urls': object, 'quoted_urls_expanded': object, #these two columns cause memory issues if not pre-specified dtype
-                              'user_id': 'Int64', 'tweet_id': 'Int64', 
-                              'retweeted_user_id': 'Int64', 'retweet_id': 'Int64',
-                              'quoted_user_id': 'Int64', 'quoted_id': 'Int64'}) 
+                              'user_id': object, 'tweet_id': object, 
+                              'retweeted_user_id': object, 'retweet_id': object,
+                              'quoted_user_id': object, 'quoted_id': object})
 tweets[['tweet_id', 'total_article_number']] = tweets.set_index('tweet_id').total_article_number.fillna(good_matches.set_index('tweet_id').total_article_number).reset_index()
 articles = pd.read_csv(data_directory + 'data/articles/daily_articles.csv')
 articles = articles.rename(columns = {'total article number': 'total_article_number'})
