@@ -17,6 +17,7 @@ import numpy as np
 import re
 import os
 import networkx as nx
+import igraph
 import scipy.stats as stats
 
     
@@ -27,8 +28,10 @@ data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
 # Load rt networks (temporary)
 ####################
 # Load data
-rt_edges = pd.read_csv(data_directory + "/data_derived/networks/rtnetwork_edges.csv")
-rt_nodes = pd.read_csv(data_directory + "/data_derived/networks/rtnetwork_nodes.csv")
+rt_edges = pd.read_csv(data_directory + "/data_derived/networks/rtnetwork_edges.csv",
+                       dtype = {'Source': object, 'Target': object, 'tweet_id': object})
+rt_nodes = pd.read_csv(data_directory + "/data_derived/networks/rtnetwork_nodes.csv",
+                       dtype = {'user_id': object, 'ID': object})
 
 # Add article-level information
 # Get source lean ratings
@@ -76,6 +79,11 @@ article_network_metrics = pd.DataFrame(columns = ['total_article_number', 'total
                                                   'network_density',
                                                   'ideology_mean', 'ideology_sd', 'ideology_se',
                                                   'article_fc_rating', 'article_lean'])
+
+# igraph uses C and it can't handle long numbers, so for each graph convert user_id to a within-graph id
+unique_ids = rt_nodes['user_id'].unique()
+    
+    
 for article_id in unique_articles:
     
     # Filter to nodes and edges of interest
@@ -88,11 +96,21 @@ for article_id in unique_articles:
     g.add_edges_from( list(zip(article_edges['Source'], article_edges['Target'])) )
     
     # TEST: import ideology scores for assortativity calculation
-    ideologies = article_nodes['user_ideology'].replace(np.nan, 0)
-    ideologies = round(ideologies*1000, 0)
-    ideologies = ideologies.astype(int)
-    nx.set_node_attributes(g, ideologies, name = 'user_ideology')
-    assort = nx.attribute_assortativity_coefficient(g, 'user_ideology')
+#    ideologies = article_nodes['user_ideology'].replace(np.nan, 0)
+#    ideologies = round(ideologies*1000, 0)
+#    ideologies = ideologies.astype(int)
+#    nx.set_node_attributes(g, ideologies, name = 'user_ideology')
+#    assort = nx.numeric_assortativity_coefficient(g, 'user_ideology')
+    
+    # Try igraph assortativity
+    # igraph uses C and it can't handle long numbers, so for each graph convert user_id to a within-graph id
+    unique_ids = article_nodes['user_id'].unique()
+    node_ids = np.array([ np.where(unique_ids == x) for x in article_nodes['user_id'] ]).flatten()
+    sources = np.array([ np.where(unique_ids == x) for x in article_edges['Source'] ]).flatten()
+    targets = np.array([ np.where(unique_ids == x) for x in article_edges['Target'] ]).flatten()
+    g_assort = igraph.Graph(vertex_attrs = {"label": node_ids, 
+                                            edges = list(zip(sources, targets)), 
+                                            directed = True)
     
     # Calculate metrics of interest
     network_density = nx.density(g)

@@ -16,7 +16,7 @@ source("scripts/_plot_themes/theme_ctokita.R")
 ####################
 # Paramters for analysis: paths to data, paths for output, and filename
 ####################
-tweeter_score_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/all_tweets_labeled.csv' 
+tweeter_score_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv' 
 outpath <- 'output/ideology/'
 
 # For labeling facet plots
@@ -74,7 +74,7 @@ gg_fmtweeters_libcon <- tweeter_scores %>%
   geom_histogram(alpha = 0.6, position = 'identity', binwidth = 0.25) +
   xlab("Tweeter ideology") +
   ylab("Count") +
-  scale_fill_manual(values = pal, name = "Article type", labels = c("False, Conservative source", "False, Liberal source")) +
+  scale_fill_manual(values = source_pal[c(1,2,4)], name = "Article type", labels = c("False, Conservative source", "False, Liberal source")) +
   scale_x_continuous(limits = c(-4, 4)) +
   theme_ctokita() +
   theme(aspect.ratio = 0.5)
