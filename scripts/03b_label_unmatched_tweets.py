@@ -32,19 +32,11 @@ After manually checking these matches, it appears that all headlines with scores
 
 # Load fuzzy match scores, filter to good match scores
 fuzzy_matches = pd.read_csv(data_directory + '/data_derived/tweets/noarticleID_tweets_with_score.csv',
-                            dtype ={'user_id': object})
+                            dtype ={'user_id': object, 'tweet_id': object})
 fuzzy_matches = fuzzy_matches.drop_duplicates()
 fuzzy_matches = fuzzy_matches.rename(columns = {'total article number': 'total_article_number'})
 good_matches = fuzzy_matches[fuzzy_matches.fuzzy_score >= 87]
-good_matches = good_matches[['tweets', 'user_id', 'total_article_number']].drop_duplicates() #duplicate tweets from previous version of tweets_parsed that had duplicates
-good_matches = good_matches.rename(columns = {'tweets': 'tweet_text'})
-
-# Load originally unmatched articles, merge with good_matches to get proper tweet_id
-unmatched = pd.read_csv(data_directory + '/data_derived/tweets/noarticleID_tweets.csv',
-                            dtype = {'user_id': object})
-unmatched = unmatched.drop_duplicates() #duplicate tweets from previous version of tweets_parsed that had duplicates
-good_matches = good_matches.merge(unmatched.drop(columns = ['total_article_number']), on = ['tweet_text', 'user_id']) #NOTE: this doesn't match all tweets as of now
-good_matches = good_matches[['tweet_id', 'total_article_number']]
+good_matches = good_matches[['tweet_id', 'total_article_number']].drop_duplicates() #duplicate tweets from previous version of tweets_parsed that had duplicates
 
 # Load labeled tweets, which already have metadata attached, and add in article IDs for good fuzzy-matched articles
 tweets = pd.read_csv(data_directory + "data_derived/tweets/tweets_labeled.csv",
@@ -53,8 +45,6 @@ tweets = pd.read_csv(data_directory + "data_derived/tweets/tweets_labeled.csv",
                               'retweeted_user_id': object, 'retweet_id': object,
                               'quoted_user_id': object, 'quoted_id': object})
 tweets[['tweet_id', 'total_article_number']] = tweets.set_index('tweet_id').total_article_number.fillna(good_matches.set_index('tweet_id').total_article_number).reset_index()
-articles = pd.read_csv(data_directory + 'data/articles/daily_articles.csv')
-articles = articles.rename(columns = {'total article number': 'total_article_number'})
 
 # Load metadata for articles
 articles = pd.read_csv(data_directory + "data/articles/daily_articles.csv")
@@ -112,9 +102,9 @@ tweets.to_csv(data_directory + "data_derived/tweets/tweets_labeled.csv", index =
 # Load labeled tweets, which already have metadata attached
 tweets = pd.read_csv(data_directory + "data_derived/tweets/tweets_labeled.csv",
                      dtype = {'quoted_urls': object, 'quoted_urls_expanded': object, #these two columns cause memory issues if not pre-specified dtype
-                              'user_id': 'Int64', 'tweet_id': 'Int64', 
-                              'retweeted_user_id': 'Int64', 'retweet_id': 'Int64',
-                              'quoted_user_id': 'Int64', 'quoted_id': 'Int64'}) 
+                              'user_id': object, 'tweet_id': object, 
+                              'retweeted_user_id': object, 'retweet_id': object,
+                              'quoted_user_id': object, 'quoted_id': object}) 
 
 ########## Pre-manual confirmation ##########
 
@@ -126,6 +116,11 @@ def simplify_link(link):
         link = re.sub('\?.*$', '', link)
         link = re.sub('/$', '', link)
     return link
+
+# Load originally unmatched articles, merge with good_matches to get proper tweet_id
+unmatched = pd.read_csv(data_directory + '/data_derived/tweets/noarticleID_tweets.csv',
+                            dtype = {'user_id': object, 'tweet_id': object})
+unmatched = unmatched.drop_duplicates() #duplicate tweets from previous version of tweets_parsed that had duplicates
 
 # Get list of URLs,
 still_unmatched = unmatched[~unmatched['tweet_id'].isin(good_matches['tweet_id'])]
@@ -144,9 +139,12 @@ unique_unmatched_urls.columns = ['urls_expanded', 'count']
 
 # Function to fetch headline from URL
 def fetch_headline(url):
+    # Header to allow get request to go onto webpages that need User-Agent
+    headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
+    # Get content
     try:
-        url_request = requests.get("http://" + url,  timeout = 10)
-        contents = BeautifulSoup(url_request.text)
+        url_request = requests.get("http://" + url,  timeout = 10, headers = headers)
+        contents = BeautifulSoup(url_request.text, features = "html.parser")
         headline = contents.find('title')
         headline = headline.text
         if headline == '403 - Forbidden':
@@ -213,7 +211,7 @@ for j in range(confirmed_matches.shape[0]):
     # Search through URLS
     has_link = still_unmatched['urls_expanded'].str.contains(link, na = False) | tweets['quoted_urls_expanded'].str.contains(link, na = False)
     # Assign article number ID
-    article_id = confirmed_matches['total_article_number'].iloc[j]
+    article_id = confirmed_matches['total_article_number'].iloc[j].copy()
     still_unmatched.loc[has_link, 'total_article_number'] = article_id
     
 # Merge in and add metadata
@@ -229,6 +227,34 @@ tweets.to_csv(data_directory + "data_derived/tweets/tweets_labeled.csv", index =
 
 
 ####################
-# Step 3: Output list of unique unmathed URLs, manually tag each, and use this set to 
+# Step 3: Output list final unmatched tweets and manually tag
 ####################
-unique_unmatched_urls = pd.read_csv(data_directory + 'data_derived/articles/unique_unmatched_urls.csv')
+# Grab unidentified URLs in remaining unidentified tweets
+last_unmatched_tweets = tweets[pd.isna(tweets['total_article_number'])]
+last_unmatched_tweets = last_unmatched_tweets[['tweet_id', 'user_id', 'user_name', 'tweet_time', 'tweet_text',
+                                               'urls', 'urls_expanded', 'url_count', 'quoted_text', 'quoted_urls',
+                                               'quoted_urls_expanded', 'quoted_url_count', 'tweet_url', 'total_article_number']]
+last_unmatched_tweets.update('"' + last_unmatched_tweets['tweet_id'] + '"') #add quotes so that excel doesn't mess up the long numbers when the csv file is opened
+last_unmatched_tweets.to_csv(data_directory + 'data_derived/articles/tweets_to_manually_tag.csv', index = False)
+
+# Load after manually tagging
+manually_tagged_tweets = pd.read_csv(data_directory + 'data_derived/articles/tweets_to_manually_tag.csv',
+                                     dtype = {'tweet_id': object, 'user_id': object})
+manually_tagged_tweets = manually_tagged_tweets[['tweet_id', 'total_article_number']]
+manually_tagged_tweets['tweet_id'] = manually_tagged_tweets['tweet_id'].str.replace('"', '')
+
+# Load labeled tweets, which already have metadata attached
+tweets = pd.read_csv(data_directory + "data_derived/tweets/tweets_labeled.csv",
+                     dtype = {'quoted_urls': object, 'quoted_urls_expanded': object, #these two columns cause memory issues if not pre-specified dtype
+                              'user_id': object, 'tweet_id': object, 
+                              'retweeted_user_id': object, 'retweet_id': object,
+                              'quoted_user_id': object, 'quoted_id': object}) 
+
+# Merge in and add metadata
+tweets[['tweet_id', 'total_article_number']] = tweets.set_index('tweet_id').total_article_number.fillna(manually_tagged_tweets.set_index('tweet_id').total_article_number).reset_index()
+tweets.loc[tweets['tweet_id'].isin(manually_tagged_tweets.tweet_id), 'manual_article_assignment'] = True
+tweets =  update_tweet_article_metadata(manually_matched_tweets = manually_tagged_tweets, 
+                                        all_tweets = tweets, 
+                                        article_data = article_metadata)
+# Save!
+tweets.to_csv(data_directory + "data_derived/tweets/tweets_labeled.csv", index = False)
