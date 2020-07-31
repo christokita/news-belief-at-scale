@@ -23,10 +23,12 @@ import multiprocessing as mp
 ####################
 
 def unique_exposed_over_time(story_id, tweets, data_directory):
-    # Function that will determine how many unique users had been exposed to a story over time.
-    #
-    # OUTPUT:
-    # - exposed_over_time: a dataframe that contains the time series of tweets and exposure over time for that story.
+    """
+    Function that will determine how many unique users had been exposed to a story over time.
+    
+    OUTPUT:
+    - exposed_over_time: a dataframe that contains the time series of tweets and exposure over time for that story.
+    """
 
     # Filter tweets to those sharing story and sort by time
     selected_tweets = tweets[tweets.total_article_number == story_id].copy()

@@ -30,11 +30,13 @@ import datetime as dt
 # Note i = 2014, 2603, 3777 are quotes
 
 def article_tweet_edges(article_id, tweets, articles, friend_files):
-    # Function that will take a set of tweets, contruct an edge+node list, and save to file
-    #
-    # OUTPUT:
-    # - rt_edge:dataframe row with user ids in the 'Source' and 'Target' column, denoting the flow of the article, along with a label for the type of flow.
-    #           This will return None if it encounters an original sharing of the article.
+    """
+    Function that will take a set of tweets, contruct an edge+node list, and save to file
+
+    OUTPUT:
+    - rt_edge: dataframe row with user ids in the 'Source' and 'Target' column, denoting the flow of the article, along with a label for the type of flow.
+               This will return None if it encounters an original sharing of the article.
+    """
     
     # Filter tweets to those sharing story and sort by time
     selected_tweets = tweets[tweets.total_article_number == article_id].copy()
@@ -63,11 +65,13 @@ def article_tweet_edges(article_id, tweets, articles, friend_files):
     return None
 
 def determine_retweet_edges(i, tweets, articles, friend_files):
-    # Function that will take a single tweet and determine if it was a RT or quoted tweet, and if so, determine who the RT came from.
-    #
-    # OUTPUT:
-    # - rt_edge:dataframe row with user ids in the 'Source' and 'Target' column, denoting the flow of the article, along with a label for the type of flow.
-    #           This will return None if it encounters an original sharing of the article.
+    """
+    Function that will take a single tweet and determine if it was a RT or quoted tweet, and if so, determine who the RT came from.
+    
+    OUTPUT:
+    - rt_edge: dataframe row with user ids in the 'Source' and 'Target' column, denoting the flow of the article, along with a label for the type of flow.
+               This will return None if it encounters an original sharing of the article.
+    """
 
     # Grab specific tweet and preliinary information    
     tweet = tweets.iloc[i,:]
@@ -85,10 +89,12 @@ def determine_retweet_edges(i, tweets, articles, friend_files):
     
     
 def parse_retweet(tweet, user_id, rt_edge, friend_files, all_tweets):
-    # Function that will take a retweet and determine who the RT came from: original tweeter or friend that tweeted
-    #
-    # OUTPUT
-    # - rt_edge: returns the rt_edge dataframe row with appropriate user_id filled in the 'to' column
+    """
+    Function that will take a retweet and determine who the RT came from: original tweeter or friend that tweeted
+    
+    OUTPUT
+    - rt_edge: returns the rt_edge dataframe row with appropriate user_id filled in the 'to' column
+    """
     
     # Ensure IDs are in proper format
     all_tweets = all_tweets.astype({'retweeted_user_id': 'Int64', 'retweet_id': 'Int64', 'user_id': 'Int64'}) 
@@ -151,10 +157,12 @@ def parse_retweet(tweet, user_id, rt_edge, friend_files, all_tweets):
 
 
 def parse_quotedtweet(tweet, rt_edge, articles):
-    # Function that will take a quoted tweet and determine if this counts as the original FM news share or a RT
-    #
-    # OUTPUT
-    # - rt_edge: returns the rt_edge dataframe row with appropriate user_id filled in the 'to' column
+    """
+    Function that will take a quoted tweet and determine if this counts as the original FM news share or a RT
+    
+    OUTPUT
+    - rt_edge: returns the rt_edge dataframe row with appropriate user_id filled in the 'to' column
+    """
     
     # Filter to appropriate article
     article = articles[articles['total article number'] == tweet['total_article_number']]

@@ -23,14 +23,15 @@ import copy
 ####################
 
 def tweet_parser(filename):
-    # Parse JSON tweet data and return a compiled dataset
-    #
-    # INPUT:
-    # - filename: path to specific JSON file containing tweet data (string).
-    #
-    # OUTPUT:
-    # - tweet_data: dataframe of all tweet data in the specified file, with a subset of the relevant data headings (pandas dataframe).
-    #
+    """
+    Parse JSON tweet data and return a compiled dataset
+    
+    INPUT:
+    - filename: path to specific JSON file containing tweet data (string).
+    
+    OUTPUT:
+    - tweet_data: dataframe of all tweet data in the specified file, with a subset of the relevant data headings (pandas dataframe).
+    """
     
     with open(filename,) as json_file:
         # Parse each individual tweet in data set 
@@ -126,10 +127,12 @@ def tweet_parser(filename):
 
 
 def get_tweet_text(tweet_object):
-    # Function to get tweet text and URLs from tweet data.
-    #
-    # INPUT
-    # - tweet_object: JSON-parsed data. Can be main tweet object, retweeted_status object, or quoted_status object
+    """
+    Function to get tweet text and URLs from tweet data.
+    
+    INPUT
+    - tweet_object: JSON-parsed data. Can be main tweet object, retweeted_status object, or quoted_status object
+    """
     
     # If extended tweet (>140 char), go to proper sub-object.
     is_extended_tweet = 'extended_tweet' in tweet_object
@@ -147,10 +150,12 @@ def get_tweet_text(tweet_object):
 
 
 def parse_urls(url_collection):
-    # Function to parse a collection of URLs
-    #
-    # INPUT
-    # - url_collection: the URL object from the tweet object or sub-object (retweet_status or quoted_status)
+    """
+    Function to parse a collection of URLs
+    
+    INPUT
+    - url_collection: the URL object from the tweet object or sub-object (retweet_status or quoted_status)
+    """
     
     url_count = len(url_collection)
     if url_count > 0:
