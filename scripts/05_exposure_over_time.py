@@ -42,7 +42,7 @@ def unique_exposed_over_time(story_id, tweets, data_directory):
     exposed_over_time = pd.DataFrame(columns = ['time', 'tweet_number', 'user_id', 'new_exposed_users', 'cumulative_exposed'])
     
     # Go through each tweet in order and determine unique exposed users
-    exposed_already = np.array([], dtype = int)
+    exposed_already = np.array([], dtype = object)
     follower_files = os.listdir(data_directory + "data/followers/")
     for i in np.arange(selected_tweets.shape[0]):
         
@@ -53,7 +53,7 @@ def unique_exposed_over_time(story_id, tweets, data_directory):
         if len(file) == 0: #no followers, no follower file
             follower_list = np.array([])
         else:
-            follower_list = np.genfromtxt(data_directory + "data/followers/" + file[0], dtype = int)
+            follower_list = np.genfromtxt(data_directory + "data/followers/" + file[0], dtype = object)
             try:
                 follower_list = follower_list[1:len(follower_list)] #remove header, will raise error if empty
             except:
@@ -120,6 +120,6 @@ if __name__ == '__main__':
     article_files = [file for file in article_files if re.match('^article', file)] #filter out hidden copies of same files
     for file in article_files:
         story_exposed = pd.read_csv(data_directory + "data_derived/timeseries/individual_articles/" + file,
-                                    dtype = {'user_id': int})
+                                    dtype = {'user_id': object})
         exposed_timeseries = exposed_timeseries.append(story_exposed, sort = False)
     exposed_timeseries = exposed_timeseries.to_csv(data_directory + "data_derived/timeseries/users_exposed_over_time.csv", index = False)
