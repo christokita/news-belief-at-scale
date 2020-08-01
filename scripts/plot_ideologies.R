@@ -23,11 +23,12 @@ outpath <- 'output/ideology/'
 label_veracity <- c("T" = "True news", 
                     "FM" = "Fake news",
                     "CND" = "CND",
-                    "No mode!" = "No mode!",
-                    "C" = "Conservative",
-                    "L" = "Liberal",
-                    "N" = "Neutral",
-                    "U" = "Unclear")
+                    "No mode!" = "No mode!")
+
+label_lean <- c("C" = "Conservative",
+                "L" = "Liberal",
+                "N" = "Neutral",
+                "U" = "Unclear")
 
 # Color palette
 plot_color <- "#495867"
@@ -53,11 +54,12 @@ tweeter_scores <- read.csv(tweeter_score_path, header = TRUE) %>%
 ####################
 # All source types
 gg_fmtweeters <- tweeter_scores %>% 
-  filter(article_fc_rating == "FM") %>% 
+  filter(article_fc_rating == "FM",
+         !is.na(user_ideology)) %>% 
   ggplot(., aes(x = user_ideology, group = source_lean, fill = source_lean)) +
   geom_histogram(alpha = 0.6, position = 'identity', binwidth = 0.25) +
   xlab("Tweeter ideology") +
-  ylab("Log count") +
+  ylab("Log number of tweets") +
   scale_fill_manual(values = source_pal[c(1,2,4)], name = "Article type", labels = c("False, Conservative source", "False, Liberal source", "False, Unclear source")) +
   scale_x_continuous(limits = c(-4, 4), expand = c(0, 0)) +
   scale_y_continuous(trans = "log10", limits = c(1, 12000), expand = c(0,0)) +
@@ -73,7 +75,7 @@ gg_fmtweeters_libcon <- tweeter_scores %>%
   ggplot(., aes(x = user_ideology, group = source_lean, fill = source_lean)) +
   geom_histogram(alpha = 0.6, position = 'identity', binwidth = 0.25) +
   xlab("Tweeter ideology") +
-  ylab("Count") +
+  ylab("Number of tweets") +
   scale_fill_manual(values = source_pal[c(1,2,4)], name = "Article type", labels = c("False, Conservative source", "False, Liberal source")) +
   scale_x_continuous(limits = c(-4, 4)) +
   theme_ctokita() +
@@ -91,7 +93,7 @@ ggsave(gg_fmtweeters_libcon, file = paste0(outpath, "FMtweeters_ideologies_lib-c
 gg_articlelean <- ggplot(data = tweeter_scores, aes(x = user_ideology, group = article_lean, fill = article_lean)) +
   geom_histogram(position = 'identity', binwidth = 0.25) +
   xlab("Tweeter ideology") +
-  ylab("Count") +
+  ylab("Number of tweets") +
   scale_x_continuous(limits = c(-4, 4), expand = c(0, 0)) +
   scale_fill_manual(values = source_pal, name = "Article lean", labels = c("Conservative", "Liberal", "Neutral", "Unclear")) +
   facet_wrap(~article_lean, scales = 'free', ncol = 1) +
@@ -130,7 +132,7 @@ gg_articlelean <- tweeter_scores %>%
   ggplot(., aes(x = user_ideology, group = article_lean, fill = article_lean)) +
   geom_histogram(position = 'identity', binwidth = 0.25) +
   xlab("Tweeter ideology") +
-  ylab("Count") +
+  ylab("Number of tweets") +
   scale_x_continuous(limits = c(-4, 4), expand = c(0, 0)) +
   scale_fill_manual(values = source_pal, name = "Article lean", labels = c("Conservative", "Liberal", "Neutral", "Unclear")) +
   facet_wrap(~article_lean, scales = 'free', ncol = 1) +
@@ -156,28 +158,34 @@ tweeter_veracity <- tweeter_scores %>%
 
 # Plot ideological distribution
 gg_veracityideo <- tweeter_scores %>% 
-  filter(!is.na(user_ideology)) %>% 
+  filter(!is.na(user_ideology),
+         article_fc_rating %in% c("FM", "T")) %>% 
   ggplot(., aes(x = user_ideology, fill = ..x..)) +
   geom_histogram(position = 'identity', binwidth = 0.25) +
   xlab("Tweeter ideology") +
-  ylab("Count") +
-  scale_x_continuous(limits = c(-4, 4), expand = c(0, 0)) +
-  scale_fill_gradientn(colors = ideol_pal) +
+  ylab("Number of tweets") +
+  scale_x_continuous(limits = c(-4.5, 4.5), expand = c(0, 0), breaks = seq(-5, 5, 1)) +
+  scale_fill_gradientn(colors = ideol_pal, limits = c(-2, 2), oob = scales::squish) +
   theme_ctokita() +
   theme(aspect.ratio = 0.2, 
         legend.position = "none") +
   facet_wrap(~article_fc_rating, 
              scales = 'free', 
              ncol = 1, 
-             strip.position = "right")
+             strip.position = "right",
+             labeller = labeller(article_fc_rating = label_veracity))
 gg_veracityideo
 ggsave(gg_veracityideo, file = paste0(outpath, "ideologies_byveracity.png"), width = 90, height = 70, units = "mm", dpi = 400)
 
 
 # Plot ideological extremity
-gg_veracityextr <- ggplot(.) +
-  geom_point(data = tweeter_scores,  aes(x = article_fc_rating, y = user_ideol_extremity),
-             size = 0.5, stroke = 0, alpha = 0.3, color = plot_color,
-             position = position_jitter(width = 0.1)) +
-  theme_ctokita()
+gg_veracityextr <- tweeter_scores %>% 
+  filter(!is.na(user_ideology)) %>% 
+  ggplot(., aes(x = user_ideol_extremity, fill = ..x..)) +
+  geom_histogram(position = 'identity', binwidth = 0.25) +
+  theme_ctokita() +
+  facet_wrap(~article_fc_rating, 
+             scales = 'free', 
+             ncol = 1, 
+             strip.position = "right")
 gg_veracityextr

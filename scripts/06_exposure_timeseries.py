@@ -162,8 +162,16 @@ if __name__ == '__main__':
     unique_articles = unique_articles[~np.isnan(unique_articles)] #drop nan
     unique_articles = unique_articles.astype(int)
     
-    # Select specific article and process exposure over time
+    # Check specific article. If it is already processed, skip proccessing and finish script
     story = unique_articles[i]
+    processed_articles = os.listdir(data_directory + "data_derived/timeseries/individual_articles/")
+    processed_articles = [file for file in processed_articles if re.match('^article', file)] #filter out hidden copies of same files
+    processed_articles = [re.search('([0-9]+)', file).group(1) for file in processed_articles]
+    processed_articles = np.array(processed_articles, dtype = int)
+    if story in processed_articles:
+        sys.exit(0)
+    
+    # Process exposure over time
     story_exposed = unique_exposed_over_time(story_id = story, 
                                              tweets = labeled_tweets, 
                                              data_directory = data_directory, 

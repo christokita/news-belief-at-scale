@@ -108,7 +108,6 @@ gg_totaltweets <- tweets %>%
              linetype = "dotted",
              size = 0.3,
              color = "grey60") +
-  # geom_text(aes(x = 24, y = 100, label = "24 hr intervention\n"), angle = 270, color = "grey80") +
   geom_step(size = 0.2, alpha = 0.5, color = line_color) +
   scale_y_continuous(breaks = c(10^seq(1, 5)),
                      labels = scales::trans_format("log10", scales::math_format(10^.x)),
@@ -124,6 +123,32 @@ gg_totaltweets <- tweets %>%
              labeller = labeller(article_fc_rating = label_veracity))
 gg_totaltweets
 ggsave(gg_totaltweets, filename = paste0(outpath,"total_tweetcount_time.png"), width = 90, height = 45, units = "mm", dpi = 400)
+
+gg_totaltweetsveracity <- tweets %>% 
+  ggplot(., aes(x = relative_tweet_time, y = tweet_number, group = total_article_number, color = article_fc_rating)) +
+  geom_vline(aes(xintercept = 24), 
+             linetype = "dotted",
+             size = 0.3,
+             color = "grey60") +
+  geom_step(size = 0.2, alpha = 0.5) +
+  scale_color_manual(name = "Article veracity", 
+                     values = c("#f29724", "#b80d48", "#2b6a6c", "#404040"),
+                     label = c("Borderline", "Fake", "No mode", "True")) +
+  scale_y_continuous(breaks = c(10^seq(1, 5)),
+                     labels = scales::trans_format("log10", scales::math_format(10^.x)),
+                     trans = scales::pseudo_log_trans(base = 10)) +
+  # scale_x_log10() +
+  xlab("Time since first article share (hrs)") +
+  ylab("Log total tweets") +
+  theme_ctokita() +
+  theme(aspect.ratio = NULL) +
+  facet_wrap(~source_type, 
+             ncol = 1,
+             strip.position = "right",
+             labeller = labeller(article_fc_rating = label_veracity))
+gg_totaltweetsveracity
+ggsave(gg_totaltweetsveracity, filename = paste0(outpath,"total_tweetcount_time_withveracity.png"), width = 90, height = 45, units = "mm", dpi = 400)
+
 
 # Percentiage of tweets per story
 gg_perctweets <- tweets %>% 
@@ -148,7 +173,7 @@ ggsave(gg_perctweets, filename = paste0(outpath, "percentage_story_tweets.png"),
 ####################
 # Plot saturation time of stories
 ####################
-percentile <- 0.5
+percentile <- 0.8
   
 percentile_data <- tweets %>% 
   filter(relative_tweet_count >= percentile) %>% 
