@@ -54,7 +54,7 @@ def unique_exposed_over_time(story_id, tweets, data_directory, ideol_bin_size):
     ideol_bins, bin_labels = create_ideology_bins(follower_ideologies, ideol_bin_size)
     
     # Create data frame to collect exposure data
-    cols = ['time', 'tweet_number', 'user_id', 'new_exposed_users', 'cumulative_exposed'] + list(bin_labels)
+    cols = ['time', 'tweet_number', 'tweet_id', 'user_id', 'new_exposed_users', 'cumulative_exposed'] + list(bin_labels)
     exposed_over_time = pd.DataFrame(columns = cols)
     del cols
     
@@ -81,10 +81,11 @@ def unique_exposed_over_time(story_id, tweets, data_directory, ideol_bin_size):
         
         # Summarise and append to data set
         new_row = pd.DataFrame({'time': selected_tweets['relative_tweet_time'].iloc[j], 
-                                                      'tweet_number': j, 
-                                                      'user_id': selected_tweets['user_id'].iloc[j],
-                                                      'new_exposed_users': len(new_exposed),
-                                                      'cumulative_exposed': len(exposed_already)}, index = [0])
+                                                        'tweet_number': j, 
+                                                        'tweet_id': selected_tweets['tweet_id'].iloc[j],
+                                                        'user_id': selected_tweets['user_id'].iloc[j],
+                                                        'new_exposed_users': len(new_exposed),
+                                                        'cumulative_exposed': len(exposed_already)}, index = [0])
         new_row = pd.concat([new_row, ideol_counts], axis = 1, sort = False)
         exposed_over_time = exposed_over_time.append(new_row, ignore_index = True, sort = False)
         
@@ -146,8 +147,8 @@ def determine_new_exposed(followers, exposed_already):
 if __name__ == '__main__':
     
     # high level directory (external HD or cluster storage)
-    data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster storage
-#    data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
+#    data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster storage
+    data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
     
     # Load tweet data, esnure in proper format
     labeled_tweets = pd.read_csv(data_directory + "data_derived/tweets/tweets_labeled.csv",
