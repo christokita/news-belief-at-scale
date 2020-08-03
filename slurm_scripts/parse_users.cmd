@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
-#SBATCH --mem-per-cpu=12gb
+#SBATCH --mem-per-cpu=18gb
 #SBATCH --array=0-299
 #SBATCH --time=11:59:00
 #SBATCH --mail-type=FAIL
