@@ -75,7 +75,7 @@ def determine_retweet_edges(i, tweets, articles, friend_files):
 
     # Grab specific tweet and preliinary information    
     tweet = tweets.iloc[i,:]
-    user_id = tweet['user_id'].astype(int)
+    user_id = tweet['user_id']
     rt_edge = pd.DataFrame({'Source': user_id, 'Target': None, 'type': None, 'total_article_number': tweet['total_article_number']}, index = [0])
     
     # If retweet determine who they were actually retweeting
@@ -97,7 +97,7 @@ def parse_retweet(tweet, user_id, rt_edge, friend_files, all_tweets):
     """
     
     # Ensure IDs are in proper format
-    all_tweets = all_tweets.astype({'retweeted_user_id': 'Int64', 'retweet_id': 'Int64', 'user_id': 'Int64'}) 
+    all_tweets = all_tweets.astype({'retweeted_user_id': object, 'retweet_id': object, 'user_id': object}) 
     
     # Filter tweets to only those talking about this news article
     article_id = tweet['total_article_number']
@@ -115,7 +115,7 @@ def parse_retweet(tweet, user_id, rt_edge, friend_files, all_tweets):
         rt_edge['type'] = "Presumed Phantom RT"
         return rt_edge
     else: 
-        friends = np.genfromtxt(data_directory + "data/friends/" + fr_file[0], dtype = int)
+        friends = np.genfromtxt(data_directory + "data/friends/" + fr_file[0], dtype = str)
         friends = np.delete(friends, 0) #drop header
     
     # If retweeted user is followed by focal user, count that as flow of tweet
@@ -132,7 +132,7 @@ def parse_retweet(tweet, user_id, rt_edge, friend_files, all_tweets):
     else:
         
         try:
-            # Grab FM tweeters who are both i's friends and tweeted the news article in question
+            # Grab tweeters who are both i's friends and tweeted the news article in question
             article_tweeters = np.unique(article_tweets['user_id'])
             candidate_friends = np.intersect1d(friends, article_tweeters)
             rt_time = dt.datetime.strptime(tweet['tweet_time'], '%a %b %d %H:%M:%S %z %Y')
@@ -145,7 +145,7 @@ def parse_retweet(tweet, user_id, rt_edge, friend_files, all_tweets):
             retweeted = candidate_tweets.loc[ candidate_tweets['tweet_time'].idxmax() ] #most recent tweet before focal tweet
             
             # Set indirect RT edge
-            rt_edge['Target'] = retweeted['user_id'].astype(int)
+            rt_edge['Target'] = retweeted['user_id'].astype(object)
             rt_edge['type'] = "Indirect RT"
             
         except:

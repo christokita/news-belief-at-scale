@@ -41,6 +41,7 @@ tweets = pd.read_csv(path_to_tweets + "tweets_parsed.csv",
                               'user_id': object, 'tweet_id': object, 
                               'retweeted_user_id': object, 'retweet_id': object,
                               'quoted_user_id': object, 'quoted_id': object})
+tweeters = tweets['user_id']
     
 # Get user IDs of tweeters
 tweeters, tweet_freq = np.unique(tweeters, return_counts = True)
@@ -59,7 +60,7 @@ follower_files = sorted( os.listdir(path_to_followers) )
 num_files = len(follower_files)
 all_followers = np.array([], dtype = object)
 for file in follower_files:
-    data = np.genfromtxt(path_to_followers + file, skip_header = 1, dtype = object) #first row is header
+    data = np.genfromtxt(path_to_followers + file, skip_header = 1, dtype = str) #first row is header
     all_followers = np.append(all_followers, data)
     all_followers = np.unique(all_followers)
     del data
@@ -74,7 +75,7 @@ followers_minus_tweeters = pd.DataFrame(followers_minus_tweeters, columns = ["us
 nofollower_files = sorted( os.listdir(path_tweeters_nofollowers) )
 no_followers = np.array([], dtype = object)
 for file in nofollower_files:
-    data = np.genfromtxt(path_tweeters_nofollowers + file, dtype = object) #first row is header
+    data = np.genfromtxt(path_tweeters_nofollowers + file, dtype = str) #first row is header
     try:
         data = data[1:len(data)] #if empty, will return error
         no_followers = np.append(no_followers, data)
@@ -99,7 +100,7 @@ friend_files = sorted( os.listdir(path_to_friends) )
 num_files = len(friend_files)
 all_friends = np.array([], dtype = object)
 for file in friend_files:
-    data = np.genfromtxt(path_to_friends + file, skip_header = 1, dtype = object) #first row is header
+    data = np.genfromtxt(path_to_friends + file, skip_header = 1, dtype = str) #first row is header
     all_friends = np.append(all_friends, data)
     all_friends = np.unique(all_friends)
     del data
@@ -114,7 +115,7 @@ all_friends_minus_tweeters = pd.DataFrame(all_friends_minus_tweeters, columns = 
 tweeters_nofriends_files = sorted( os.listdir(path_to_tweeters_nofriends) )
 no_friends = np.array([], dtype = object)
 for file in tweeters_nofriends_files:
-    data = np.genfromtxt(path_to_tweeters_nofriends + file, dtype = object) #first row is header
+    data = np.genfromtxt(path_to_tweeters_nofriends + file, dtype = str) #first row is header
     try:
         data = data[1:len(data)] #if empty, will return error
         no_friends = np.append(no_friends, data)

@@ -59,7 +59,7 @@ for user_id in tweeters:
     if len(file) > 1:
         print("WARNING: user_id = %d matches multiple follower list files." % user_id)
     try:
-        follower_list = np.genfromtxt(data_directory + "data/followers/" + file[0], dtype = object)
+        follower_list = np.genfromtxt(data_directory + "data/followers/" + file[0], dtype = str)
         follower_list = follower_list[1:len(follower_list)] #remove header, will raise error if empty
         followers = np.append(followers, follower_list)
         followers = np.unique(followers)
@@ -89,7 +89,7 @@ for user_id in tweeters:
     if len(file) > 1:
         print("WARNING: user_id = %d matches multiple follower list files." % user_id)
     try:
-        friend_list = np.genfromtxt(data_directory + "data/friends/" + file[0], dtype = object)
+        friend_list = np.genfromtxt(data_directory + "data/friends/" + file[0], dtype = str)
         friend_list = friend_list[1:len(friend_list)] #remove header, will raise error if empty
         friends = np.append(friends, friend_list)
         friends = np.unique(friends)
