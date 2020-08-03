@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=1
-#SBATCH --mem-per-cpu=18gb
+#SBATCH --cpus-per-task=2
+#SBATCH --mem-per-cpu=12gb
 #SBATCH --array=0-135
-#SBATCH --time=23:59:00
+#SBATCH --time=71:59:00
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=ctokita@princeton.edu
 #SBATCH --output=slurm_outfiles/slurm-%A_%a.out
