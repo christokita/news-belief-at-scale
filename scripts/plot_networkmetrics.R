@@ -17,6 +17,7 @@ source("scripts/_plot_themes/theme_ctokita.R")
 # Paramters for analysis: paths to data, paths for output, and filename
 ####################
 network_metric_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/networks/article_network_metrics.csv'
+retweet_network_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/networks/'
 outpath <- 'output/networks/'
 
 # Color palette
@@ -29,6 +30,8 @@ plot_color <- "#495867"
 # Read in data
 network_metrics <- read.csv(network_metric_path, header = TRUE)
 
+# Read in network data
+rt_edges <- read.csv(paste0(retweet_network_path, 'rtnetwork_edges.csv'), colClasses = c("Source"="character", "Target"="character"))
 
 
 ############################## Ideology in networks ##############################
