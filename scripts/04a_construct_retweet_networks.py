@@ -22,12 +22,16 @@ import multiprocessing as mp
 import datetime as dt
     
 
-####################
-# Functions to parse retweets and quoted tweets
-####################
+# Helpful for debugging/test cases
 # Note i = 8 is example self-retweet
 # Note i = 9,10 is example of phantom retweet
 # Note i = 2014, 2603, 3777 are quotes
+# Note tweet_id = '1197665879598624769' should be an indirect RT
+
+####################
+# Functions to parse retweets and quoted tweets
+####################
+
 
 def article_tweet_edges(article_id, tweets, articles, friend_files):
     """
@@ -76,7 +80,7 @@ def determine_retweet_edges(i, tweets, articles, friend_files):
     # Grab specific tweet and preliinary information    
     tweet = tweets.iloc[i,:]
     user_id = tweet['user_id']
-    rt_edge = pd.DataFrame({'Source': user_id, 'Target': None, 'type': None, 'total_article_number': tweet['total_article_number']}, index = [0])
+    rt_edge = pd.DataFrame({'Source': None, 'Target': user_id, 'type': None, 'total_article_number': tweet['total_article_number']}, index = [0])
     
     # If retweet determine who they were actually retweeting
     if tweet['is_retweet']:
@@ -96,7 +100,7 @@ def parse_retweet(tweet, user_id, rt_edge, friend_files, all_tweets):
     - rt_edge: returns the rt_edge dataframe row with appropriate user_id filled in the 'to' column
     """
     
-    # Ensure IDs are in proper format
+    # Ensure IDs and times are in proper format
     all_tweets = all_tweets.astype({'retweeted_user_id': object, 'retweet_id': object, 'user_id': object}) 
     
     # Filter tweets to only those talking about this news article
@@ -111,7 +115,7 @@ def parse_retweet(tweet, user_id, rt_edge, friend_files, all_tweets):
     regex_friend = re.compile(r"[0-9].*_%s.csv" % user_id)
     fr_file = list(filter(regex_friend.match, friend_files))
     if len(fr_file) == 0: #don't have friend file for user, could be because it is private
-        rt_edge['Target'] = rt_user_id
+        rt_edge['Source'] = rt_user_id
         rt_edge['type'] = "Presumed Phantom RT"
         return rt_edge
     else: 
@@ -120,37 +124,36 @@ def parse_retweet(tweet, user_id, rt_edge, friend_files, all_tweets):
     
     # If retweeted user is followed by focal user, count that as flow of tweet
     if rt_user_id in friends:
-        rt_edge['Target'] = rt_user_id
+        rt_edge['Source'] = rt_user_id
         rt_edge['type'] = "Direct RT"
         
     # Check if self-retweet
     elif rt_user_id == user_id:
-        rt_edge['Target'] = rt_user_id
+        rt_edge['Source'] = rt_user_id
         rt_edge['type'] = "Self RT"
         
     # Otherwise determine if indirect RT or phantom RT
     else:
         
+        # Grab tweeters who are both i's friends and tweeted the news article in question
+        article_tweeters = np.unique(article_tweets['user_id'])
+        candidate_friends = np.intersect1d(friends, article_tweeters)
+        rt_time = tweet['tweet_time']
+        candidate_tweets = article_tweets[(article_tweets['user_id'].isin(candidate_friends))].copy()
+        
+        # Filter candidate tweets to only those that are RTing the same tweet and that occured before i's retweet
+        candidate_tweets = candidate_tweets[candidate_tweets['retweet_id'] == rt_id]
+        candidate_tweets = candidate_tweets[candidate_tweets['tweet_time'] < rt_time] #tweets before focal individual
+        
         try:
-            # Grab tweeters who are both i's friends and tweeted the news article in question
-            article_tweeters = np.unique(article_tweets['user_id'])
-            candidate_friends = np.intersect1d(friends, article_tweeters)
-            rt_time = dt.datetime.strptime(tweet['tweet_time'], '%a %b %d %H:%M:%S %z %Y')
-            candidate_tweets = article_tweets[(article_tweets['user_id'].isin(candidate_friends))].copy()
-            
-            # Filter candidate tweets to only those that are RTing the same tweet and that occured before i's retweet
-            candidate_tweets = candidate_tweets[candidate_tweets['retweet_id'] == rt_id]
-            candidate_tweets.loc[:,'tweet_time'] = pd.to_datetime(candidate_tweets['tweet_time'], format = '%a %b %d %H:%M:%S %z %Y')
-            candidate_tweets = candidate_tweets[candidate_tweets['tweet_time'] < rt_time] #tweets before focal individual
-            retweeted = candidate_tweets.loc[ candidate_tweets['tweet_time'].idxmax() ] #most recent tweet before focal tweet
-            
-            # Set indirect RT edge
-            rt_edge['Target'] = retweeted['user_id'].astype(object)
+            # Grab most recent tweet before focal tweet, Set indirect RT edge
+            retweeted = candidate_tweets.loc[ candidate_tweets['tweet_time'].idxmax() ]
+            rt_edge['Source'] = retweeted['user_id']
             rt_edge['type'] = "Indirect RT"
             
         except:
             # set phantom RT edge
-            rt_edge['Target'] = rt_user_id
+            rt_edge['Source'] = rt_user_id
             rt_edge['type'] = "Phantom RT"
     
     return rt_edge
@@ -187,7 +190,7 @@ def parse_quotedtweet(tweet, rt_edge, articles):
         
     # Determine what to do
     if in_quoted:
-        rt_edge['Target'] = tweet['quoted_user_id']
+        rt_edge['Source'] = tweet['quoted_user_id']
         rt_edge['type'] = "Quote"
     elif in_main and not in_quoted:
         return None #this is treated as an original tweet of the article
@@ -221,6 +224,10 @@ if __name__ == '__main__':
                                   'retweeted_user_id': object, 'retweet_id': object,
                                   'quoted_user_id': object, 'quoted_id': object})
     number_of_tweets = tweets.shape[0]
+    
+    # Format tweet time
+    tweets.loc[:,'tweet_time'] = pd.to_datetime(tweets['tweet_time'], format = '%a %b %d %H:%M:%S %z %Y')
+
     
     # Get unique articles
     unique_articles = tweets['total_article_number'].unique()
