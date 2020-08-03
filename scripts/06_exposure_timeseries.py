@@ -147,8 +147,8 @@ def determine_new_exposed(followers, exposed_already):
 if __name__ == '__main__':
     
     # high level directory (external HD or cluster storage)
-#    data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster storage
-    data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
+    data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster storage
+#    data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
     
     # Load tweet data, esnure in proper format
     labeled_tweets = pd.read_csv(data_directory + "data_derived/tweets/tweets_labeled.csv",
