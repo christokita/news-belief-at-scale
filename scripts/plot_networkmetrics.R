@@ -34,6 +34,24 @@ network_metrics <- read.csv(network_metric_path, header = TRUE)
 rt_edges <- read.csv(paste0(retweet_network_path, 'rtnetwork_edges.csv'), colClasses = c("Source"="character", "Target"="character"))
 
 
+############################## Basics ##############################
+
+####################
+# Plot: Tweet types
+####################
+gg_tweettypes <- rt_edges %>% 
+  mutate(type = ifelse(type == "Presumed Phantom RT", "Phantom RT", type)) %>% 
+  mutate(type = gsub(" RT", "", type)) %>% 
+  ggplot(., aes(x = type, fill = type)) +
+  geom_histogram(stat = "count") +
+  scale_fill_manual(values = c("#1B264F", "#274690", "#576CA8", "#302B27")) +
+  xlab("Retweet type") +
+  ylab("Count") +
+  theme_ctokita() +
+  theme(legend.position = "none")
+gg_tweettypes
+ggsave(gg_tweettypes, filename = paste0(outpath, "RT_type.png"), width = 60, heigh = 60, units = "mm", dpi = 400)
+
 ############################## Ideology in networks ##############################
 
 ####################
