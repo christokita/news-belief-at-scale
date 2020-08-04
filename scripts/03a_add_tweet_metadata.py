@@ -117,7 +117,7 @@ labeled_tweets = labeled_tweets.merge(article_ratings, how = 'left', on = 'total
 ####################
 # Load and prepare ideological scores
 ideological_scores = pd.read_csv(data_directory + "data_derived/ideological_scores/unique_tweeters_ideology_scores.csv",
-                                 dtype = {'id_str': object})
+                                 dtype = {'user_id': object})
 ideological_scores = ideological_scores.rename(columns = {'id_str': 'user_id', 'pablo_score': 'user_ideology'})
 
 # Merge in ideological scores
@@ -151,9 +151,9 @@ for user in missing_ideologies['user_id']:
             next
     else:
         try:
-            follower_list = np.genfromtxt(data_directory + "data/followers/" + file[0], dtype = object)
-            follower_list = follower_list[1:len(follower_list)] #remove header, will raise error if empty
-            friend_scores = friend_ideologies[friend_ideologies['user_id'].isin(follower_list)]
+            friend_list = np.genfromtxt(data_directory + "data/followers/" + file[0], dtype = str)
+            friend_list = friend_list[1:len(friend_list)] #remove header, will raise error if empty
+            friend_scores = friend_ideologies[friend_ideologies['user_id'].isin(friend_list)]
             missing_ideologies.loc[missing_ideologies.user_id == user, 'user_ideology'] =  np.mean(friend_scores['pablo_score'])
         except:
             next
