@@ -45,71 +45,66 @@ def unique_exposed_over_time(story_id, tweets, data_directory, ideol_bin_size):
     selected_tweets['article_first_time'] = min(selected_tweets['tweet_time'])
     selected_tweets['relative_tweet_time'] = selected_tweets['tweet_time'] - selected_tweets['article_first_time']
     selected_tweets['relative_tweet_time'] = selected_tweets['relative_tweet_time'] / np.timedelta64(1, 'h') #convert to hours
+    selected_tweets = selected_tweets.sort_values('relative_tweet_time')
     
-    # Load follower ideology data
+    # Load follower IDs for each tweeter
+    followers_per_tweeter = gather_followers(selected_tweets)
+    
+    # Drop duplicates so we only keep first instance of exposure per follower
+    followers_per_tweeter = followers_per_tweeter.drop_duplicates(subset = "follower_id")
+    
+    # Merge in follower ideology data
     follower_ideologies = pd.read_csv(data_directory + "data_derived/ideological_scores/cleaned_followers_ideology_scores.csv",
                                       dtype = {'user_id': object, 'pablo_score': float})
+    follower_ideologies = follower_ideologies.rename(columns = {'user_id': 'follower_id'})
+    follower_ideologies = follower_ideologies.drop(columns = ['accounts_followed'])
+    followers_per_tweeter = followers_per_tweeter.merge(follower_ideologies, how = "left", on = "follower_id")
     
     # Determine bin edges from size. Ideologies are in range [-2.654, 5.001]
     ideol_bins, bin_labels = create_ideology_bins(follower_ideologies, ideol_bin_size)
     
     # Create data frame to collect exposure data
-    cols = ['time', 'tweet_number', 'tweet_id', 'user_id', 'new_exposed_users', 'cumulative_exposed'] + list(bin_labels)
+    cols = ['relative_time', 'tweet_number', 'tweet_id', 'user_id', 'new_exposed_users', 'cumulative_exposed'] + list(bin_labels)
     exposed_over_time = pd.DataFrame(columns = cols)
     del cols
     
-    # Go through each tweet in order and determine unique exposed users, and their ideology
-    exposed_already = np.array([], dtype = object)
-    follower_files = os.listdir(data_directory + "data/followers/")
-    for j in np.arange(selected_tweets.shape[0]):
-        
-        # Get user ID and appropriate file
-        user_id = selected_tweets['user_id'].iloc[j]
-        regex = re.compile(r"[0-9].*_%s.csv" % user_id)
-        file = list(filter(regex.match, follower_files))
-        
-        # Load followers
-        followers = load_followers(file, data_directory)
-        
-        # Determine new unique exposed users
-        new_exposed, exposed_already = determine_new_exposed(followers, exposed_already)
-        
-        # Get ideologies of these followers     
-        ideologies = follower_ideologies.loc[follower_ideologies['user_id'].isin(new_exposed), 'pablo_score']
-        ideol_counts = np.histogram(ideologies, bins = ideol_bins)
-        ideol_counts = pd.DataFrame([ideol_counts[0]], columns = bin_labels)
-        
-        # Summarise and append to data set
-        new_row = pd.DataFrame({'time': selected_tweets['relative_tweet_time'].iloc[j], 
-                                                        'tweet_number': j, 
-                                                        'tweet_id': selected_tweets['tweet_id'].iloc[j],
-                                                        'user_id': selected_tweets['user_id'].iloc[j],
-                                                        'new_exposed_users': len(new_exposed),
-                                                        'cumulative_exposed': len(exposed_already)}, index = [0])
-        new_row = pd.concat([new_row, ideol_counts], axis = 1, sort = False)
-        exposed_over_time = exposed_over_time.append(new_row, ignore_index = True, sort = False)
-        
+    # Construct our data set
+    exposed_over_time = create_exposure_dataset(collection_df = exposed_over_time, 
+                                                article_tweets = selected_tweets, 
+                                                follower_data = followers_per_tweeter,
+                                                bins = ideol_bins,
+                                                bin_labels = bin_labels)
+    
     # Add additional info for data frame and return
     exposed_over_time['total_article_number'] = story_id
     return(exposed_over_time)
     
     
-def create_ideology_bins(ideologes, bin_size):
+def gather_followers(article_tweets):
     """
-    Function that computes bins for ideology scores
+    Function that will go through each tweet and will load the follower IDs for each tweeter.
     
-    OUTPUT:
-    - bins:     bin edges (numpy array).
-    - labels:   labels for bins (list of str).
+    OUTPUT
+    - followers_exposed: dataframe listing user ID of each tweeter and all user IDs of their respective followers.
     """
-    lower_edge = math.floor(ideologes['pablo_score'].min() / bin_size) * bin_size
-    upper_edge = math.ceil(ideologes['pablo_score'].max() / bin_size) * bin_size
-    bins = np.arange(lower_edge, upper_edge + 0.001, bin_size) #stop number in range is non-inclusive, so need to add small amount
-    labels = np.delete(bins, -1) #delete upper edge of last bin
-    labels = ["ideol_" + str(s) + "_" + str(s+0.5) for s in labels]
-    return bins, labels
+    # Load follower IDs for each tweeter
+    follower_files = os.listdir(data_directory + "data/followers/")
+    followers_exposed = pd.DataFrame(columns = ['user_id', 'follower_id'], dtype = object)
+    for j in np.arange(article_tweets.shape[0]):
+        
+        # Get user ID and appropriate file
+        user_id = article_tweets['user_id'].iloc[j]
+        regex = re.compile(r"[0-9].*_%s.csv" % user_id)
+        file = list(filter(regex.match, follower_files))
+        
+        # Load followers, bind to dataframe
+        followers = load_followers(file, data_directory)
+        if len(followers) > 0:
+            new_row = pd.DataFrame({'user_id': user_id, 'follower_id': followers})
+            followers_exposed = followers_exposed.append(new_row, ignore_index = True)
+    return followers_exposed
     
-
+    
 def load_followers(file, data_directory):
     """
     Function that will load the follower files or return an empty array if there are no followers for this user
@@ -127,19 +122,60 @@ def load_followers(file, data_directory):
             followers = np.array([]) #no followers, empty file
     return followers
 
-def determine_new_exposed(followers, exposed_already):
+
+def create_exposure_dataset(collection_df, article_tweets, follower_data, bins, bin_labels):
     """
-    Function to determine what new unique followers have been exposed to the news article
+    Function that will go construct our dataset
+    """
+    cumulative_exposed = 0
+    for j in np.arange(article_tweets.shape[0]):
+        
+        # Get tweet identifying items
+        user_id = article_tweets['user_id'].iloc[j]
+        tweet_id = article_tweets['tweet_id'].iloc[j]
+        rel_time = article_tweets['relative_tweet_time'].iloc[j]
+        tweet_number = j
+        
+        # Subset out unique, newly exposed followers of this user
+        their_followers = follower_data[follower_data['user_id'] == user_id]
+        
+        # Count total new exposed, update cumulative exposed
+        new_exposed_count = their_followers.shape[0]
+        cumulative_exposed += new_exposed_count
+        
+        # Get ideologies of these followers     
+        ideol_counts = np.histogram(their_followers['pablo_score'], bins = bins)
+        ideol_counts = pd.DataFrame([ideol_counts[0]], columns = bin_labels)
+        
+        # Summarise and create new row
+        new_row = pd.DataFrame({'relative_time': rel_time, 
+                                'tweet_number': tweet_number, 
+                                'tweet_id': tweet_id,
+                                'user_id': user_id,
+                                'new_exposed_users': new_exposed_count,
+                                'cumulative_exposed': cumulative_exposed}, index = [0])
+        new_row = pd.concat([new_row, ideol_counts], axis = 1, sort = False)
+        collection_df = collection_df.append(new_row, ignore_index = True, sort = False)
     
-    OUTPUT
-    - new_exposed:  array of user IDs of users that were exposed for the first time. 
+    # return    
+    return collection_df
+        
+
+def create_ideology_bins(ideologes, bin_size):
     """
-    if len(followers) > 0: #if array is empty, np.setdiff1d will raise annoying error.
-        new_exposed = np.setdiff1d(followers, exposed_already)
-        exposed_already = np.append(exposed_already, new_exposed)
-    else: #bypass annoying error with np.setdiff1d if followers is an empty array
-        new_exposed = np.array([])
-    return new_exposed, exposed_already
+    Function that computes bins for ideology scores
+    
+    OUTPUT:
+    - bins:     bin edges (numpy array).
+    - labels:   labels for bins (list of str).
+    """
+    lower_edge = math.floor(ideologes['pablo_score'].min() / bin_size) * bin_size
+    upper_edge = math.ceil(ideologes['pablo_score'].max() / bin_size) * bin_size
+    bins = np.arange(lower_edge, upper_edge + 0.001, bin_size) #stop number in range is non-inclusive, so need to add small amount
+    labels = np.delete(bins, -1) #delete upper edge of last bin
+    labels = ["ideol_" + str(s) + "_" + str(s+0.5) for s in labels]
+    return bins, labels
+    
 
 ####################
 # Main script: Count exposed users over time
@@ -147,15 +183,13 @@ def determine_new_exposed(followers, exposed_already):
 if __name__ == '__main__':
     
     # high level directory (external HD or cluster storage)
-    data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster storage
-#    data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
+#    data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster storage
+    data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
     
     # Load tweet data, esnure in proper format
     labeled_tweets = pd.read_csv(data_directory + "data_derived/tweets/tweets_labeled.csv",
                                  dtype = {'quoted_urls': object, 'quoted_urls_expanded': object, #these two columns cause memory issues if not pre-specified dtype
-                                          'user_id': object, 'tweet_id': object, 
-                                          'retweeted_user_id': object, 'retweet_id': object,
-                                          'quoted_user_id': object, 'quoted_id': object})
+                                          'user_id': object, 'tweet_id': object})
     
     # Get unique articles
     unique_articles = labeled_tweets['total_article_number'].unique()
@@ -194,6 +228,6 @@ if __name__ == '__main__':
         article_files = [file for file in article_files if re.match('^article', file)] #filter out hidden copies of same files
         for file in article_files:
             story_exposed = pd.read_csv(data_directory + "data_derived/timeseries/individual_articles/" + file,
-                                        dtype = {'user_id': int})
+                                        dtype = {'user_id': object})
             exposed_timeseries = exposed_timeseries.append(story_exposed, sort = False)
         exposed_timeseries = exposed_timeseries.to_csv(data_directory + "data_derived/timeseries/users_exposed_over_time.csv", index = False)
