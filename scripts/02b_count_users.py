@@ -38,9 +38,7 @@ outpath_friend_data = data_directory + "data_derived/friends/"
 # Load tweets
 tweets = pd.read_csv(path_to_tweets + "tweets_parsed.csv",
                      dtype = {'quoted_urls': object, 'quoted_urls_expanded': object, #these two columns cause memory issues if not pre-specified dtype
-                              'user_id': object, 'tweet_id': object, 
-                              'retweeted_user_id': object, 'retweet_id': object,
-                              'quoted_user_id': object, 'quoted_id': object})
+                              'user_id': 'int64', 'tweet_id': 'int64'})
 tweeters = tweets['user_id']
     
 # Get user IDs of tweeters
@@ -58,24 +56,24 @@ tweeters.to_csv(outpath_tweet_data + "unique_tweeters.csv", index = False)
 # Count up followers
 follower_files = sorted( os.listdir(path_to_followers) )
 num_files = len(follower_files)
-all_followers = np.array([], dtype = object)
+all_followers = np.array([], dtype = 'int64')
 for file in follower_files:
-    data = np.genfromtxt(path_to_followers + file, skip_header = 1, dtype = str) #first row is header
+    data = np.genfromtxt(path_to_followers + file, skip_header = 1, dtype = 'int64') #first row is header
     all_followers = np.append(all_followers, data)
     all_followers = np.unique(all_followers)
     del data
 followers_minus_tweeters = np.setdiff1d(all_followers, tweeters)
 count_followers = all_followers.shape[0]
 count_followers_minus_tweeters = followers_minus_tweeters.shape[0]
-all_followers = pd.DataFrame(all_followers, columns = ["user_id"], dtype = object)
-followers_minus_tweeters = pd.DataFrame(followers_minus_tweeters, columns = ["user_id"], dtype = object)
+all_followers = pd.DataFrame(all_followers, columns = ["user_id"], dtype = 'int64')
+followers_minus_tweeters = pd.DataFrame(followers_minus_tweeters, columns = ["user_id"], dtype = 'int64')
     
 
 # Count tweeters who had no followers
 nofollower_files = sorted( os.listdir(path_tweeters_nofollowers) )
-no_followers = np.array([], dtype = object)
+no_followers = np.array([], dtype = 'int64')
 for file in nofollower_files:
-    data = np.genfromtxt(path_tweeters_nofollowers + file, dtype = str) #first row is header
+    data = np.genfromtxt(path_tweeters_nofollowers + file, dtype = 'int64') #first row is header
     try:
         data = data[1:len(data)] #if empty, will return error
         no_followers = np.append(no_followers, data)
@@ -84,7 +82,7 @@ for file in nofollower_files:
     except:
         next
 count_no_followers = no_followers.shape[0]
-no_followers = pd.DataFrame(no_followers, columns = ["user_id"], dtype = object)
+no_followers = pd.DataFrame(no_followers, columns = ["user_id"], dtype = 'int64')
 
 # Save
 all_followers.to_csv(outpath_follower_data + "unique_followers.csv", index = False)
@@ -98,24 +96,24 @@ del all_followers, followers_minus_tweeters, no_followers
 # Count up friends
 friend_files = sorted( os.listdir(path_to_friends) )
 num_files = len(friend_files)
-all_friends = np.array([], dtype = object)
+all_friends = np.array([], dtype = 'int64')
 for file in friend_files:
-    data = np.genfromtxt(path_to_friends + file, skip_header = 1, dtype = str) #first row is header
+    data = np.genfromtxt(path_to_friends + file, skip_header = 1, dtype = 'int64') #first row is header
     all_friends = np.append(all_friends, data)
     all_friends = np.unique(all_friends)
     del data
 all_friends_minus_tweeters = np.setdiff1d(all_friends, tweeters)
 count_all_friends = all_friends.shape[0]
 count_all_friends_minus_tweeters = all_friends_minus_tweeters.shape[0]
-all_friends = pd.DataFrame(all_friends, columns = ["user_id"], dtype = object)
-all_friends_minus_tweeters = pd.DataFrame(all_friends_minus_tweeters, columns = ["user_id"], dtype = object)
+all_friends = pd.DataFrame(all_friends, columns = ["user_id"], dtype = 'int64')
+all_friends_minus_tweeters = pd.DataFrame(all_friends_minus_tweeters, columns = ["user_id"], dtype = 'int64')
     
 
 # Count tweeters who have no friends
 tweeters_nofriends_files = sorted( os.listdir(path_to_tweeters_nofriends) )
-no_friends = np.array([], dtype = object)
+no_friends = np.array([], dtype = 'int64')
 for file in tweeters_nofriends_files:
-    data = np.genfromtxt(path_to_tweeters_nofriends + file, dtype = str) #first row is header
+    data = np.genfromtxt(path_to_tweeters_nofriends + file, dtype = 'int64') #first row is header
     try:
         data = data[1:len(data)] #if empty, will return error
         no_friends = np.append(no_friends, data)
@@ -124,7 +122,7 @@ for file in tweeters_nofriends_files:
     except:
         next
 count_no_friends = no_friends.shape[0]
-no_friends = pd.DataFrame(no_friends, columns = ["user_id"], dtype = object)
+no_friends = pd.DataFrame(no_friends, columns = ["user_id"], dtype = 'int64')
 
 # Save
 all_friends.to_csv(outpath_friend_data + "unique_friends.csv", index = False)
