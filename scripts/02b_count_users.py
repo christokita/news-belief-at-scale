@@ -5,9 +5,13 @@ Created on Tue Apr 14 10:44:52 2020
 
 @author: ChrisTokita
 
-SCRIPT:
+SCRIPT
 Parse user data to determine the unique number and IDs of users (and user types).
 This script uses a high performance computing cluster, assuming a slurm-based scheduling system.
+
+NOTE:
+Normally, I would handle IDs as strings, but counting such large number is slow. 
+I handled as int64 explicitly and hand checking suggets this is still good! 
 """
 
 ####################
