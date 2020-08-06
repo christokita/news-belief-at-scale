@@ -214,9 +214,6 @@ for j in range(confirmed_matches.shape[0]):
     article_id = confirmed_matches['total_article_number'].iloc[j].copy()
     still_unmatched.loc[has_link, 'total_article_number'] = article_id
     
-    if still_unmatched.total_article_number[still_unmatched.user_name == 'margaretjg24'].iloc[0] == 134:
-        print(j)
-    
 # Merge in and add metadata
 round2_matched = still_unmatched[~pd.isna(still_unmatched['total_article_number'])]
 tweets[['tweet_id', 'total_article_number']] = tweets.set_index('tweet_id').total_article_number.fillna(round2_matched.set_index('tweet_id').total_article_number).reset_index()
