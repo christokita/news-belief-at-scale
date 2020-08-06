@@ -18,7 +18,7 @@ source("scripts/_plot_themes/theme_ctokita.R")
 ####################
 # Paramters for analysis: paths to data, paths for output, and filename
 ####################
-tweeter_score_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/all_tweets_labeled.csv' #path to fitness cascade data
+tweeter_score_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv' #path to fitness cascade data
 outpath <- 'output/timeseries/'
 
 # For labeling facet plots
@@ -345,8 +345,8 @@ exposure_data <- rbind(exposure_data, dummy_exposure) %>%
 
 # Merge in relevant article level data
 article_data <- tweeter_scores %>% 
-  select(user_id, total_article_number, source_lean, article_fc_rating, article_lean, user_ideology, article_ideology)
-exposure_timeseries <- merge(exposure_data, article_data, by = c("user_id", "total_article_number"), all.x = TRUE) %>% 
+  select(user_id, tweet_number, total_article_number, source_lean, article_fc_rating, article_lean, user_ideology, article_ideology)
+exposure_timeseries <- merge(exposure_data, article_data, by = c("tweet_number", "total_article_number"), all.x = TRUE) %>% 
   group_by(total_article_number) %>% 
   mutate(relative_cumulative_exposed = cumulative_exposed / max(cumulative_exposed))
 rm(exposure_data, story_data)
@@ -357,7 +357,7 @@ rm(exposure_data, story_data)
 # Total cumulative exposed
 gg_exposuretime <- exposure_timeseries %>% 
   filter(article_fc_rating %in% c("T", "FM")) %>% 
-  ggplot(., aes(x = time, y = cumulative_exposed, group = total_article_number)) +
+  ggplot(., aes(x = relative_time, y = cumulative_exposed, group = total_article_number)) +
   geom_step(size = 0.3, alpha = 0.5, color = line_color) +
   # scale_y_log10() +
   scale_y_continuous(breaks = c(10^seq(1, 7, 2)),
