@@ -98,6 +98,8 @@ tweet_perhour <- tweets %>%
   count(.)
 tweet_perhour$n[tweet_perhour$hour_bin %in% c(-2, -1)] <- 0 #zero out the count of dummy rows
 
+
+
 ############################## Plot simple time series of tweet count ##############################
 
 ####################
