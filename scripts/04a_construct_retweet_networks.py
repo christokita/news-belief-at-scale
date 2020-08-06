@@ -33,9 +33,10 @@ import datetime as dt
 ####################
 
 
-def article_tweet_edges(article_id, tweets, articles, friend_files):
+def article_tweet_edges(article_id, tweets, articles, fuzzy_matched_URLs, friend_files):
     """
-    Function that will take a set of tweets, contruct an edge+node list, and save to file
+    Function that will take a set of tweets, contruct an edge+node list, and save to file.
+    Most inputs are self-explanatory, but fuzzy_matched_URLs is the list of URLs generated for previously unmatched tweets (see script 03b).
 
     OUTPUT:
     - rt_edge: dataframe row with user ids in the 'Source' and 'Target' column, denoting the flow of the article, along with a label for the type of flow.
@@ -49,7 +50,7 @@ def article_tweet_edges(article_id, tweets, articles, friend_files):
     # Loop over tweets sharing this specific article and create edgelist
     retweet_edges = pd.DataFrame(columns = ['Source', 'Target', 'type', 'total_article_number', 'tweet_id'])
     for i in range(n_tweets):
-        edge = determine_retweet_edges(i, selected_tweets, articles, friend_files)
+        edge = determine_retweet_edges(i, selected_tweets, articles, fuzzy_matched_URLs, friend_files)
         if edge is not None:
             edge['tweet_id'] = selected_tweets.tweet_id.iloc[i]
             retweet_edges = retweet_edges.append(edge, sort = False)
@@ -68,7 +69,7 @@ def article_tweet_edges(article_id, tweets, articles, friend_files):
     nodes.to_csv(data_directory + "data_derived/networks/specific_article_networks/article" + str(article_id) + "_nodes.csv", index = False) 
     return None
 
-def determine_retweet_edges(i, tweets, articles, friend_files):
+def determine_retweet_edges(i, tweets, articles, manually_matched_URLs, friend_files):
     """
     Function that will take a single tweet and determine if it was a RT or quoted tweet, and if so, determine who the RT came from.
     
@@ -86,7 +87,7 @@ def determine_retweet_edges(i, tweets, articles, friend_files):
     if tweet['is_retweet']:
         rt_edge = parse_retweet(tweet, user_id, rt_edge, friend_files, tweets)
     elif tweet['is_quote']:
-        rt_edge = parse_quotedtweet(tweet, rt_edge, articles)
+        rt_edge = parse_quotedtweet(tweet, rt_edge, articles, manually_matched_URLs)
     else:
         rt_edge = None
     return rt_edge
@@ -97,7 +98,7 @@ def parse_retweet(tweet, user_id, rt_edge, friend_files, all_tweets):
     Function that will take a retweet and determine who the RT came from: original tweeter or friend that tweeted
     
     OUTPUT
-    - rt_edge: returns the rt_edge dataframe row with appropriate user_id filled in the 'to' column
+    - rt_edge: returns the rt_edge dataframe row with appropriate user_id filled in the 'Source' column
     """
     
     # Ensure IDs and times are in proper format
@@ -159,12 +160,12 @@ def parse_retweet(tweet, user_id, rt_edge, friend_files, all_tweets):
     return rt_edge
 
 
-def parse_quotedtweet(tweet, rt_edge, articles):
+def parse_quotedtweet(tweet, rt_edge, articles, fuzzy_matched_URLs):
     """
     Function that will take a quoted tweet and determine if this counts as the original FM news share or a RT
     
     OUTPUT
-    - rt_edge: returns the rt_edge dataframe row with appropriate user_id filled in the 'to' column
+    - rt_edge: returns the rt_edge dataframe row with appropriate user_id filled in the 'Source' column
     """
     
     # Filter to appropriate article
@@ -193,10 +194,16 @@ def parse_quotedtweet(tweet, rt_edge, articles):
         rt_edge['Source'] = tweet['quoted_user_id']
         rt_edge['type'] = "Quote"
     elif in_main and not in_quoted:
-        return None #this is treated as an original tweet of the article
+        rt_edge = None #this is treated as an original tweet of the article
     elif not in_main and not in_quoted:
-        print("For user %d in tweet i=%d, a matching link was not found in either the main or quoted tweet text! Check this." % (tweet['user_id'], tweet.name))
-        return None
+        result = find_unmatched_url(tweet, fuzzy_matched_URLs)
+        if result is not None:
+            rt_edge['Source'] = tweet['quoted_user_id']
+            rt_edge['type'] = "Quote"
+        else:
+            rt_edge = None
+    
+    return rt_edge
 
 # Function to clean up links for better matching
 def simplify_link(link):
@@ -208,14 +215,39 @@ def simplify_link(link):
     return link
 
 
+# Function to check for the hard to match tweets (see script: 03b)
+def find_unmatched_url(tweet, fuzzy_matched_URLs):
+    """
+    In the case of a quoted tweet that we can't find the URL from our original list, look for a match in the set of URLs we fuzzy matched.
+    
+    OUTPUT
+    - rt_edge: returns the rt_edge dataframe row with appropriate user_id filled in the 'Source' column
+    """
+    # Get matched URLs for this article in question
+    URLs_of_interest = fuzzy_matched_URLs[fuzzy_matched_URLs.total_article_number == tweet.total_article_number]
+    article_URLs = URLs_of_interest['urls_expanded']
+    
+    # Loop through and determine where it shows up
+    for url in article_URLs:
+        in_body = url in tweet['urls_expanded']
+        in_quote = url in tweet['quoted_urls_expanded']
+        
+        if in_body:
+            return None
+        elif in_quote:
+            return "retweet"
+        
+    # If still not found, raise note of caution
+    print("For user %s in tweet i=%d, a matching link was not found in either the main or quoted tweet text! Check this." % (tweet['user_id'], tweet.name))
+
 ####################
 # Main script: Construct network edges
 ####################
 if __name__ == '__main__':
     
     # high level directory (external HD or cluster storage)
-    data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster storage
-#    data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
+#    data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster storage
+    data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
     
     # Load tweet data, esnure in proper format
     tweets = pd.read_csv(data_directory + "data_derived/tweets/tweets_labeled.csv",
@@ -228,7 +260,6 @@ if __name__ == '__main__':
     # Format tweet time
     tweets.loc[:,'tweet_time'] = pd.to_datetime(tweets['tweet_time'], format = '%a %b %d %H:%M:%S %z %Y')
 
-    
     # Get unique articles
     unique_articles = tweets['total_article_number'].unique()
     unique_articles.sort()
@@ -243,16 +274,19 @@ if __name__ == '__main__':
     processed_articles = np.array(processed_articles, dtype = int)
     unique_articles = np.setdiff1d(unique_articles, processed_articles)
     
-    # Load articles
+    # Load articles and fuzzy/manually-matched URLs
     articles = pd.read_csv(data_directory + "data/articles/daily_articles.csv")
-    
+    checked_unmatched_urls = pd.read_csv(data_directory + 'data_derived/articles/manuallyconfirmed_unmatched_urls.csv') 
+    checked_unmatched_urls.loc[~pd.isna(checked_unmatched_urls['manual_matched_ID']), 'total_article_number'] = checked_unmatched_urls.loc[~pd.isna(checked_unmatched_urls['manual_matched_ID']), 'manual_matched_ID'] #plugs in manually fixed article number
+    confirmed_matches =  checked_unmatched_urls[checked_unmatched_urls['good_match'] == True]
+
     # Get list of friend files for reference
     friend_files = [file for file in os.listdir(data_directory + "data/friends/") if re.match('^[0-9]', file)] #filter out hidden copies of same files
 
     # Process article tweets in parallel, writing individual article networks to file
     pool = mp.Pool(mp.cpu_count())
     for article_id in unique_articles:
-        pool.apply_async(article_tweet_edges, args = (article_id, tweets, articles, friend_files))
+        pool.apply_async(article_tweet_edges, args = (article_id, tweets, articles, confirmed_matches, friend_files))
     pool.close()
     pool.join()
     
