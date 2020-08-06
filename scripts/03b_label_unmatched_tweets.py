@@ -209,10 +209,13 @@ for j in range(confirmed_matches.shape[0]):
     # Prep links for pattern matching
     link = confirmed_matches['urls_expanded'].iloc[j]
     # Search through URLS
-    has_link = still_unmatched['urls_expanded'].str.contains(link, na = False) | tweets['quoted_urls_expanded'].str.contains(link, na = False)
+    has_link = still_unmatched['urls_expanded'].str.contains(link, na = False) | still_unmatched['quoted_urls_expanded'].str.contains(link, na = False)
     # Assign article number ID
     article_id = confirmed_matches['total_article_number'].iloc[j].copy()
     still_unmatched.loc[has_link, 'total_article_number'] = article_id
+    
+    if still_unmatched.total_article_number[still_unmatched.user_name == 'margaretjg24'].iloc[0] == 134:
+        print(j)
     
 # Merge in and add metadata
 round2_matched = still_unmatched[~pd.isna(still_unmatched['total_article_number'])]
