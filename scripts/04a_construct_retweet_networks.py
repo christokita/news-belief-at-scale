@@ -18,9 +18,7 @@ import pandas as pd
 import numpy as np
 import re
 import os
-import multiprocessing as mp
-import datetime as dt
-    
+import multiprocessing as mp    
 
 # Helpful for debugging/test cases
 # Note i = 8 is example self-retweet
@@ -48,7 +46,7 @@ def article_tweet_edges(article_id, tweets, articles, fuzzy_matched_URLs, friend
     n_tweets = len(selected_tweets)
     
     # Loop over tweets sharing this specific article and create edgelist
-    retweet_edges = pd.DataFrame(columns = ['Source', 'Target', 'type', 'total_article_number', 'tweet_id'])
+    retweet_edges = pd.DataFrame(columns = ['Source', 'Target', 'RT_type', 'total_article_number', 'tweet_id'])
     for i in range(n_tweets):
         edge = determine_retweet_edges(i, selected_tweets, articles, fuzzy_matched_URLs, friend_files)
         if edge is not None:
@@ -81,7 +79,7 @@ def determine_retweet_edges(i, tweets, articles, manually_matched_URLs, friend_f
     # Grab specific tweet and preliinary information    
     tweet = tweets.iloc[i,:]
     user_id = tweet['user_id']
-    rt_edge = pd.DataFrame({'Source': None, 'Target': user_id, 'type': None, 'total_article_number': tweet['total_article_number']}, index = [0])
+    rt_edge = pd.DataFrame({'Source': None, 'Target': user_id, 'RT_type': None, 'total_article_number': tweet['total_article_number']}, index = [0])
     
     # If retweet determine who they were actually retweeting
     if tweet['is_retweet']:
@@ -117,7 +115,7 @@ def parse_retweet(tweet, user_id, rt_edge, friend_files, all_tweets):
     fr_file = list(filter(regex_friend.match, friend_files))
     if len(fr_file) == 0: #don't have friend file for user, could be because it is private
         rt_edge['Source'] = rt_user_id
-        rt_edge['type'] = "Presumed Phantom RT"
+        rt_edge['RT_type'] = "Presumed Phantom RT"
         return rt_edge
     else: 
         friends = np.genfromtxt(data_directory + "data/friends/" + fr_file[0], dtype = str)
@@ -126,12 +124,12 @@ def parse_retweet(tweet, user_id, rt_edge, friend_files, all_tweets):
     # If retweeted user is followed by focal user, count that as flow of tweet
     if rt_user_id in friends:
         rt_edge['Source'] = rt_user_id
-        rt_edge['type'] = "Direct RT"
+        rt_edge['RT_type'] = "Direct RT"
         
     # Check if self-retweet
     elif rt_user_id == user_id:
         rt_edge['Source'] = rt_user_id
-        rt_edge['type'] = "Self RT"
+        rt_edge['RT_type'] = "Self RT"
         
     # Otherwise determine if indirect RT or phantom RT
     else:
@@ -150,12 +148,12 @@ def parse_retweet(tweet, user_id, rt_edge, friend_files, all_tweets):
             # Grab most recent tweet before focal tweet, Set indirect RT edge
             retweeted = candidate_tweets.loc[ candidate_tweets['tweet_time'].idxmax() ]
             rt_edge['Source'] = retweeted['user_id']
-            rt_edge['type'] = "Indirect RT"
+            rt_edge['RT_type'] = "Indirect RT"
             
         except:
             # set phantom RT edge
             rt_edge['Source'] = rt_user_id
-            rt_edge['type'] = "Phantom RT"
+            rt_edge['RT_type'] = "Phantom RT"
     
     return rt_edge
 
@@ -192,14 +190,14 @@ def parse_quotedtweet(tweet, rt_edge, articles, fuzzy_matched_URLs):
     # Determine what to do
     if in_quoted:
         rt_edge['Source'] = tweet['quoted_user_id']
-        rt_edge['type'] = "Quote"
+        rt_edge['RT_type'] = "Quote"
     elif in_main and not in_quoted:
         rt_edge = None #this is treated as an original tweet of the article
     elif not in_main and not in_quoted:
         result = find_unmatched_url(tweet, fuzzy_matched_URLs)
         if result is not None:
             rt_edge['Source'] = tweet['quoted_user_id']
-            rt_edge['type'] = "Quote"
+            rt_edge['RT_type'] = "Quote"
         else:
             rt_edge = None
     
@@ -246,8 +244,8 @@ def find_unmatched_url(tweet, fuzzy_matched_URLs):
 if __name__ == '__main__':
     
     # high level directory (external HD or cluster storage)
-#    data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster storage
-    data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
+    data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster storage
+#    data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
     
     # Load tweet data, esnure in proper format
     tweets = pd.read_csv(data_directory + "data_derived/tweets/tweets_labeled.csv",
@@ -291,7 +289,7 @@ if __name__ == '__main__':
     pool.join()
     
     # Compile individual article networks into main edge and node list
-    retweet_edges = pd.DataFrame(columns = ['Source', 'Target', 'type', 'total_article_number', 'tweet_id'])
+    retweet_edges = pd.DataFrame(columns = ['Source', 'Target', 'RT_type', 'total_article_number', 'tweet_id'])
     retweet_nodes = pd.DataFrame(columns = ['user_id', 'user_name', 'user_ideology', 'ID', 'Label'])
     article_files = os.listdir(data_directory + "data_derived/networks/specific_article_networks/")
     article_edge_files = [file for file in article_files if re.match('^article[0-9]+_edges', file)] #filter out hidden copies of same files
