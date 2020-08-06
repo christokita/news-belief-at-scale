@@ -254,6 +254,9 @@ gg_retweets
 ggsave(gg_retweets, filename = paste0(outpath, "RTpercentage.png"), width = 55, height = 45, units = "mm", dpi = 400)
   
 
+
+############################## Plot time series of tweeter ideology ##############################
+
 ####################
 # Ideological distance of tweeters relative to article content
 ####################

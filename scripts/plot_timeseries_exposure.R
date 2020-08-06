@@ -1,0 +1,196 @@
+########################################
+#
+# PLOT: Exposure to news articles over time, comparing by article veracity or by news source type
+#
+########################################
+
+####################
+# Load packages
+####################
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(RColorBrewer)
+library(scales)
+source("scripts/_plot_themes/theme_ctokita.R")
+
+####################
+# Paramters for analysis: grouping of interest, paths to data, paths for output, and filename
+####################
+# Choose grouping of interest. Options: 
+#     (1) article veracity: "article_fc_rating"
+#     (2) source: "source_type"
+grouping <- "source_type"
+
+# Paths to files/directories
+tweet_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv' #path to fitness cascade data
+if (grouping == "article_fc_rating") {
+  outpath <- 'output/exposure_timeseries/veracity/'
+} else if(grouping == "source_type") {
+  outpath <- 'output/exposure_timeseries/source_type/'
+}
+
+# Color palette
+line_color <- "#495867"
+ideol_pal <- rev(brewer.pal(5, "RdBu"))
+ideol_pal[3] <- "#e0e0e0"
+ideol_dist_pal <- rev(brewer.pal(5, "PuOr"))
+ideol_dist_pal[3] <- "#e0e0e0"
+
+
+####################
+# Load and prep data 
+####################
+# Read in tweet data for article info
+article_data <- read.csv(tweet_path, header = TRUE, colClasses = c("user_id"="character", "tweet_id"="character")) %>% 
+  filter(!is.na(total_article_number)) %>%
+  group_by(total_article_number) %>% 
+  arrange(tweet_time) %>% 
+  mutate(tweet_number = 1:length(tweet_time)) %>% 
+  select(tweet_id, total_article_number, source_type, source_lean, article_fc_rating, article_lean, user_ideology) 
+
+# Load exposure data 
+exposure_data <- read.csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/timeseries/users_exposed_over_time.csv', 
+                          header = TRUE, colClasses = c("user_id"="character", "tweet_id"="character")) %>% 
+  mutate(tweet_number = tweet_number+1) %>%  #python zero index
+  rename(time = relative_time)
+
+# Merge in relevant article level data
+# NOTE: adds one extra row, check after double checking with new data
+exposure_timeseries <- merge(exposure_data, article_data, by = c("tweet_id", "total_article_number"), all = TRUE) 
+
+# TEMP FIX for broken tweet
+exposure_timeseries <- exposure_timeseries[exposure_timeseries$tweet_id != '1214365500559568897',]
+
+# Add dummy rows of pre-first share for plotting purposes
+# (1) Create empty dataframe for dummy rows
+n_articles <- length(unique(exposure_timeseries$total_article_number)) #number of unique articles
+dummy_rows <- data.frame(matrix(NA, ncol = ncol(exposure_timeseries), nrow = 2*n_articles))  #create empty dataframe
+names(dummy_rows) <- names(exposure_timeseries) #give same column names
+# (2) Create unique set of article IDs and fact-check rating to add to our dummy rows
+unique_article_ratings <- article_data %>% 
+  select(source_type, source_lean, total_article_number, article_fc_rating) %>% 
+  unique()
+# (3) Join together
+exposure_timeseries <- dummy_rows %>% 
+  select(-article_fc_rating, -source_type, -source_lean) %>% 
+  mutate(time = rep(c(-2, -0.01), n_articles),
+         tweet_number = rep(c(-1, 0), n_articles),
+         new_exposed_users = 0, 
+         cumulative_exposed = 0, 
+         total_article_number = rep(unique(article_data$total_article_number), each = 2)) %>% 
+  merge(unique_article_ratings, by = "total_article_number") %>% 
+  rbind(exposure_timeseries, .) %>% 
+  mutate(hour_bin = cut(time, breaks = seq(-2, 50, 1), include.lowest = TRUE, right = FALSE, labels = seq(-2, 49))) %>%  #bin by hour tweet appeared
+  mutate(hour_bin = as.numeric(as.character(hour_bin))) %>%  #convert from factor to plain number
+  group_by(total_article_number) %>% 
+  mutate(relative_cumulative_exposed = cumulative_exposed / max(cumulative_exposed),
+         relative_tweet_count = tweet_number / max(tweet_number))
+
+rm(dummy_rows, article_data, exposure_data)
+
+# If analyzing by veracity, drop out non-True/False articles
+if (grouping == "article_fc_rating") {
+  exposure_timeseries <- exposure_timeseries %>% 
+    filter(article_fc_rating %in% c("T", "FM"))
+}
+
+# Clean up some labels
+exposure_timeseries <- exposure_timeseries %>% 
+  mutate(article_fc_rating = ifelse(article_fc_rating == "T", "True news", ifelse(article_fc_rating == "FM", "Fake news", 
+                                                                                  ifelse(article_fc_rating == "CND", "Borderline", 
+                                                                                         ifelse(article_fc_rating == "No Mode!", "No mode", article_fc_rating)))),
+         source_type = ifelse(source_type == "mainstream", "Mainstream", ifelse(source_type == "fringe", "Fringe", source_type)),
+         article_lean = ifelse(article_lean == "C", "Conservative", ifelse(article_lean == "L", "Liberal",
+                                                                           ifelse(article_lean == "N", "Neutral", 
+                                                                                  ifelse(article_lean == "U", "Unclear", source_type)))) )
+
+
+
+############################## Plot time series of article exposure ##############################
+
+####################
+# Total cumulative exposed
+####################
+gg_exposuretime <- exposure_timeseries %>% 
+  ggplot(., aes(x = time, y = cumulative_exposed, group = total_article_number)) +
+  geom_step(size = 0.3, alpha = 0.5, color = line_color) +
+  # scale_y_log10() +
+  scale_y_continuous(breaks = c(10^seq(1, 7, 2)),
+                     labels = scales::trans_format("log10", scales::math_format(10^.x)),
+                     trans = scales::pseudo_log_trans(base = 10)) +
+  xlab("Time since first article share (hrs)") +
+  ylab("Log users exposed") +
+  theme_ctokita() +
+  theme(aspect.ratio = NULL) +
+  facet_wrap(as.formula(paste("~", grouping)), 
+             ncol = 1,
+             strip.position = "right")
+gg_exposuretime
+ggsave(gg_exposuretime, filename = paste0(outpath, "total_exposed_time.png"), width = 90, height = 45, units = "mm", dpi = 400)
+
+
+####################
+# Percentiage of tweets per story
+####################
+gg_relexpostime <- exposure_timeseries %>% 
+  ggplot(., aes(x = time, y = relative_cumulative_exposed, group = total_article_number)) +
+  geom_step(size = 0.3, alpha = 0.5, color = line_color) +
+  # scale_y_log10() +
+  scale_y_continuous(labels = scales::comma) +
+  xlab("Time since first article share (hrs)") +
+  ylab("Proportion of total users exposed") +
+  theme_ctokita() +
+  theme(aspect.ratio = NULL) +
+  facet_wrap(as.formula(paste("~", grouping)), 
+             ncol = 1,
+             strip.position = "right")
+gg_relexpostime
+ggsave(gg_relexpostime, filename = paste0(outpath, "percentage_exposed_time.png"), width = 90, height = 45, units = "mm", dpi = 400)
+
+
+####################
+# Cumulative exposed by tweet number
+####################
+gg_exposuretweet <- exposure_timeseries %>% 
+  ggplot(., aes(x = tweet_number, y = cumulative_exposed, group = total_article_number)) +
+  geom_step(size = 0.3, alpha = 0.5, color = line_color) +
+  scale_y_continuous(breaks = c(10^seq(1, 7, 2)),
+                     labels = scales::trans_format("log10", scales::math_format(10^.x)),
+                     trans = scales::pseudo_log_trans(base = 10)) +
+  xlab("Tweet number") +
+  ylab("Log users exposed") +
+  theme_ctokita() +
+  theme(aspect.ratio = NULL) +
+  facet_wrap(as.formula(paste("~", grouping)), 
+             ncol = 1,
+             strip.position = "right")
+gg_exposuretweet
+ggsave(gg_exposuretweet, filename = paste0(outpath, "total_exposed_tweetnumber.png"), width = 90, height = 45, units = "mm", dpi = 400)
+
+
+####################
+# Relative tweet time tweet number vs exposure
+####################
+# Merge data to create relevant dataset
+exposure_vs_tweet <- tweets %>% 
+  select(total_article_number, tweet_number, relative_tweet_count) %>% 
+  merge(exposure_timeseries, ., all.x = TRUE)
+
+# Plot
+gg_expVnum <- exposure_timeseries %>% 
+  filter(tweet_number > -1) %>% 
+  ggplot(., aes(x = relative_tweet_count, y = relative_cumulative_exposed, group = total_article_number, color = total_article_number)) +
+  geom_abline(intercept = 0, slope = 1, color = "black", 
+              linetype = "dashed", size = 0.3)+
+  geom_line(size = 0.3, alpha = 0.5, color = line_color) +
+  xlab("Proportion of total tweets") +
+  ylab("Proportion of total users exposed") +
+  theme_ctokita() +
+  facet_wrap(as.formula(paste("~", grouping)), 
+             ncol = 1,
+             strip.position = "right",
+             scales = "free_x")
+gg_expVnum
+ggsave(gg_expVnum, filename = paste0(outpath, "relative_tweet_vs_exposure.png"), width = 50, height = 90, units = "mm", dpi = 400)
