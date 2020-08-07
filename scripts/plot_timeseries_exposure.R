@@ -60,9 +60,6 @@ exposure_data <- read.csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ti
 # NOTE: adds one extra row, check after double checking with new data
 exposure_timeseries <- merge(exposure_data, article_data, by = c("tweet_id", "total_article_number"), all = TRUE) 
 
-# TEMP FIX for broken tweet
-exposure_timeseries <- exposure_timeseries[exposure_timeseries$tweet_id != '1214365500559568897',]
-
 # Add dummy rows of pre-first share for plotting purposes
 # (1) Create empty dataframe for dummy rows
 n_articles <- length(unique(exposure_timeseries$total_article_number)) #number of unique articles
@@ -194,3 +191,84 @@ gg_expVnum <- exposure_timeseries %>%
              scales = "free_x")
 gg_expVnum
 ggsave(gg_expVnum, filename = paste0(outpath, "relative_tweet_vs_exposure.png"), width = 50, height = 90, units = "mm", dpi = 400)
+
+
+############################## Plot article exposure by ideology ##############################
+
+# Prep data
+exposure_ideol <- exposure_timeseries %>% 
+  select(-source_lean, -relative_cumulative_exposed, -relative_tweet_count) %>% 
+  gather(key = "ideology_bin", value = "count", 
+         -time, -tweet_number, -tweet_id, -user_id, -user_ideology, -new_exposed_users, -cumulative_exposed, -total_article_number, -hour_bin, -source_type, -article_fc_rating, -article_lean) %>% 
+  mutate(ideology_bin = gsub("ideol_", "", ideology_bin)) %>% 
+  mutate(ideology_bin = gsub("^\\.", "-", ideology_bin)) %>% 
+  mutate(ideology_bin = gsub("_\\.", "_-", ideology_bin)) %>% 
+  separate(ideology_bin, c("lower", "upper"), sep = "_", convert = TRUE) %>% 
+  mutate(ideology_bin = (lower + upper) / 2) %>% 
+  select(-lower, -upper)
+
+####################
+# 
+####################
+# Grab example story for now
+story <- 28
+example_story <- exposure_ideol %>% 
+  filter(total_article_number == story)
+
+# 
+ggplot(data = example_story, aes(x = ideology_bin, y = tweet_number, fill = count)) +
+  geom_tile() +
+  scale_fill_gradientn(name = "count", trans = "log", colors = c("blue", "red"), na.value = "blue") +
+  theme_ctokita()
+
+####################
+# Total ideologies exposed to articles by type
+####################
+axis_labels <- as.character(unique(exposure_ideol$ideology_bin))
+axis_labels[seq(1, length(axis_labels)+1, 2)] <- ""
+gg_ideol_total <- exposure_ideol %>% 
+  group_by(!!sym(grouping), ideology_bin) %>% 
+  summarise(count = sum(count, na.rm = TRUE),
+            avg_count = sum(count, na.rm = TRUE) / length(unique(total_article_number))) %>% 
+  ggplot(., aes(x = as.factor(ideology_bin), y = count, fill = ideology_bin)) +
+  geom_bar(stat = "identity") +
+  scale_x_discrete(labels = axis_labels) +
+  scale_y_continuous(labels = comma) +
+  scale_fill_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish) +
+  xlab("Follower ideology") +
+  ylab("Total users exposed to articles") +
+  theme_ctokita() +
+  theme(legend.position = "none",
+        aspect.ratio = NULL) +
+  facet_wrap(as.formula(paste("~", grouping)), 
+             ncol = 1,
+             strip.position = "right",
+             scales = "free")
+gg_ideol_total
+ggsave(gg_ideol_total, filename = paste0(outpath, "ideol_total_exposed.png"), width = 90, height = 90, units = "mm", dpi = 400)
+
+
+####################
+# Avg ideologies exposed per article (by type)
+####################
+axis_labels <- as.character(unique(exposure_ideol$ideology_bin))
+axis_labels[seq(1, length(axis_labels)+1, 2)] <- ""
+gg_ideol_avg <- exposure_ideol %>% 
+  group_by(!!sym(grouping), ideology_bin) %>% 
+  summarise(avg_count = sum(count, na.rm = TRUE) / length(unique(total_article_number))) %>% 
+  ggplot(., aes(x = as.factor(ideology_bin), y = avg_count, fill = ideology_bin)) +
+  geom_bar(stat = "identity") +
+  scale_x_discrete(labels = axis_labels) +
+  scale_y_continuous(labels = comma) +
+  scale_fill_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish) +
+  xlab("Follower ideology") +
+  ylab("Avg. users exposed to article") +
+  theme_ctokita() +
+  theme(legend.position = "none",
+        aspect.ratio = NULL) +
+  facet_wrap(as.formula(paste("~", grouping)), 
+             ncol = 1,
+             strip.position = "right",
+             scales = "free")
+gg_ideol_avg
+ggsave(gg_ideol_avg, filename = paste0(outpath, "ideol_avg_exposed.png"), width = 90, height = 90, units = "mm", dpi = 400)
