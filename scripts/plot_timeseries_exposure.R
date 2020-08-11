@@ -21,7 +21,7 @@ source("scripts/_plot_themes/theme_ctokita.R")
 # Choose grouping of interest. Options: 
 #     (1) article veracity: "article_fc_rating"
 #     (2) source: "source_type"
-grouping <- "source_type"
+grouping <- "article_fc_rating"
 
 # Paths to files/directories
 tweet_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv' #path to fitness cascade data
@@ -193,6 +193,7 @@ gg_expVnum
 ggsave(gg_expVnum, filename = paste0(outpath, "relative_tweet_vs_exposure.png"), width = 50, height = 90, units = "mm", dpi = 400)
 
 
+
 ############################## Plot article exposure by ideology ##############################
 
 # Prep data
@@ -207,18 +208,21 @@ exposure_ideol <- exposure_timeseries %>%
   mutate(ideology_bin = (lower + upper) / 2) %>% 
   select(-lower, -upper)
 
+
 ####################
-# 
+# Single story exposure heatmap
 ####################
 # Grab example story for now
 story <- 28
 example_story <- exposure_ideol %>% 
-  filter(total_article_number == story)
+  filter(total_article_number == story) %>% 
+  group_by(hour_bin, ideology_bin) %>% 
+  summarise(count = sum(count))
 
 # 
-ggplot(data = example_story, aes(x = ideology_bin, y = tweet_number, fill = count)) +
+ggplot(data = example_story, aes(x = ideology_bin, y = hour_bin, fill = count)) +
   geom_tile() +
-  scale_fill_gradientn(name = "count", trans = "log", colors = c("blue", "red"), na.value = "blue") +
+  scale_fill_gradientn(name = "count", trans = "log", colors = c("white", "red"), na.value = "white") +
   theme_ctokita()
 
 ####################
@@ -272,3 +276,36 @@ gg_ideol_avg <- exposure_ideol %>%
              scales = "free")
 gg_ideol_avg
 ggsave(gg_ideol_avg, filename = paste0(outpath, "ideol_avg_exposed.png"), width = 90, height = 90, units = "mm", dpi = 400)
+
+
+####################
+# Exposure time series
+####################
+gg_ideoltime <- exposure_ideol %>% 
+  group_by(!!sym(grouping), hour_bin, ideology_bin) %>% 
+  summarise(count = sum(count)) %>%
+  ggplot(., aes(x = hour_bin, y = count, fill = ideology_bin)) +
+  geom_bar(position = "fill", stat = "identity", width = 1) +
+  scale_fill_gradientn(colours = ideol_pal, 
+                       name = "User\nideology",
+                       limits = c(-2, 2), 
+                       oob = squish) +
+  scale_x_continuous(breaks = seq(0, 48, 6)) +
+  xlab("Time since first article share (hrs)") +
+  ylab("New users exposed") +
+  theme_ctokita() +
+  theme(aspect.ratio = NULL, 
+        legend.box.margin = unit(c(0, 0, 0, 0), "mm")) +
+  facet_wrap(as.formula(paste("~", grouping)), 
+             ncol = 1,
+             strip.position = "right",
+             scales = "free")
+gg_ideoltime
+ggsave(gg_ideoltime, filename = paste0(outpath, "ideol_exposed_hourbin.png"), width = 90, height = 90, units = "mm", dpi = 400)
+
+
+gg_ideoltime_binned <-  exposure_timeseries %>% 
+  mutate(Liberal = ideol_.3.0_.2.5 + ideol_.2.5_.2.0 + ideol_.2.0_.1.5 + ideol_.1.5_.1.0,
+         Moderate = ideol_.1.0_.0.5 + ideol_.0.5_0.0 + ideol_0.0_0.5 + ideol_0.5_1.0,
+         Conservative = ideol_1.0_1.5 + ideol_1.5_2.0 + ideol_2.0_2.5 + ideol_2.5_3.0+ ideol_3.0_3.5 + ideol_3.5_4.0 + ideol_4.0_4.5 + ideol_4.5_5.0 + ideol_5.0_5.5) +
+  select()
