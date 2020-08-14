@@ -53,13 +53,13 @@ belief_data['belief'] = belief_data['belief'].map({'t': 'True', 'f': 'False', 'c
 ####################
 import matplotlib.pyplot as plt
 
-belief_type = 'True'
+belief_type = 'Unsure'
 data_subset = belief_data[belief_data.belief == belief_type]
 #data_subset = data_subset[data_subset.total_article_number == 28]
-data_subset = data_subset[data_subset.fc_rating == 'FM']
+data_subset = data_subset[data_subset.fc_rating == 'T']
 data_subset = data_subset[['ideology_score', 'belief_freq']]
 sum_data = data_subset.groupby(['ideology_score']).mean()
 
 plt.bar(sum_data.index, sum_data['belief_freq'])
 plt.xlabel("Ideology")
-plt.ylabel("\% believing %s" % belief_type)
+plt.ylabel("Freq. believing %s" % belief_type)
