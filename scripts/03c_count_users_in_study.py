@@ -21,8 +21,8 @@ import os
 import re
 
 # high level directory (external HD or cluster storage)
-#data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster storage
-data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
+data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster storage
+#data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
 outpath = data_directory + "data_derived/"
    
 
@@ -53,7 +53,7 @@ followers = np.array([], dtype = 'int64')
 fm_followers = np.array([], dtype = 'int64')
 
 # Loop through user IDs and add to list followers
-for user_id in tweets['user_id'].iloc[0:20]:
+for user_id in tweets['user_id']:
     regex = re.compile(r"[0-9].*_%s.csv" % user_id)
     file = list(filter(regex.match, follower_files))
     if len(file) > 1:
