@@ -21,7 +21,7 @@ source("scripts/_plot_themes/theme_ctokita.R")
 # Choose grouping of interest. Options: 
 #     (1) article veracity: "article_fc_rating"
 #     (2) source: "source_type"
-grouping <- "article_fc_rating"
+grouping <- "source_type"
 
 # Paths to files/directories
 tweet_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv' #path to fitness cascade data
@@ -162,7 +162,7 @@ gg_totaltweets_color <- tweets %>%
                      labels = scales::trans_format("log10", scales::math_format(10^.x)),
                      trans = scales::pseudo_log_trans(base = 10)) +
   scale_x_continuous(breaks = seq(0, 48, 6)) +
-  scale_color_manual(values = c("#f29724", "#b80d48", "#2b6a6c", "#404040"), 
+  scale_color_manual(values = c("#EF8354", "#b80d48", "#EF8354", "#404040"), 
                      name = "") +
   xlab("Time since first article share (hrs)") +
   ylab("Log total tweets") +
