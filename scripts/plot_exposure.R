@@ -37,10 +37,10 @@ ideol_pal <- rev(brewer.pal(5, "RdBu"))
 ####################
 # Read in tweet data, Calculate time since first sharing of the story
 tweets <- read.csv(tweet_path, header = TRUE, colClasses = c("user_id"="character", "tweet_id"="character")) %>% 
+  filter(total_article_number > 10) %>% #discard first 10 articles from analysis
   mutate(article_ideology = article_con_feel - article_lib_feel,
          tweet_time_text = tweet_time,
          tweet_time = as.POSIXct(tweet_time, format = "%a %b %d %H:%M:%S %z %Y")) %>% 
-  filter(!is.na(total_article_number)) %>% 
   arrange(total_article_number, tweet_time) %>% 
   group_by(total_article_number) %>% 
   mutate(article_first_time = min(tweet_time)) %>% 

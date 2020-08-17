@@ -43,16 +43,25 @@ ideol_dist_pal[3] <- "#e0e0e0"
 # Load and prep data 
 ####################
 # Read in tweet data for article info
-article_data <- read.csv(tweet_path, header = TRUE, colClasses = c("user_id"="character", "tweet_id"="character")) %>% 
-  filter(!is.na(total_article_number)) %>%
+tweets <- read.csv(tweet_path, header = TRUE, colClasses = c("user_id"="character", "tweet_id"="character")) %>% 
+  filter(total_article_number > 10) %>% #discard first 10 articles from analysis
+  mutate(article_ideology = article_con_feel - article_lib_feel,
+         tweet_time_text = tweet_time,
+         tweet_time = as.POSIXct(tweet_time, format = "%a %b %d %H:%M:%S %z %Y")) %>% 
+  arrange(total_article_number, tweet_time) %>% 
   group_by(total_article_number) %>% 
-  arrange(tweet_time) %>% 
-  mutate(tweet_number = 1:length(tweet_time)) %>% 
+  mutate(article_first_time = min(tweet_time)) %>% 
+  mutate(tweet_number = 1:length(tweet_time), #order tweets for plotting purposes
+         relative_tweet_time = as.numeric( (tweet_time - article_first_time) / (60*60) ) ) %>%  #time diff is in seconds, so convert to hours
+  mutate(relative_tweet_count = tweet_number / max(tweet_number))
+
+article_data <- tweets %>% 
   select(tweet_id, total_article_number, source_type, source_lean, article_fc_rating, article_lean, user_ideology) 
 
 # Load exposure data 
 exposure_data <- read.csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/timeseries/users_exposed_over_time.csv', 
                           header = TRUE, colClasses = c("user_id"="character", "tweet_id"="character")) %>% 
+  filter(total_article_number > 10) %>% #discard first 10 articles from analysis
   mutate(tweet_number = tweet_number+1) %>%  #python zero index
   rename(time = relative_time)
 
@@ -304,8 +313,8 @@ gg_ideoltime
 ggsave(gg_ideoltime, filename = paste0(outpath, "ideol_exposed_hourbin.png"), width = 90, height = 90, units = "mm", dpi = 400)
 
 
-gg_ideoltime_binned <-  exposure_timeseries %>% 
-  mutate(Liberal = ideol_.3.0_.2.5 + ideol_.2.5_.2.0 + ideol_.2.0_.1.5 + ideol_.1.5_.1.0,
-         Moderate = ideol_.1.0_.0.5 + ideol_.0.5_0.0 + ideol_0.0_0.5 + ideol_0.5_1.0,
-         Conservative = ideol_1.0_1.5 + ideol_1.5_2.0 + ideol_2.0_2.5 + ideol_2.5_3.0+ ideol_3.0_3.5 + ideol_3.5_4.0 + ideol_4.0_4.5 + ideol_4.5_5.0 + ideol_5.0_5.5) +
-  select()
+# gg_ideoltime_binned <-  exposure_timeseries %>% 
+#   mutate(Liberal = ideol_.3.0_.2.5 + ideol_.2.5_.2.0 + ideol_.2.0_.1.5 + ideol_.1.5_.1.0,
+#          Moderate = ideol_.1.0_.0.5 + ideol_.0.5_0.0 + ideol_0.0_0.5 + ideol_0.5_1.0,
+#          Conservative = ideol_1.0_1.5 + ideol_1.5_2.0 + ideol_2.0_2.5 + ideol_2.5_3.0+ ideol_3.0_3.5 + ideol_3.5_4.0 + ideol_4.0_4.5 + ideol_4.5_5.0 + ideol_5.0_5.5) +
+#   select()
