@@ -31,7 +31,7 @@ After manually checking these matches, it appears that all headlines with scores
 """
 
 # Load fuzzy match scores, filter to good match scores
-fuzzy_matches = pd.read_csv(data_directory + '/data_derived/tweets/noarticleID_tweets_with_score.csv',
+fuzzy_matches = pd.read_csv(data_directory + 'data_derived/tweets/noarticleID_tweets_with_matchscores.csv',
                             dtype ={'user_id': object, 'tweet_id': object})
 fuzzy_matches = fuzzy_matches.drop_duplicates()
 fuzzy_matches = fuzzy_matches.rename(columns = {'total article number': 'total_article_number'})
