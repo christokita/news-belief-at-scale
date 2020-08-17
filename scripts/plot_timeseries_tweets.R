@@ -21,7 +21,7 @@ source("scripts/_plot_themes/theme_ctokita.R")
 # Choose grouping of interest. Options: 
 #     (1) article veracity: "article_fc_rating"
 #     (2) source: "source_type"
-grouping <- "source_type"
+grouping <- "article_fc_rating"
 
 # Paths to files/directories
 tweet_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv' #path to fitness cascade data
@@ -381,7 +381,7 @@ gg_ideoltime_raw <- tweets %>%
   ggplot(., aes(x = relative_tweet_time, y = user_ideology, color = user_ideology)) +
   geom_point(size = 0.3, stroke = 0, position = position_jitter(width = 0.1, height = 0.1)) +
   scale_color_gradientn(colors = ideol_pal, limits = c(-2, 2), oob = scales::squish) +
-  scale_x_continuous(breaks = seq(0, 48, 6)) +
+  scale_x_continuous(breaks = seq(0, 48, 12)) +
   scale_y_continuous(breaks = seq(-4, 4, 2)) +
   xlab("Time since first article share (hrs)") +
   ylab("User ideology") +
@@ -390,7 +390,7 @@ gg_ideoltime_raw <- tweets %>%
         legend.position = "none") +
   facet_grid(as.formula(paste(grouping, "~", "article_lean")))
 gg_ideoltime_raw
-ggsave(gg_ideoltime_raw, filename = paste0(outpath, "ideology_raw_articlelean.png"), width = 120, height = 45, units = "mm", dpi = 400)
+ggsave(gg_ideoltime_raw, filename = paste0(outpath, "ideology_raw_articlelean.png"), width = 90, height = 45, units = "mm", dpi = 400)
 
 
 ####################
@@ -409,7 +409,7 @@ gg_ideoltimesource <- tweets %>%
   summarise(freq_ideol_bin = mean(freq_ideol_bin)) %>% 
   ggplot(., aes(x = hour_bin, y = freq_ideol_bin, fill = factor(ideol_bin, levels = c(1, 0, -1)))) +
   geom_bar(position = "fill", stat = "identity", width = 1) +
-  scale_x_continuous(breaks = seq(0, 48, 6)) +
+  scale_x_continuous(breaks = seq(0, 48, 12)) +
   scale_fill_manual(values = rev(ideol_pal[c(1,3,5)]),
                     name = "User ideology",
                     labels = c("Conservative", "Moderate", "Liberal")) +
@@ -420,7 +420,7 @@ gg_ideoltimesource <- tweets %>%
         legend.box.margin = unit(c(0, 0, 0, 0), "mm")) +
   facet_grid(article_fc_rating~source_type)
 gg_ideoltimesource
-ggsave(gg_ideoltimesource, filename = paste0(outpath, "ideology_dist_bysourceandveracity.png"), width = 120, height = 45, units = "mm", dpi = 400)
+ggsave(gg_ideoltimesource, filename = paste0(outpath, "ideology_dist_bysourceandveracity.png"), width = 90, height = 45, units = "mm", dpi = 400)
 
 
 
