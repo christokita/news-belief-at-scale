@@ -6,7 +6,8 @@ Created on Tue Apr 14 10:44:52 2020
 @author: ChrisTokita
 
 SCRIPT
-Parse user data to determine the unique number and IDs of users (and user types).
+Parse user data to determine the unique number and IDs of all users (and user types) of all the tracked articles.
+In the next script 02c_count_users_in_study.py we will count only the users user in the study (we exclude the first 10 articles from analysis).
 This script uses a high performance computing cluster, assuming a slurm-based scheduling system.
 
 NOTE:
@@ -47,7 +48,7 @@ tweeters = tweets['user_id']
     
 # Get user IDs of tweeters
 tweeters, tweet_freq = np.unique(tweeters, return_counts = True)
-tweeters = pd.DataFrame(tweeters, columns = ['user_id'])
+tweeters = pd.DataFrame(tweeters, columns = ['user_id'], dtype = 'int64')
 count_tweeters = tweeters.shape[0]
 
 # Save tweeters
