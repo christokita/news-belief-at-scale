@@ -7,7 +7,7 @@ Created on Tue Apr 14 10:44:52 2020
 
 SCRIPT
 Parse user data to determine the unique number and IDs of all users (and user types) of all the tracked articles.
-In the next script 02c_count_users_in_study.py we will count only the users user in the study (we exclude the first 10 articles from analysis).
+In later script 03c_count_users_in_study.py we will count only the users user in the study (we exclude the first 10 articles from analysis).
 This script uses a high performance computing cluster, assuming a slurm-based scheduling system.
 
 NOTE:
@@ -145,4 +145,4 @@ unique_users = pd.DataFrame({'user_type': ["Tweeters",
                              'count': [count_tweeters, 
                                        count_followers, count_followers_minus_tweeters, count_no_followers,
                                        count_all_friends, count_all_friends_minus_tweeters, count_no_friends]})
-unique_users.to_csv(outpath + "unique_user_summary.csv", index = False)
+unique_users.to_csv(outpath + "summary_unique_users.csv", index = False)
