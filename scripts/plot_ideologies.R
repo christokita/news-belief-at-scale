@@ -41,9 +41,9 @@ source_pal <- c(ideol_pal[c(5,1)], "#9D69A3", "#C5CBD3")
 # Load data 
 ####################
 # Read in data
-tweeter_scores <- read.csv(tweeter_score_path, header = TRUE) %>% 
+tweets <- read.csv(tweeter_score_path, header = TRUE) %>% 
   mutate(article_ideology = article_con_feel - article_lib_feel) %>% 
-  filter(!is.na(total_article_number))
+  filter(total_article_number > 10) #discard first 10 articles from analysis
 
 
 
@@ -53,7 +53,7 @@ tweeter_scores <- read.csv(tweeter_score_path, header = TRUE) %>%
 # Plot: Tweeter ideology distribution by article source lean
 ####################
 # All source types
-gg_fmtweeters <- tweeter_scores %>% 
+gg_fmtweeters <- tweets %>% 
   filter(article_fc_rating == "FM",
          !is.na(user_ideology)) %>% 
   ggplot(., aes(x = user_ideology, group = source_lean, fill = source_lean)) +
@@ -69,7 +69,7 @@ gg_fmtweeters
 ggsave(gg_fmtweeters, file = paste0(outpath, "FMtweeters_ideologies_bysource.png"), width = 120, height = 45, units = "mm", dpi = 400)
 
 # Just liberal and conservative sources
-gg_fmtweeters_libcon <- tweeter_scores %>% 
+gg_fmtweeters_libcon <- tweets %>% 
   filter(source_lean %in% c("C", "L"),
          article_fc_rating == "FM") %>% 
   ggplot(., aes(x = user_ideology, group = source_lean, fill = source_lean)) +
@@ -90,7 +90,7 @@ ggsave(gg_fmtweeters_libcon, file = paste0(outpath, "FMtweeters_ideologies_lib-c
 
 ###### All articles #####
 # Distribution of user ideology by article lean
-gg_articlelean <- ggplot(data = tweeter_scores, aes(x = user_ideology, group = article_lean, fill = article_lean)) +
+gg_articlelean <- ggplot(data = tweets, aes(x = user_ideology, group = article_lean, fill = article_lean)) +
   geom_histogram(position = 'identity', binwidth = 0.25) +
   xlab("Tweeter ideology") +
   ylab("Number of tweets") +
@@ -105,7 +105,7 @@ gg_articlelean
 ggsave(gg_articlelean, file = paste0(outpath, "ideologies_byarticlelean.png"), width = 90, height = 70, units = "mm", dpi = 400)
 
 # Tweeter ideology vs article ideology
-gg_articleideol <- tweeter_scores %>% 
+gg_articleideol <- tweets %>% 
   filter(article_fc_rating %in% c("FM", "T"),
          !is.na(user_ideology)) %>% 
   ggplot(., aes(x = user_ideology, y = article_ideology, color = article_lean)) +
@@ -127,7 +127,7 @@ ggsave(gg_articleideol, file = paste0(outpath, "ideology_vs_articleideology.png"
 
 
 ###### Just FM articles #####
-gg_articlelean <- tweeter_scores %>% 
+gg_articlelean <- tweets %>% 
   filter(article_fc_rating == "FM") %>% 
   ggplot(., aes(x = user_ideology, group = article_lean, fill = article_lean)) +
   geom_histogram(position = 'identity', binwidth = 0.25) +
@@ -151,13 +151,13 @@ ggsave(gg_articlelean, file = paste0(outpath, "FMtweeters_ideologies_byarticlele
 # Plot: Ideology by article veracity
 ####################
 # Summarise data
-tweeter_veracity <- tweeter_scores %>% 
+tweeter_veracity <- tweets %>% 
   group_by(article_fc_rating) %>% 
   summarise(ideological_extremity = mean(user_ideol_extremity, na.rm = TRUE)) %>% 
   filter(article_fc_rating %in% c("FM", "T"))
 
 # Plot ideological distribution
-gg_veracityideo <- tweeter_scores %>% 
+gg_veracityideo <- tweets %>% 
   filter(!is.na(user_ideology),
          article_fc_rating %in% c("FM", "T")) %>% 
   ggplot(., aes(x = user_ideology, fill = ..x..)) +
@@ -179,7 +179,7 @@ ggsave(gg_veracityideo, file = paste0(outpath, "ideologies_byveracity.png"), wid
 
 
 # Plot ideological extremity
-gg_veracityextr <- tweeter_scores %>% 
+gg_veracityextr <- tweets %>% 
   filter(!is.na(user_ideology)) %>% 
   ggplot(., aes(x = user_ideol_extremity, fill = ..x..)) +
   geom_histogram(position = 'identity', binwidth = 0.25) +
