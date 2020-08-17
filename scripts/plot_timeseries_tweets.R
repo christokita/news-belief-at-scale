@@ -21,7 +21,7 @@ source("scripts/_plot_themes/theme_ctokita.R")
 # Choose grouping of interest. Options: 
 #     (1) article veracity: "article_fc_rating"
 #     (2) source: "source_type"
-grouping <- "source_type"
+grouping <- "article_fc_rating"
 
 # Paths to files/directories
 tweet_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv' #path to fitness cascade data
@@ -43,11 +43,11 @@ ideol_dist_pal[3] <- "#e0e0e0"
 # Load and prep data 
 ####################
 # Read in data, Calculate time since first sharing of the story
-tweets <- read.csv(tweet_path, header = TRUE, colClasses = c("user_id"="character")) %>% 
+tweets <- read.csv(tweet_path, header = TRUE, colClasses = c("user_id"="character", "tweet_id"="character")) %>% 
+  filter(total_article_number > 10) %>% #discard first 10 articles from analysis
   mutate(article_ideology = article_con_feel - article_lib_feel,
          tweet_time_text = tweet_time,
          tweet_time = as.POSIXct(tweet_time, format = "%a %b %d %H:%M:%S %z %Y")) %>% 
-  filter(!is.na(total_article_number)) %>%
   arrange(total_article_number, tweet_time) %>% 
   group_by(total_article_number) %>% 
   mutate(article_first_time = min(tweet_time)) %>% 
@@ -323,8 +323,7 @@ gg_ideoltime <- tweets %>%
         legend.box.margin = unit(c(0, 0, 0, 0), "mm")) +
   facet_wrap(as.formula(paste("~", grouping)),
              ncol = 1,
-             strip.position = "right", 
-             labeller = labeller(article_fc_rating = label_veracity))
+             strip.position = "right")
 gg_ideoltime
 ggsave(gg_ideoltime, filename = paste0(outpath,"ideology_dist.png"), width = 90, height = 45, units = "mm", dpi = 400)
 
@@ -395,7 +394,7 @@ ggsave(gg_ideoltime_raw, filename = paste0(outpath, "ideology_raw_articlelean.pn
 
 
 ####################
-# Raw plot of ideology of tweeters over time
+# Ideology of tweeters: source type by article veracity
 ####################
 # Calculate average ideological distribution of tweeters over time, broken out by source and article veracity
 # Bin ideologies, filter out users without ideological scores, bin by hour
