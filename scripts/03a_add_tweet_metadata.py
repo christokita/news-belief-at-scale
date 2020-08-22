@@ -116,9 +116,9 @@ labeled_tweets = labeled_tweets.merge(article_ratings, how = 'left', on = 'total
 # Add user-level information
 ####################
 # Load and prepare ideological scores
-ideological_scores = pd.read_csv(data_directory + "data_derived/ideological_scores/unique_tweeters_ideology_scores.csv",
+ideological_scores = pd.read_csv(data_directory + "data_derived/ideological_scores/cleaned_tweeter_ideology_scores.csv",
                                  dtype = {'user_id': object})
-ideological_scores = ideological_scores.rename(columns = {'id_str': 'user_id', 'pablo_score': 'user_ideology'})
+ideological_scores = ideological_scores.rename(columns = {'pablo_score': 'user_ideology'})
 
 # Merge in ideological scores
 labeled_tweets = labeled_tweets.merge(ideological_scores, how = 'left', on = 'user_id')

@@ -35,3 +35,13 @@ friends = pd.read_csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ideolo
 friends_cleaned = clean_ideology_scores(friends)
 friends_cleaned.to_csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ideological_scores/cleaned_friends_ideology_scores.csv', index = False)
 del friends, friends_cleaned
+
+tweeters = pd.read_csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ideological_scores/unique_tweeters_ideology_scores.csv',
+                      dtype = {'user_id': object})
+tweeters_cleaned = tweeters.drop(columns = ['Unnamed: 0'])
+tweeters_cleaned = tweeters_cleaned.rename(columns = {'0_norm': 'pablo_score'})
+tweeters_cleaned.to_csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ideological_scores/cleaned_tweeter_ideology_scores.csv', index = False)
+
+
+tweeters_old = pd.read_csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ideological_scores/unique_tweeters_ideology_scores_OLD.csv',
+                      dtype = {'user_id': object})
