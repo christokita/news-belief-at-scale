@@ -19,7 +19,18 @@ import re
 import math
 import multiprocessing as mp
 
+# high level directory (external HD or cluster storage)
+data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster storage
+#    data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
 
+# Paths for ideology distrubtion data
+outpath = data_directory + "data_derived/ideological_scores/estimated_ideol_distributions/"
+prior_file = outpath + "_population_estimate.csv"
+
+
+####################
+# Functions for analysis
+####################
 # Function to load followers
 def load_followers(file, data_directory):
     """
@@ -41,10 +52,11 @@ def load_followers(file, data_directory):
 # Create dataframe of tweeters and their followers
 def match_followers_to_ideologies(user_ids, ideologies, data_directory, outpath, batch, n_batches):
     """
-    Function that will...
+    Function that will take a set of user IDs and subset a batch of them,
+    then match these users to their followers that have ideology scores
     
     OUTPUT
-    
+    - nothing. It writes the save this dataset to file.
     """
     
     # Grab proper batch of user_ids
@@ -75,15 +87,30 @@ def match_followers_to_ideologies(user_ids, ideologies, data_directory, outpath,
     followers_matched.to_csv(outpath + 'temp_matched_follower_ideology_' + str(batch) + '.csv', index = False)
     return None
 
-####################
-# Create user x follower ideology dataset
-####################
+# Likelihood function for estimating s.d. of ideology
+def logL_sd(mu, sigma, samples):
+    """
+    Function that calculates the likelihood of the n observations, given a normal distribution.
+    
+    INPUTS
+    - n: number of observations
+    - V: sample variance of observations
+    - sigma: s.d. of normal distrubtion we assume the observations are coming from
+    """
+    n = len(samples)
+    first_part = -n/2 * np.log(2*math.pi)
+    second_part = -n/2 * np.log(sigma**2)
+    third_part = -1/(2 * sigma**2) * np.sum( (samples-mu)**2 )
+    logL = first_part + second_part + third_part
+    return logL
+
+# Main script
 if __name__ == '__main__':
     
-    # high level directory (external HD or cluster storage)
-    data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster storage
-#    data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
-    
+
+    ####################
+    # Load tweeters, followers, and ideology scores
+    ####################
     # Load tweets and follower ideology data 
     tweets = pd.read_csv(data_directory + "data_derived/tweets/tweets_labeled.csv",
                          dtype = {'quoted_urls': object, 'quoted_urls_expanded': object, #these two columns cause memory issues if not pre-specified dtype
@@ -103,6 +130,10 @@ if __name__ == '__main__':
     follower_ideologies = follower_ideologies.append(tweeter_ideologies, ignore_index = True)
     follower_ideologies = follower_ideologies.drop_duplicates()
 
+
+    ####################
+    # Create data set matching follower ideology to each tweeter
+    ####################
     # Get unique users
     unique_users = tweets.user_id[~pd.isna(tweets['total_article_number'])].unique()
     del tweets
@@ -136,3 +167,30 @@ if __name__ == '__main__':
     for file in temp_files:
         os.remove(temp_dir + file)
     os.rmdir(temp_dir)
+    
+    
+    ####################
+    # Calculate population-level distribution of ideologies
+    ####################
+    # Unique followers
+    followers_data = followers_data[['follower_id', 'follower_ideology']].drop_duplicates()
+    
+    # Get population sample mean
+    mean_population_ideol = followers_data['follower_ideology'].mean() #we assume the distribution is centered on this
+    
+    # Set up uninformative prior
+    sigmas = np.arange(0.1, 4.1, 0.1)
+    log_prior = np.log(1 / sigmas**2)    
+    
+    # Calculate log likelihood
+    log_L = np.array([])
+    for sigma in sigmas:
+        val = logL_sd(mu = mean_population_ideol, 
+                      sigma = sigma, 
+                      samples = followers_data['follower_ideology'])
+        log_L = np.append(log_L, val)
+        
+    # Calculate posterior and save for future use
+    log_post = log_prior + log_L
+    log_pop_posterior = pd.DataFrame({'sigma': sigmas, 'log_pr': log_post})
+    log_pop_posterior.to_csv(prior_file, index = False)
