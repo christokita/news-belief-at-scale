@@ -70,7 +70,6 @@ def match_followers_to_ideologies(user_ids, ideologies, data_directory, outpath,
     # Merge in ideologies and save
     del new_data, followers, follower_files 
     followers_matched = followers_matched.merge(ideologies, how = "inner", on = 'follower_id')
-    followers_matched = followers_matched.drop(columns = ['follower_id'])
     followers_matched = followers_matched.rename(columns = {'tweeter_id': 'user_id', 'pablo_score': 'follower_ideology'})
     followers_matched = followers_matched.sort_values(by = 'user_id')
     followers_matched.to_csv(outpath + 'temp_matched_follower_ideology_' + str(batch) + '.csv', index = False)

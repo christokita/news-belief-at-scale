@@ -9,4 +9,4 @@
 ##Load anaconda python packages
 module load anaconda3 
 ##Run script
-srun python3 scripts/05_exposure_over_time.py
+srun python3 scripts/06_exposure_over_time.py

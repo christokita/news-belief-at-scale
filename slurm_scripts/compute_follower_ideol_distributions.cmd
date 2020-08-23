@@ -10,4 +10,4 @@
 ##Load anaconda python packages
 module load anaconda3 
 ##Run script
-srun python3 scripts/06b_follower_ideologies_inference.py
+srun python3 scripts/05b_follower_ideologies_inference.py

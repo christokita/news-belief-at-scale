@@ -10,4 +10,4 @@
 ##Load anaconda python packages
 module load anaconda3 
 ##Run script
-srun python3 scripts/06a_follower_ideologies_prep.py
+srun python3 scripts/05a_follower_ideologies_prep.py
