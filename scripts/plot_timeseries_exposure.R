@@ -21,7 +21,7 @@ source("scripts/_plot_themes/theme_ctokita.R")
 # Choose grouping of interest. Options: 
 #     (1) article veracity: "article_fc_rating"
 #     (2) source: "source_type"
-grouping <- "source_type"
+grouping <- "article_fc_rating"
 
 # Paths to files/directories
 tweet_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv' #path to fitness cascade data
@@ -59,11 +59,16 @@ article_data <- tweets %>%
   select(tweet_id, total_article_number, source_type, source_lean, article_fc_rating, article_lean, user_ideology) 
 
 # Load exposure data 
-exposure_data <- read.csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/timeseries/users_exposed_over_time.csv', 
+#
+# NOTE:
+# - for the raw count of exposure of followers we have ideology scores for user: users_exposed_over_time.csv
+# - for the estimated ideology of all exposed followers: estimated_users_exposed_over_time.csv
+exposure_data <- read.csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/timeseries/estimated_users_exposed_over_time.csv', 
                           header = TRUE, colClasses = c("user_id"="character", "tweet_id"="character")) %>% 
   filter(total_article_number > 10) %>% #discard first 10 articles from analysis
   mutate(tweet_number = tweet_number+1) %>%  #python zero index
-  rename(time = relative_time)
+  rename(time = relative_time) %>% 
+  arrange(total_article_number, tweet_number)
 
 # Merge in relevant article level data
 # NOTE: adds one extra row, check after double checking with new data
@@ -92,7 +97,8 @@ exposure_timeseries <- dummy_rows %>%
   mutate(hour_bin = as.numeric(as.character(hour_bin))) %>%  #convert from factor to plain number
   group_by(total_article_number) %>% 
   mutate(relative_cumulative_exposed = cumulative_exposed / max(cumulative_exposed),
-         relative_tweet_count = tweet_number / max(tweet_number))
+         relative_tweet_count = tweet_number / max(tweet_number)) %>% 
+  arrange(total_article_number, tweet_number)
 
 rm(dummy_rows, article_data, exposure_data)
 
@@ -128,7 +134,7 @@ gg_exposuretime <- exposure_timeseries %>%
                      labels = scales::trans_format("log10", scales::math_format(10^.x)),
                      trans = scales::pseudo_log_trans(base = 10)) +
   xlab("Time since first article share (hrs)") +
-  ylab("Log users exposed") +
+  ylab("Total users exposed") +
   theme_ctokita() +
   theme(aspect.ratio = NULL) +
   facet_wrap(as.formula(paste("~", grouping)), 
@@ -168,7 +174,7 @@ gg_exposuretweet <- exposure_timeseries %>%
                      labels = scales::trans_format("log10", scales::math_format(10^.x)),
                      trans = scales::pseudo_log_trans(base = 10)) +
   xlab("Tweet number") +
-  ylab("Log users exposed") +
+  ylab("Total users exposed") +
   theme_ctokita() +
   theme(aspect.ratio = NULL) +
   facet_wrap(as.formula(paste("~", grouping)), 

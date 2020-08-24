@@ -73,6 +73,7 @@ rt_nodes = rt_nodes.merge(article_ratings, how = 'left', on = 'total_article_num
 # Get unique articles
 unique_articles = rt_nodes['total_article_number'].unique().astype(int)
 unique_articles.sort()
+unique_articles = unique_articles[unique_articles > 10] #excluding first 10 articles
 
 # Loop over articles and calculate basic metrics
 article_network_metrics = pd.DataFrame(columns = ['total_article_number', 'total_tweets', 'total_RTs',
@@ -108,9 +109,9 @@ for article_id in unique_articles:
     node_ids = np.array([ np.where(unique_ids == x) for x in article_nodes['user_id'] ]).flatten()
     sources = np.array([ np.where(unique_ids == x) for x in article_edges['Source'] ]).flatten()
     targets = np.array([ np.where(unique_ids == x) for x in article_edges['Target'] ]).flatten()
-    g_assort = igraph.Graph(vertex_attrs = {"label": node_ids, 
-                                            edges = list(zip(sources, targets)), 
-                                            directed = True)
+#    g_assort = igraph.Graph(vertex_attrs = {"label": node_ids, 
+#                                            edges = list(zip(sources, targets)), 
+#                                            directed = True)
     
     # Calculate metrics of interest
     network_density = nx.density(g)
