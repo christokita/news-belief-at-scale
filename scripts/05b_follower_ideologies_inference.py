@@ -169,7 +169,7 @@ tweeter_ideologies = tweeter_ideologies.rename(columns = {'user_id': 'follower_i
 tweeter_ideologies = tweeter_ideologies[~pd.isna(tweeter_ideologies['follower_ideology'])]
 follower_ideologies = follower_ideologies.append(tweeter_ideologies, ignore_index = True)
 follower_ideologies = follower_ideologies.drop_duplicates()
-del tweets
+del tweeter_ideologies, tweets
 
 # We will use ideological category bins of size 1, with moderate being [-0.5, 0.5]
 # But per SMAPP instructions, we will not use the normalized scores.
@@ -193,7 +193,7 @@ user_ids, ideology_data = match_followers_to_ideologies(user_ids = tweeters,
                                                         data_directory = data_directory, 
                                                         batch = batch, 
                                                         n_batches = n_batches)
-del follower_ideologies, tweeters
+del tweeters
 
 # Grab our unique tweeters in this batch that do have follower ideology scores
 users_with_scored_followers = ideology_data['user_id'].unique()
@@ -217,9 +217,9 @@ estimated_ideology_batch['mu_basis'] = "followers"
 # (b) use the population mean and s.d.
 missing_users = [x for x in user_ids if x not in users_with_scored_followers]
 for user_id in missing_users:
-    user_ideology = tweeter_ideologies.user_ideology[tweeter_ideologies.user_id == user_id].iloc[0]
-    if not math.isnan(user_ideology):
-        mu = user_ideology
+    user_ideology = follower_ideologies.follower_ideology[follower_ideologies.follower_id == user_id] #grab user's own ideology
+    if len(user_ideology) > 0:
+        mu = user_ideology.iloc[0]
         sigma = log_pop_posterior.sigma[log_pop_posterior.log_pr == max(log_pop_posterior['log_pr'])]
         basis = "user"
     else:
