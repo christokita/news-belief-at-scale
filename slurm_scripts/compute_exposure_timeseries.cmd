@@ -13,4 +13,4 @@
 ##Load anaconda python packages
 module load anaconda3 
 ##Run script
-srun python3 scripts/06_exposure_timeseries.py $SLURM_ARRAY_TASK_ID 
+srun python3 scripts/06_exposure_over_time.py $SLURM_ARRAY_TASK_ID 
