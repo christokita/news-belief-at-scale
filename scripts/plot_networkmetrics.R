@@ -40,17 +40,18 @@ rt_edges <- read.csv(paste0(retweet_network_path, 'rtnetwork_edges.csv'), colCla
 # Plot: Tweet types
 ####################
 gg_tweettypes <- rt_edges %>% 
-  mutate(type = ifelse(type == "Presumed Phantom RT", "Phantom RT", type)) %>% 
-  mutate(type = gsub(" RT", "", type)) %>% 
-  ggplot(., aes(x = type, fill = type)) +
+  mutate(RT_type = ifelse(RT_type == "Presumed Phantom RT", "Phantom RT", RT_type)) %>% 
+  mutate(RT_type = gsub(" RT", "", RT_type)) %>% 
+  ggplot(., aes(x = RT_type, fill = RT_type)) +
   geom_histogram(stat = "count") +
-  scale_fill_manual(values = c("#1B264F", "#274690", "#576CA8", "#302B27")) +
+  scale_fill_manual(values = c("#1B264F", "#274690", "#576CA8", "#302B27", "Green")) +
   xlab("Retweet type") +
   ylab("Count") +
   theme_ctokita() +
   theme(legend.position = "none")
 gg_tweettypes
 ggsave(gg_tweettypes, filename = paste0(outpath, "RT_type.png"), width = 60, heigh = 60, units = "mm", dpi = 400)
+
 
 ############################## Ideology in networks ##############################
 
@@ -78,11 +79,12 @@ ggsave(gg_ideodiversity, filename = paste0(outpath, "ideodiversity_byveracity.pn
 ####################
 gg_veracitydensity <- network_metrics %>% 
   filter(article_fc_rating %in% c("FM", "T")) %>% 
+  # filter(total_tweets > 20) %>% 
   ggplot(., aes(x = article_fc_rating, y = network_density)) +
   geom_point(size = 1, stroke = 0, alpha = 0.5,
              position = position_jitter(width = 0.03)) +
   scale_x_discrete(labels = c("Fake news", "Real news")) +
-  ylab("Ideol. diversity of article tweeters") +
+  ylab("Network density") +
   xlab("") +
   theme_ctokita()
 gg_veracitydensity
