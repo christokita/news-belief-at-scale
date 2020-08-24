@@ -120,4 +120,4 @@ if __name__ == '__main__':
 
     # Write to csv
     updated_exposure_data = pd.concat(result_list)
-    updated_exposure_data.to_csv(data_directory + "data_derived/timeseries/estimatd_users_exposed_over_time.csv", index = False)
+    updated_exposure_data.to_csv(data_directory + "data_derived/timeseries/estimated_users_exposed_over_time.csv", index = False)
