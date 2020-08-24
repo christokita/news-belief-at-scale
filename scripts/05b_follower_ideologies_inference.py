@@ -93,7 +93,7 @@ def match_followers_to_ideologies(user_ids, ideologies, data_directory, batch, n
     followers_matched = followers_matched.merge(ideologies, how = "inner", on = 'follower_id')
     followers_matched = followers_matched.rename(columns = {'tweeter_id': 'user_id', 'pablo_score': 'follower_ideology'})
     followers_matched = followers_matched.sort_values(by = 'user_id')
-    return followers_matched
+    return user_id_batch, followers_matched
 
 # Likelihood function for s.d.
 def logL_sd(mu, sigma, samples):
@@ -169,7 +169,7 @@ tweeter_ideologies = tweeter_ideologies.rename(columns = {'user_id': 'follower_i
 tweeter_ideologies = tweeter_ideologies[~pd.isna(tweeter_ideologies['follower_ideology'])]
 follower_ideologies = follower_ideologies.append(tweeter_ideologies, ignore_index = True)
 follower_ideologies = follower_ideologies.drop_duplicates()
-del tweeter_ideologies, tweets
+del tweets
 
 # We will use ideological category bins of size 1, with moderate being [-0.5, 0.5]
 # But per SMAPP instructions, we will not use the normalized scores.
@@ -188,29 +188,50 @@ log_pop_posterior = pd.read_csv(prior_file)
 # Estimate distribution of followers for each unique tweeter in this batch
 ####################
 # Take our batch of user IDs and match them to their followers that have ideology scores
-ideology_data = match_followers_to_ideologies(user_ids = tweeters, 
-                                              ideologies = follower_ideologies, 
-                                              data_directory = data_directory, 
-                                              batch = batch, 
-                                              n_batches = n_batches)
+user_ids, ideology_data = match_followers_to_ideologies(user_ids = tweeters, 
+                                                        ideologies = follower_ideologies, 
+                                                        data_directory = data_directory, 
+                                                        batch = batch, 
+                                                        n_batches = n_batches)
 del follower_ideologies, tweeters
 
-# Grab our unique tweeters in this batch
-user_ids = ideology_data['user_id'].unique()
+# Grab our unique tweeters in this batch that do have follower ideology scores
+users_with_scored_followers = ideology_data['user_id'].unique()
 
 # Set the sigmas we will be checking 
 sigmas = np.arange(0.1, 4.1, 0.1)
 
 # Loop through our tweeters and estimate ideology distribution of followers
 estimated_ideology_batch = pd.DataFrame(columns = ['user_id', 'user_id_str', 'mu', 'sigma'])
-for user_id in user_ids:
+for user_id in users_with_scored_followers:
     followers = ideology_data.follower_ideology[ideology_data.user_id == user_id]
     follower_estimate = estimate_ideology_distribution(user_id = user_id, 
                                                        ideology_samples = followers, 
                                                        sigmas = sigmas, 
                                                        log_prior = log_pop_posterior['log_pr'])
     estimated_ideology_batch = estimated_ideology_batch.append(follower_estimate, ignore_index = True)
+estimated_ideology_batch['mu_basis'] = "followers"
 
+# For tweeters that didn't have followers with ideology scores we will:
+# (a) use their own ideology as the distribution mean with population s.d., and if that doesn't work
+# (b) use the population mean and s.d.
+missing_users = [x for x in user_ids if x not in users_with_scored_followers]
+for user_id in missing_users:
+    user_ideology = tweeter_ideologies.user_ideology[tweeter_ideologies.user_id == user_id].iloc[0]
+    if not math.isnan(user_ideology):
+        mu = user_ideology
+        sigma = log_pop_posterior.sigma[log_pop_posterior.log_pr == max(log_pop_posterior['log_pr'])]
+        basis = "user"
+    else:
+        mu = log_pop_posterior.mu[log_pop_posterior.log_pr == max(log_pop_posterior['log_pr'])]
+        sigma = log_pop_posterior.sigma[log_pop_posterior.log_pr == max(log_pop_posterior['log_pr'])]
+        basis = "population"
+    new_row = pd.DataFrame({'user_id': user_id, 
+                            'user_id_str': "\"" + user_id + "\"", 
+                            'mu': mu, 
+                            'sigma': sigma, 
+                            'mu_basis': basis})
+    estimated_ideology_batch = estimated_ideology_batch.append(new_row, ignore_index = True)
 
 # Create temporary folder to hold partial results
 temp_dir = outpath + 'TEMP_follower_ideology_dist_shapes/'

@@ -21,7 +21,7 @@ import multiprocessing as mp
 
 # high level directory (external HD or cluster storage)
 data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster storage
-#    data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
+#data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
 
 # Paths for ideology distrubtion data
 outpath = data_directory + "data_derived/ideological_scores/estimated_ideol_distributions/"
@@ -192,5 +192,5 @@ if __name__ == '__main__':
         
     # Calculate posterior and save for future use
     log_post = log_prior + log_L
-    log_pop_posterior = pd.DataFrame({'sigma': sigmas, 'log_pr': log_post})
+    log_pop_posterior = pd.DataFrame({'mu': mean_population_ideol, 'sigma': sigmas, 'log_pr': log_post})
     log_pop_posterior.to_csv(prior_file, index = False)
