@@ -13,8 +13,7 @@ Determine exposure by political type over time.
 
 
 ####################
-# Load libraries and packages, set important parameters, load data
-####################
+# Load libraries and packages, set important parameter
 import pandas as pd
 import numpy as np
 import re
