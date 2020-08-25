@@ -116,8 +116,8 @@ if __name__ == '__main__':
     result_list = pool.map(update_exposure_data, batched_data)
     pool.close()
     pool.join()
-    
 
     # Write to csv
     updated_exposure_data = pd.concat(result_list)
+    updated_exposure_data = updated_exposure_data.sort_values(by = ['total_article_number', 'tweet_number'])
     updated_exposure_data.to_csv(data_directory + "data_derived/exposure/estimated_users_exposed_over_time.csv", index = False)
