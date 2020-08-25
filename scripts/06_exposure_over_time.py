@@ -215,7 +215,7 @@ if __name__ == '__main__':
     
     # Check specific article. If it is already processed, skip proccessing and finish script
     story = unique_articles[i]
-    processed_articles = os.listdir(data_directory + "data_derived/timeseries/individual_articles/")
+    processed_articles = os.listdir(data_directory + "data_derived/exposure/individual_articles/")
     processed_articles = [file for file in processed_articles if re.match('^article', file)] #filter out hidden copies of same files
     processed_articles = [re.search('([0-9]+)', file).group(1) for file in processed_articles]
     processed_articles = np.array(processed_articles, dtype = int)
@@ -227,7 +227,7 @@ if __name__ == '__main__':
                                              tweets = labeled_tweets, 
                                              data_directory = data_directory, 
                                              ideol_bin_size = 0.5)
-    story_exposed.to_csv(data_directory + "data_derived/timeseries/individual_articles/article_" + str(story) + ".csv", index = False)
+    story_exposed.to_csv(data_directory + "data_derived/exposure/individual_articles/article_" + str(story) + ".csv", index = False)
 
     # Check if all stories are processed at this point.
     processed_articles = os.listdir(data_directory + "data_derived/timeseries/individual_articles/")
@@ -240,10 +240,10 @@ if __name__ == '__main__':
     if len(articles_left_to_do) == 0:   
         col_names = story_exposed.columns
         exposed_timeseries = pd.DataFrame(columns = col_names)
-        article_files = os.listdir(data_directory + "data_derived/timeseries/individual_articles/")
+        article_files = os.listdir(data_directory + "data_derived/exposure/individual_articles/")
         article_files = [file for file in article_files if re.match('^article', file)] #filter out hidden copies of same files
         for file in article_files:
-            story_exposed = pd.read_csv(data_directory + "data_derived/timeseries/individual_articles/" + file,
+            story_exposed = pd.read_csv(data_directory + "data_derived/exposure/individual_articles/" + file,
                                         dtype = {'user_id': 'int64'})
             exposed_timeseries = exposed_timeseries.append(story_exposed, sort = False)
-        exposed_timeseries = exposed_timeseries.to_csv(data_directory + "data_derived/timeseries/users_exposed_over_time.csv", index = False)
+        exposed_timeseries = exposed_timeseries.to_csv(data_directory + "data_derived/exposure/users_exposed_over_time.csv", index = False)
