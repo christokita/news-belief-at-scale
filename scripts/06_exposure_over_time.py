@@ -21,7 +21,6 @@ import re
 import os
 import math
 import sys
-#import multiprocessing as mp
 
 # Get chunk number from SLURM script
 i = int(sys.argv[1])
@@ -149,8 +148,11 @@ def create_exposure_dataset(collection_df, follower_count, article_tweets, follo
         tweet_number = j
         
         # Get follower count
-        total_followers = follower_count.followers[follower_count.user_id == user_id].iloc[0]
-        
+        if user_id in set(follower_count.user_id):
+            total_followers = follower_count.followers[follower_count.user_id == user_id].iloc[0]
+        else:
+            total_followers = 0
+            
         # Subset out unique, newly exposed followers of this user
         their_followers = follower_data[follower_data['user_id'] == user_id]
         
@@ -231,7 +233,7 @@ if __name__ == '__main__':
     story_exposed.to_csv(data_directory + "data_derived/exposure/individual_articles/article_" + str(story) + ".csv", index = False)
 
     # Check if all stories are processed at this point.
-    processed_articles = os.listdir(data_directory + "data_derived/timeseries/individual_articles/")
+    processed_articles = os.listdir(data_directory + "data_derived/exposure/individual_articles/")
     processed_articles = [file for file in processed_articles if re.match('^article', file)] #filter out hidden copies of same files
     processed_articles = [re.search('([0-9]+)', file).group(1) for file in processed_articles]
     processed_articles = np.array(processed_articles, dtype = int)

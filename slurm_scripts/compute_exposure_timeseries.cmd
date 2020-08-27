@@ -3,7 +3,7 @@
 #SBATCH --cpus-per-task=2
 #SBATCH --mem-per-cpu=12gb
 #SBATCH --array=0-135
-#SBATCH --time=71:59:00
+#SBATCH --time=36:00:00
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=ctokita@princeton.edu
 #SBATCH --output=slurm_outfiles/slurm-%A_%a.out
