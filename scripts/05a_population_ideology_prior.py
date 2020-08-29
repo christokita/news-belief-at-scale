@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Tue Aug  4 14:28:50 2020
+Created on Fri Aug  28 11:08:00 2020
 
 @author: ChrisTokita
 
 SCRIPT:
-Prepare data for analysis of all follower ideologies
+Conduct MCMC bayesian inference of population distribution of follower ideology
 """
 
 ####################
@@ -14,10 +14,13 @@ Prepare data for analysis of all follower ideologies
 ####################
 import pandas as pd
 import numpy as np
+import pymc3 as pm
 import os
 import re
 import math
 import multiprocessing as mp
+
+
 
 # high level directory (external HD or cluster storage)
 data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster storage
@@ -25,7 +28,8 @@ data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster stora
 
 # Paths for ideology distrubtion data
 outpath = data_directory + "data_derived/ideological_scores/estimated_ideol_distributions/"
-prior_file = outpath + "_population_estimate.csv"
+posterior_samples_file = outpath + "_population_posterior_samples.csv"
+population_map_file = outpath + "_population_MAP_estimate.csv"
 
 
 ####################
@@ -87,110 +91,117 @@ def match_followers_to_ideologies(user_ids, ideologies, data_directory, outpath,
     followers_matched.to_csv(outpath + 'temp_matched_follower_ideology_' + str(batch) + '.csv', index = False)
     return None
 
-# Likelihood function for estimating s.d. of ideology
-def logL_sd(mu, sigma, samples):
-    """
-    Function that calculates the likelihood of the n observations, given a normal distribution.
-    
-    INPUTS
-    - n: number of observations
-    - V: sample variance of observations
-    - sigma: s.d. of normal distrubtion we assume the observations are coming from
-    """
-    n = len(samples)
-    first_part = -n/2 * np.log(2*math.pi)
-    second_part = -n/2 * np.log(sigma**2)
-    third_part = -1/(2 * sigma**2) * np.sum( (samples-mu)**2 )
-    logL = first_part + second_part + third_part
-    return logL
 
 # Main script
 if __name__ == '__main__':
     
-
     ####################
-    # Load tweeters, followers, and ideology scores
+    # Load (or create) data set of paired tweeters-follower ideology scores
     ####################
-    # Load tweets and follower ideology data 
-    tweets = pd.read_csv(data_directory + "data_derived/tweets/tweets_labeled.csv",
-                         dtype = {'quoted_urls': object, 'quoted_urls_expanded': object, #these two columns cause memory issues if not pre-specified dtype
-                                  'user_id': object, 'tweet_id': object, 
-                                  'retweeted_user_id': object, 'retweet_id': object,
-                                  'quoted_user_id': object, 'quoted_id': object})
-    follower_ideologies = pd.read_csv(data_directory + "data_derived/ideological_scores/cleaned_followers_ideology_scores.csv",
-                                      dtype = {'user_id': object, 'pablo_score': float})
-    follower_ideologies = follower_ideologies.drop(columns = ['accounts_followed'])
-    follower_ideologies = follower_ideologies.rename(columns = {'user_id': 'follower_id'})
+    if os.path.exists(data_directory + 'data_derived/ideological_scores/paired_tweeter-follower_ideology.csv'):
+        followers_data = pd.read_csv(data_directory + 'data_derived/ideological_scores/paired_tweeter-follower_ideology.csv')
     
-    # Add tweeter ideologies (since they can also be followers) 
-    tweeter_ideologies = tweets[['user_id', 'user_ideology']]
-    tweeter_ideologies = tweeter_ideologies.rename(columns = {'user_id': 'follower_id', 'user_ideology': 'pablo_score'})
-    tweeter_ideologies = tweeter_ideologies[~pd.isna(tweeter_ideologies['pablo_score'])]
-    tweeter_ideologies = tweeter_ideologies.drop_duplicates()
-    follower_ideologies = follower_ideologies.append(tweeter_ideologies, ignore_index = True)
-    follower_ideologies = follower_ideologies.drop_duplicates()
-
-
+    else:
+        # Load tweets and follower ideology data 
+        tweets = pd.read_csv(data_directory + "data_derived/tweets/tweets_labeled.csv",
+                             dtype = {'quoted_urls': object, 'quoted_urls_expanded': object, #these two columns cause memory issues if not pre-specified dtype
+                                      'user_id': object, 'tweet_id': object, 
+                                      'retweeted_user_id': object, 'retweet_id': object,
+                                      'quoted_user_id': object, 'quoted_id': object})
+        follower_ideologies = pd.read_csv(data_directory + "data_derived/ideological_scores/cleaned_followers_ideology_scores.csv",
+                                          dtype = {'user_id': object, 'pablo_score': float})
+        follower_ideologies = follower_ideologies.drop(columns = ['accounts_followed'])
+        follower_ideologies = follower_ideologies.rename(columns = {'user_id': 'follower_id'})
+        
+        # Add tweeter ideologies (since they can also be followers) 
+        tweeter_ideologies = tweets[['user_id', 'user_ideology']]
+        tweeter_ideologies = tweeter_ideologies.rename(columns = {'user_id': 'follower_id', 'user_ideology': 'pablo_score'})
+        tweeter_ideologies = tweeter_ideologies[~pd.isna(tweeter_ideologies['pablo_score'])]
+        tweeter_ideologies = tweeter_ideologies.drop_duplicates()
+        follower_ideologies = follower_ideologies.append(tweeter_ideologies, ignore_index = True)
+        follower_ideologies = follower_ideologies.drop_duplicates()
+        del tweeter_ideologies
+        
+        # Get unique users
+        unique_users = tweets.user_id[~pd.isna(tweets['total_article_number'])].unique()
+        del tweets
+        
+        # Create temporary folder to hold partial results
+        temp_dir = data_directory + 'data_derived/ideological_scores/TEMP_matched_follower_ideologies/'
+        os.makedirs(temp_dir, exist_ok = True)
+        
+        # Process tweeters in batches and write temporary files out
+        pool = mp.Pool(mp.cpu_count())
+        n_batches = 20
+        for i in np.arange(n_batches):
+            pool.apply_async(match_followers_to_ideologies, args = (unique_users, follower_ideologies, data_directory, temp_dir, i, n_batches))
+        pool.close()
+        pool.join()
+        
+        # Bind together temporary out files into final dataset
+        temp_files = os.listdir(temp_dir)
+        for file in temp_files:
+            temp_data = pd.read_csv(temp_dir + file, dtype = {'user_id': object})
+            if 'followers_data' not in globals():
+                followers_data = temp_data
+            else:
+                followers_data = followers_data.append(temp_data, ignore_index = True, sort = False)
+            del temp_data
+        
+        # save
+        followers_data.to_csv(data_directory + 'data_derived/ideological_scores/paired_tweeter-follower_ideology.csv', index = False)
+        
+        # Delete temp data
+        for file in temp_files:
+            os.remove(temp_dir + file)
+        os.rmdir(temp_dir)
+        
+    
     ####################
-    # Create data set matching follower ideology to each tweeter
-    ####################
-    # Get unique users
-    unique_users = tweets.user_id[~pd.isna(tweets['total_article_number'])].unique()
-    del tweets
-    
-    # Create temporary folder to hold partial results
-    temp_dir = data_directory + 'data_derived/ideological_scores/TEMP_matched_follower_ideologies/'
-    os.makedirs(temp_dir, exist_ok = True)
-
-    # Process tweeters in batches and write temporary files out
-    pool = mp.Pool(mp.cpu_count())
-    n_batches = 20
-    for i in np.arange(n_batches):
-        pool.apply_async(match_followers_to_ideologies, args = (unique_users, follower_ideologies, data_directory, temp_dir, i, n_batches))
-    pool.close()
-    pool.join()
-    
-    # Bind together temporary out files into final dataset
-    temp_files = os.listdir(temp_dir)
-    for file in temp_files:
-        temp_data = pd.read_csv(temp_dir + file, dtype = {'user_id': object})
-        if 'followers_data' not in globals():
-            followers_data = temp_data
-        else:
-            followers_data = followers_data.append(temp_data, ignore_index = True, sort = False)
-        del temp_data
-    
-    # save
-    followers_data.to_csv(data_directory + 'data_derived/ideological_scores/paired_tweeter-follower_ideology.csv', index = False)
-
-    # Delete temp data
-    for file in temp_files:
-        os.remove(temp_dir + file)
-    os.rmdir(temp_dir)
-    
-    
-    ####################
-    # Calculate population-level distribution of ideologies
+    # Infer population level ideology distrubiton shape
     ####################
     # Unique followers
     followers_data = followers_data[['follower_id', 'follower_ideology']].drop_duplicates()
     
-    # Get population sample mean
-    mean_population_ideol = followers_data['follower_ideology'].mean() #we assume the distribution is centered on this
+    # Prepare data for inference
+    samples = followers_data['follower_ideology']
+    sample_mu = np.array([np.mean(samples)])
+    sample_sigma = np.array([np.std(samples)])
     
-    # Set up uninformative prior
-    sigmas = np.arange(0.1, 4.1, 0.1)
-    log_prior = np.log(1 / sigmas**2)    
-    
-    # Calculate log likelihood
-    log_L = np.array([])
-    for sigma in sigmas:
-        val = logL_sd(mu = mean_population_ideol, 
-                      sigma = sigma, 
-                      samples = followers_data['follower_ideology'])
-        log_L = np.append(log_L, val)
+    # Run inference using NUTS
+    total_samples = 20000
+    n_cores = 4
+    burn_in = 1000
+    niter = int( (total_samples + n_cores*burn_in) / n_cores ) #account for removal of burn in at the beginning of each chain
+    with pm.Model() as model:
+        # define priors
+        # Based on P. Barbera's work we know ideology scores tend to be normally distributed around 0
+        # For standard deviation, typically an exponential distribution is used
+        mu = pm.Normal('mu', mu = 0, sigma = 2, shape = sample_mu.shape)
+        sigma = pm.Exponential('sigma', lam = 2, shape = sample_sigma.shape)
         
-    # Calculate posterior and save for future use
-    log_post = log_prior + log_L
-    log_pop_posterior = pd.DataFrame({'mu': mean_population_ideol, 'sigma': sigmas, 'log_pr': log_post})
-    log_pop_posterior.to_csv(prior_file, index = False)
+        # define likelihood
+        observed_data = pm.Normal('observed_data', mu = mu, sigma = sigma, observed = samples)
+        
+        # inference
+        map_estimate = pm.find_MAP()
+        step = pm.Slice()
+        trace = pm.sample(draws = niter, start = None, random_seed = 323, cores = n_cores, chains = n_cores)
+        
+    # Get samples of population-level posterior for use as prior in individual-level inference later
+    posterior_mu = trace.get_values('mu', burn = burn_in, combine = True)
+    posterior_sigma = trace.get_values('sigma', burn = burn_in, combine = True)
+    posterior_samples = pd.DataFrame({'mu_samples': posterior_mu.ravel(), 
+                                      'sigma_samples': posterior_sigma.ravel()})
+    posterior_samples.to_csv(posterior_samples_file, index = False)
+    
+    # Get MAP estimate
+    population_MAPestimate = pd.DataFrame({'mu': map_estimate['mu'], 'sigma': map_estimate['sigma']})
+    population_MAPestimate.to_csv(population_map_file, index = False)
+    
+#    import matplotlib.pyplot as plt
+#    import scipy.stats as stats
+#    plt.hist(samples, density = True)
+#    x = np.linspace(-5, 5, 100)
+#    plt.plot(x, stats.norm(loc = map_estimate['mu'], scale = map_estimate['sigma']).pdf(x))
+#    plt.plot(x, stats.norm(loc = np.mean(posterior_mu), scale = np.mean(posterior_sigma)).pdf(x))
