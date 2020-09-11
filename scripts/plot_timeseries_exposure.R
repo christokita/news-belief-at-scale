@@ -217,7 +217,7 @@ ggsave(gg_expVnum, filename = paste0(outpath, "relative_tweet_vs_exposure.png"),
 exposure_ideol <- exposure_timeseries %>% 
   select(-source_lean, -relative_cumulative_exposed, -relative_tweet_count) %>% 
   gather(key = "ideology_bin", value = "count", 
-         -time, -tweet_number, -tweet_id, -user_id, -user_ideology, -new_exposed_users, -cumulative_exposed, -total_article_number, -hour_bin, -source_type, -article_fc_rating, -article_lean) %>% 
+         -time, -tweet_number, -tweet_id, -user_id, -user_ideology, -follower_count, -new_exposed_users, -cumulative_exposed, -total_article_number, -hour_bin, -source_type, -article_fc_rating, -article_lean) %>% 
   mutate(ideology_bin = gsub("ideol_", "", ideology_bin)) %>% 
   mutate(ideology_bin = gsub("^\\.", "-", ideology_bin)) %>% 
   mutate(ideology_bin = gsub("_\\.", "_-", ideology_bin)) %>% 
@@ -321,8 +321,103 @@ gg_ideoltime
 ggsave(gg_ideoltime, filename = paste0(outpath, "ideol_exposed_hourbin.png"), width = 90, height = 90, units = "mm", dpi = 400)
 
 
-# gg_ideoltime_binned <-  exposure_timeseries %>% 
-#   mutate(Liberal = ideol_.3.0_.2.5 + ideol_.2.5_.2.0 + ideol_.2.0_.1.5 + ideol_.1.5_.1.0,
-#          Moderate = ideol_.1.0_.0.5 + ideol_.0.5_0.0 + ideol_0.0_0.5 + ideol_0.5_1.0,
-#          Conservative = ideol_1.0_1.5 + ideol_1.5_2.0 + ideol_2.0_2.5 + ideol_2.5_3.0+ ideol_3.0_3.5 + ideol_3.5_4.0 + ideol_4.0_4.5 + ideol_4.5_5.0 + ideol_5.0_5.5) +
-#   select()
+####################
+# Exposure diversity over time
+####################
+library(vegan)
+
+# Set up data
+# diversity_data <- exposure_ideol %>% 
+#   filter(hour_bin >= 0) %>% 
+#   select(!!sym(grouping), total_article_number, hour_bin, ideology_bin, count) %>% 
+#   group_by(!!sym(grouping), total_article_number, hour_bin, ideology_bin) %>% 
+#   summarise(total_exposed = sum(count)) %>% 
+#   pivot_wider(names_from = ideology_bin, values_from = total_exposed)
+diversity_data <- exposure_ideol %>% 
+  filter(hour_bin >= 0) %>% 
+  select(total_article_number, !!sym(grouping), tweet_id, user_id, tweet_number, time, hour_bin, new_exposed_users, ideology_bin, count) %>% 
+  pivot_wider(names_from = ideology_bin, values_from = count) 
+
+# Distance matrix between ideology bins
+bin_centers <- unique(exposure_ideol$ideology_bin)
+ideol_distance_matrix <- as.matrix( dist(bin_centers, diag = TRUE, upper = TRUE, method = "euclidean") )
+
+# Try calculating diversity as expected ideological difference between two randomly chosen exposed users
+ideological_diversity <- function(distance_matrix, ideological_counts) {
+  
+  diversity_data <- c()
+  for (i in 1:nrow(ideological_counts)) {
+    # Normalize counts into proportions and compute ideology X ideology encounter probability
+    count_row <- ideological_counts[i , ]
+    normalized_counts <- as.matrix( count_row / sum(count_row) )
+    encounter_probs <- t(normalized_counts) %*% normalized_counts
+    
+    # Compute ideological distance X probability of encounter
+    weighted_difference <- encounter_probs *  distance_matrix 
+    expected_difference <- sum(weighted_difference)
+    diversity_data <- c(diversity_data, expected_difference)
+  }
+  return(diversity_data)
+}
+
+diversity_index <- data.frame(ideol_diversity = ideological_diversity(distance_matrix = ideol_distance_matrix, ideological_counts = diversity_data[ , 5:21]))
+diversity_data <- diversity_data %>% 
+  select(!!sym(grouping), total_article_number, user_id, tweet_id, time, hour_bin, new_exposed_users) %>% 
+  cbind(diversity_index)
+
+gg_expos_diversity <- diversity_data %>% 
+  group_by(!!sym(grouping), hour_bin) %>% 
+  filter(hour_bin < 31, 
+         !is.na(ideol_diversity)) %>% 
+  summarise(diveristy_mean = mean(ideol_diversity),
+            diveristy_sd = sd(ideol_diversity),
+            diversity_ci = 2 * sd(ideol_diversity) / sqrt(length(ideol_diversity))) %>% 
+  ggplot(., aes(x = hour_bin, y = diveristy_mean, group = !!sym(grouping), color = !!sym(grouping))) +
+  geom_ribbon(aes(ymax = diveristy_mean + diversity_ci, ymin = diveristy_mean - diversity_ci, fill = !!sym(grouping)),
+              color = NA, alpha = 0.2) +
+  geom_line(size = 0.3) +
+  scale_x_continuous(breaks = seq(0, 48, 6)) +
+  scale_y_continuous(breaks = seq(0, 3, 0.2)) +
+  scale_color_manual(values = c("#F18805", line_color), name = "") +
+  scale_fill_manual(values = c("#F18805", line_color), name = "") +
+  xlab("Time since first article share (hrs)") +
+  ylab("Mean ideological diversity\nof exposed users") +
+  theme_ctokita()
+gg_expos_diversity
+
+
+gg_expos_diversity_raw <- diversity_data %>% 
+  filter(hour_bin < 31, 
+         !is.na(ideol_diversity)) %>% 
+  ggplot(., aes(x = time, y = ideol_diversity, group = total_article_number)) +
+  geom_point(size = 0.1, alpha = 0.4, color = line_color) +
+  theme_ctokita() + 
+  facet_wrap(as.formula(paste("~", grouping)), 
+             ncol = 1,
+             strip.position = "right",
+             scales = "fixed")
+gg_expos_diversity_raw
+
+
+
+# Calculate diversity index by story by hour
+diversity_indices <- data.frame(diversity_index = diversity(diversity_data[ , 4:20], index = "simpson"))
+alpha_diversity <- data.frame(alpha_diversity = fisher.alpha(diversity_data[ , 4:20]))
+# diversity_indices <- data.frame(diversity = betadiver(diversity_data[ , 4:19], method = "w"))
+diversity_data <- diversity_data %>% 
+  select(!!sym(grouping), total_article_number, hour_bin) %>% 
+  cbind(diversity_indices, alpha_diversity)
+
+
+# Plot 
+gg_expos_diversity <- ggplot(diversity_data, aes(x = hour_bin, y = alpha_diversity, group = total_article_number)) +
+  geom_line(size = 0.3, color = line_color) +
+  theme_ctokita() + 
+  facet_wrap(as.formula(paste("~", grouping)), 
+             ncol = 1,
+             strip.position = "right",
+             scales = "fixed")
+gg_expos_diversity
+
+ggplot(diversity_data, aes(x = !!sym(grouping), y = diversity)) +
+  geom_point()
