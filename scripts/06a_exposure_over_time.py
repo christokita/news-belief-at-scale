@@ -21,6 +21,7 @@ import re
 import os
 import math
 import sys
+import time
 
 # Get chunk number from SLURM script
 i = int(sys.argv[1])
@@ -78,6 +79,7 @@ def unique_exposed_over_time(story_id, tweets, data_directory, ideol_bin_size):
     del cols
     
     # Construct our data set
+    selected_tweets = selected_tweets.sort_values('relative_tweet_time') #paranoid double check that tweets are properly ordered
     exposed_over_time = create_exposure_dataset(collection_df = exposed_over_time, 
                                                 follower_count = follower_count,
                                                 article_tweets = selected_tweets, 
@@ -98,6 +100,9 @@ def gather_followers(article_tweets):
     OUTPUT
     - followers_exposed: dataframe listing user ID of each tweeter and all user IDs of their respective followers.
     """
+    # Drop duplicate tweets from same user so we only gather followers once
+    article_tweets = article_tweets.drop_duplicates(subset = ['user_id'])
+    
     # Load follower IDs for each tweeter
     follower_files = os.listdir(data_directory + "data/followers/")
     followers_exposed = pd.DataFrame(columns = ['user_id', 'follower_id'], dtype = 'int64')
@@ -139,6 +144,7 @@ def create_exposure_dataset(collection_df, follower_count, article_tweets, follo
     Function that will go construct our dataset
     """
     cumulative_exposed = 0
+    already_tweeted = [] #list to keep track of which users have already shown up sequentially
     for j in np.arange(article_tweets.shape[0]):
         
         # Get tweet identifying items
@@ -156,13 +162,19 @@ def create_exposure_dataset(collection_df, follower_count, article_tweets, follo
         # Subset out unique, newly exposed followers of this user
         their_followers = follower_data[follower_data['user_id'] == user_id]
         
-        # Count total new exposed, update cumulative exposed
-        new_exposed_count = their_followers.shape[0]
-        cumulative_exposed += new_exposed_count
-        
-        # Get ideologies of these followers     
+        # Bin ideologies of exposed followers     
         ideol_counts = np.histogram(their_followers['pablo_score'], bins = bins)
         ideol_counts = pd.DataFrame([ideol_counts[0]], columns = bin_labels)
+        
+        # Count total new exposed and update cumulative exposed
+        # If user had already shared tweeted story before, then we can't double count their followers as exposed.
+        if user_id in already_tweeted:
+            new_exposed_count = 0
+            ideol_counts[:] = 0
+        else:
+            new_exposed_count = their_followers.shape[0]
+        cumulative_exposed += new_exposed_count
+        already_tweeted.append(user_id)
         
         # Summarise and create new row
         new_row = pd.DataFrame({'relative_time': rel_time, 
@@ -233,6 +245,7 @@ if __name__ == '__main__':
     story_exposed.to_csv(data_directory + "data_derived/exposure/individual_articles/article_" + str(story) + ".csv", index = False)
 
     # Check if all stories are processed at this point.
+    time.sleep(10)
     processed_articles = os.listdir(data_directory + "data_derived/exposure/individual_articles/")
     processed_articles = [file for file in processed_articles if re.match('^article', file)] #filter out hidden copies of same files
     processed_articles = [re.search('([0-9]+)', file).group(1) for file in processed_articles]
