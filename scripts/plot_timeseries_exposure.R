@@ -360,7 +360,8 @@ ideological_diversity <- function(distance_matrix, ideological_counts) {
   return(diversity_data)
 }
 
-diversity_index <- data.frame(ideol_diversity = ideological_diversity(distance_matrix = ideol_distance_matrix, ideological_counts = diversity_data[ , 5:21]))
+ideol_bins_cols <- grep("[-.0-9]+", names(diversity_data))
+diversity_index <- data.frame(ideol_diversity = ideological_diversity(distance_matrix = ideol_distance_matrix, ideological_counts = diversity_data[ , ideol_bins_cols]))
 diversity_data <- diversity_data %>% 
   select(!!sym(grouping), total_article_number, user_id, tweet_id, time, hour_bin, new_exposed_users) %>% 
   cbind(diversity_index)
@@ -377,7 +378,7 @@ gg_expos_diversity <- diversity_data %>%
               color = NA, alpha = 0.2) +
   geom_line(size = 0.3) +
   scale_x_continuous(breaks = seq(0, 48, 6)) +
-  scale_y_continuous(breaks = seq(0, 3, 0.2)) +
+  scale_y_continuous(breaks = seq(0, 3, 0.1)) +
   scale_color_manual(values = c("#F18805", line_color), name = "") +
   scale_fill_manual(values = c("#F18805", line_color), name = "") +
   xlab("Time since first article share (hrs)") +
@@ -401,17 +402,18 @@ gg_expos_diversity_raw
 
 
 # Calculate diversity index by story by hour
-diversity_indices <- data.frame(diversity_index = diversity(diversity_data[ , 4:20], index = "simpson"))
-alpha_diversity <- data.frame(alpha_diversity = fisher.alpha(diversity_data[ , 4:20]))
+diversity_indices <- data.frame(diversity_index = diversity(diversity_data[ , 8:24], index = "simpson"))
+alpha_diversity <- data.frame(alpha_diversity = fisher.alpha(diversity_data[ , 8:24]))
 # diversity_indices <- data.frame(diversity = betadiver(diversity_data[ , 4:19], method = "w"))
 diversity_data <- diversity_data %>% 
-  select(!!sym(grouping), total_article_number, hour_bin) %>% 
-  cbind(diversity_indices, alpha_diversity)
+  select(!!sym(grouping), user_id, new_exposed_users, total_article_number, hour_bin) %>% 
+  cbind(diversity_indices) %>% 
+  filter(new_exposed_users > 0)
 
 
 # Plot 
-gg_expos_diversity <- ggplot(diversity_data, aes(x = hour_bin, y = alpha_diversity, group = total_article_number)) +
-  geom_line(size = 0.3, color = line_color) +
+gg_expos_diversity <- ggplot(diversity_data, aes(x = hour_bin, y = diversity_index, group = total_article_number)) +
+  geom_point(size = 0.3, color = line_color) +
   theme_ctokita() + 
   facet_wrap(as.formula(paste("~", grouping)), 
              ncol = 1,
