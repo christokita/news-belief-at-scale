@@ -169,9 +169,9 @@ if __name__ == '__main__':
     sample_sigma = np.array([np.std(samples)])
     
     # Run inference using NUTS
-    total_samples = 20000
     n_cores = 4
-    burn_in = 1000
+    total_samples = 1000
+    burn_in = 100
     niter = int( (total_samples + n_cores*burn_in) / n_cores ) #account for removal of burn in at the beginning of each chain
     with pm.Model() as model:
         # define priors
@@ -185,8 +185,8 @@ if __name__ == '__main__':
         
         # inference
         map_estimate = pm.find_MAP()
-        step = pm.Slice()
-        trace = pm.sample(draws = niter, start = None, random_seed = 323, cores = n_cores, chains = n_cores)
+        step = pm.NUTS(target_accept = 0.90)
+        trace = pm.sample(draws = niter, start = None, init = 'advi_map', step = step, random_seed = 323, cores = n_cores, chains = n_cores)
         
     # Get samples of population-level posterior for use as prior in individual-level inference later
     posterior_mu = trace.get_values('mu', burn = burn_in, combine = True)
