@@ -59,7 +59,7 @@ def unique_exposed_over_time(story_id, tweets, data_directory, ideol_bin_size):
     follower_count = follower_count.reset_index(drop = True)
     
     # Drop duplicates so we only keep first instance of exposure per follower
-    followers_per_tweeter = followers_per_tweeter.drop_duplicates(subset = "follower_id")
+    followers_per_tweeter = followers_per_tweeter.drop_duplicates(subset = "follower_id", keep = "first")
     
     # Merge in follower ideology data
     follower_ideologies = pd.read_csv(data_directory + "data_derived/ideological_scores/cleaned_followers_ideology_scores.csv",
@@ -101,7 +101,7 @@ def gather_followers(article_tweets):
     - followers_exposed: dataframe listing user ID of each tweeter and all user IDs of their respective followers.
     """
     # Drop duplicate tweets from same user so we only gather followers once
-    article_tweets = article_tweets.drop_duplicates(subset = ['user_id'])
+    article_tweets = article_tweets.drop_duplicates(subset = ['user_id'], keep = "first")
     
     # Load follower IDs for each tweeter
     follower_files = os.listdir(data_directory + "data/followers/")
