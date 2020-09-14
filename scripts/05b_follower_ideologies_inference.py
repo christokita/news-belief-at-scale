@@ -26,12 +26,13 @@ batch = int(sys.argv[1])
 n_batches = 200
 
 # high level directory (external HD or cluster storage)
-#data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster storage
-data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
+data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster storage
+#data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
 
 # Path to necessary data
 outpath = data_directory + "data_derived/ideological_scores/estimated_ideol_distributions/"
 prior_file = outpath + "_population_posterior_samples.csv"
+map_estimate_file = outpath + "_population_MAP_estimate.csv"
 
 
 ####################
@@ -104,7 +105,7 @@ def from_posterior(param, samples, lower_bound, upper_bound):
     # so we'll extend the domain and use linear approximation of density on it
     x = np.concatenate([[lower_bound], x, [upper_bound]])
     y = np.concatenate([[0], y, [0]])
-    return Interpolated(param, x, y)
+    return pm.distributions.Interpolated(param, x, y)
 
 
 
@@ -161,17 +162,17 @@ prior_sigma = np.array([ prior['sigma_samples'] ]).T #needs to be column format 
 
 # Loop through our tweeters and estimate ideology distribution of followers
 estimated_ideology_batch = pd.DataFrame(columns = ['user_id', 'user_id_str', 'mu', 'sigma'])
-for user_id in users_with_scored_followers[60:61]:
+for user_id in users_with_scored_followers:
     
     # Grab follower ideologies we have for this user
     followers = ideology_data.follower_ideology[ideology_data.user_id == user_id]
+    n_followers = len(followers)
     
     # Determine MAP estimate 
     with pm.Model() as model:
         # Create empirical prior from posterior
         mu = from_posterior('mu', prior_mu, lower_bound = -5, upper_bound = 5)
         sigma = from_posterior('sigma', prior_sigma, lower_bound = 0, upper_bound = 5)
-        alpha = from_posterior('sigma', prior_alpha, lower_bound = -10, upper_bound = 10)
         
         # Likelihood function
         observed_data = pm.Normal('observed_data', mu = mu, sigma = sigma, observed = followers)
@@ -182,15 +183,66 @@ for user_id in users_with_scored_followers[60:61]:
     follower_estimate = pd.DataFrame({'user_id': user_id, 
                                       'user_id_str': "\"" + user_id + "\"", 
                                       'mu': est_parameters['mu'], 
-                                      'sigma': est_parameters['sigma']}, index = [0])
+                                      'sigma': est_parameters['sigma'],
+                                      'n_follower_samples': n_followers,
+                                      'mu_basis': "followers"}, index = [0])
     estimated_ideology_batch = estimated_ideology_batch.append(follower_estimate, ignore_index = True)
 
-estimated_ideology_batch['mu_basis'] = "followers"
+# Load MAP estimate of population-level ideology distribution
+population_MAP_estimate = pd.read_csv(map_estimate_file)
+
+# For tweeters that didn't have followers, use population-level estimate
+missing_users = [x for x in user_ids if x not in users_with_scored_followers]
+missing_user_estimates = pd.DataFrame({'user_id': missing_users,
+                                      'user_id_str': ["\"" + x + "\"" for x in missing_users]}) 
+missing_user_estimates['mu'] = population_MAP_estimate['mu'].iloc[0]
+missing_user_estimates['sigma'] = population_MAP_estimate['sigma'].iloc[0]
+missing_user_estimates['n_follower_samples'] = 0
+missing_user_estimates['mu_basis'] = "population"
+
+# Append to all estiamtes and save to temporary folder to hold partial results
+estimated_ideology_batch = estimated_ideology_batch.append(missing_user_estimates, ignore_index = True)
+temp_dir = outpath + 'TEMP_follower_ideology_dist_shapes/'
+os.makedirs(temp_dir, exist_ok = True)
+estimated_ideology_batch.to_csv(temp_dir + 'batch_' + str(batch).zfill(3) + '.csv', index = False)
+
+
+####################
+# Combine all data that was processed in parallel
+####################
+# If this is the last batch to finish, bind all temoprary files together and save
+time.sleep(10)
+temp_files = os.listdir(temp_dir)
+if len(temp_files) == n_batches:
+    estimated_ideology_distributions = pd.DataFrame(columns = estimated_ideology_batch.columns)
+    for file in temp_files:
+        batch_data = pd.read_csv(temp_dir + file, dtype = {'user_id': str})
+        estimated_ideology_distributions = estimated_ideology_distributions.append(batch_data)
+        os.remove(temp_dir + file)
+    estimated_ideology_distributions.to_csv(outpath + 'follower_ideology_distribution_shapes.csv', index = False)
+    os.rmdir(temp_dir)
+
+
+
+#for user_id in missing_users:
+#    user_ideology = follower_ideologies.follower_ideology[follower_ideologies.follower_id == user_id] #grab user's own ideology
+#    if len(user_ideology) > 0:
+#        mu = user_ideology.iloc[0]
+#        sigma = log_pop_posterior.sigma[log_pop_posterior.log_pr == max(log_pop_posterior['log_pr'])]
+#        basis = "user"
+#    else:
+#        mu = log_pop_posterior.mu[log_pop_posterior.log_pr == max(log_pop_posterior['log_pr'])]
+#        sigma = log_pop_posterior.sigma[log_pop_posterior.log_pr == max(log_pop_posterior['log_pr'])]
+#        basis = "population"
+#    new_row = pd.DataFrame({'user_id': user_id, 
+#                            'user_id_str': "\"" + user_id + "\"", 
+#                            'mu': mu, 
+#                            'sigma': sigma, 
+#                            'mu_basis': basis})
+#    estimated_ideology_batch = estimated_ideology_batch.append(new_row, ignore_index = True)   
 
     
 
-    
-
-x = np.linspace(-4, 4, 100)
-plt.plot(x, stats.norm(loc = est_parameters['mu'], scale = est_parameters['sigma']).pdf(x))    
-plt.hist(followers, density = True)
+#x = np.linspace(-4, 4, 100)
+#plt.plot(x, stats.norm(loc = est_parameters['mu'], scale = est_parameters['sigma']).pdf(x))    
+#plt.hist(followers, density = True)
