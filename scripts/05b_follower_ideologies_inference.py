@@ -34,6 +34,11 @@ outpath = data_directory + "data_derived/ideological_scores/estimated_ideol_dist
 prior_file = outpath + "_population_posterior_samples.csv"
 map_estimate_file = outpath + "_population_MAP_estimate.csv"
 
+# Supress theano/pymc3 logging
+import logging
+logger = logging.getLogger("pymc3")
+logger.propagate = False
+
 
 ####################
 # Functions for estimating follower ideology 
@@ -169,7 +174,7 @@ with pm.Model(coords = coords) as unpooled_model:
     observed_data = pm.Normal('observed_data', mu = mu_i, sigma = sigma_i, observed = followers.follower_ideology)
     
     # Best estimate of distribution shape
-    est_parameters = pm.find_MAP()
+    est_parameters = pm.find_MAP(progressbar = False)
     
 # Create dataframe to collect data
 user_info = followers[['user_id', 'user_idx']].drop_duplicates()
@@ -218,17 +223,17 @@ if len(temp_files) == n_batches:
     for file in temp_files:
         batch_data = pd.read_csv(temp_dir + file, dtype = {'user_id': str})
         estimated_ideology_distributions = estimated_ideology_distributions.append(batch_data)
-        os.remove(temp_dir + file)
+#        os.remove(temp_dir + file)
     estimated_ideology_distributions.to_csv(outpath + 'follower_ideology_distribution_shapes.csv', index = False)
-    os.rmdir(temp_dir)
+#    os.rmdir(temp_dir)
 
     
 ####################
 # Uncomment to see individual fits
 ####################
-#select_est_parameters = select_user = 2
-#
-#import matplotlib.pyplot as plt
-#x = np.linspace(-4, 4, 100)
-#plt.plot(x, stats.norm(loc = est_parameters['mu'][select_est_parameters], scale = est_parameters['sigma'][select_est_parameters]).pdf(x))    
-#plt.hist(followers.follower_ideology[followers.user_idx == select_user], density = True, bins = np.arange(-5, 5, 0.25))
+select_est_parameters = select_user = 0
+
+import matplotlib.pyplot as plt
+x = np.linspace(-4, 4, 100)
+plt.plot(x, stats.norm(loc = est_parameters['mu'][select_est_parameters], scale = est_parameters['sigma'][select_est_parameters]).pdf(x))    
+plt.hist(followers.follower_ideology[followers.user_idx == select_user], density = True, bins = np.arange(-5, 5, 0.25))
