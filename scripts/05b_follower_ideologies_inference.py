@@ -91,7 +91,7 @@ def match_followers_to_ideologies(user_ids, ideologies, data_directory, batch, n
     followers_matched = followers_matched.sort_values(by = 'user_id')
     return user_id_batch, followers_matched
 
-def from_posterior(param, samples, lower_bound, upper_bound):
+def from_posterior(param, samples, lower_bound, upper_bound, dims):
     """
     Function to sample from the population-level posterior to form an empirical prior for future use at the individual level.
     
@@ -105,7 +105,7 @@ def from_posterior(param, samples, lower_bound, upper_bound):
     # so we'll extend the domain and use linear approximation of density on it
     x = np.concatenate([[lower_bound], x, [upper_bound]])
     y = np.concatenate([[0], y, [0]])
-    return pm.distributions.Interpolated(param, x, y)
+    return pm.distributions.Interpolated(param, x, y, dims = dims)
 
 
 
@@ -135,15 +135,6 @@ follower_ideologies = follower_ideologies.append(tweeter_ideologies, ignore_inde
 follower_ideologies = follower_ideologies.drop_duplicates()
 del tweeter_ideologies, tweets
 
-# We will use ideological category bins of size 1, with moderate being [-0.5, 0.5]
-# But per SMAPP instructions, we will not use the normalized scores.
-# Normalize ideologies between -3.5 and 3.5.
-min_ideol = follower_ideologies['follower_ideology'].min()
-max_ideol = follower_ideologies['follower_ideology'].max()
-follower_ideologies['norm_ideology'] = (follower_ideologies['follower_ideology'] - min_ideol) / (max_ideol - min_ideol)
-follower_ideologies['norm_ideology'] = 3.5 * (2*follower_ideologies['norm_ideology'] - 1)
-del min_ideol, max_ideol
-
 
 ####################
 # Try inference
@@ -160,34 +151,43 @@ prior = pd.read_csv(prior_file)
 prior_mu = np.array([ prior['mu_samples'] ]).T #needs to be column format for from_posterior function
 prior_sigma = np.array([ prior['sigma_samples'] ]).T #needs to be column format for from_posterior function
 
-# Loop through our tweeters and estimate ideology distribution of followers
-estimated_ideology_batch = pd.DataFrame(columns = ['user_id', 'user_id_str', 'mu', 'sigma'])
-for user_id in users_with_scored_followers:
+# Unpooled model   
+followers = ideology_data[ideology_data['user_id'].isin(users_with_scored_followers)]
+followers = followers.assign(user_idx = pd.factorize(followers['user_id'])[0])
+coords = {"user_id": followers['user_id'].unique(), "obs_id": np.arange(followers['follower_ideology'].size)}
+with pm.Model(coords = coords) as unpooled_model:
     
-    # Grab follower ideologies we have for this user
-    followers = ideology_data.follower_ideology[ideology_data.user_id == user_id]
-    n_followers = len(followers)
+    user_idx = pm.Data("user_idx", followers.user_idx, dims = "obs_id")
     
-    # Determine MAP estimate 
-    with pm.Model() as model:
-        # Create empirical prior from posterior
-        mu = from_posterior('mu', prior_mu, lower_bound = -5, upper_bound = 5)
-        sigma = from_posterior('sigma', prior_sigma, lower_bound = 0, upper_bound = 5)
-        
-        # Likelihood function
-        observed_data = pm.Normal('observed_data', mu = mu, sigma = sigma, observed = followers)
-        
-        # Best estimate of distribution shape
-        est_parameters = pm.find_MAP()
-        
-    follower_estimate = pd.DataFrame({'user_id': user_id, 
-                                      'user_id_str': "\"" + user_id + "\"", 
-                                      'mu': est_parameters['mu'], 
-                                      'sigma': est_parameters['sigma'],
-                                      'n_follower_samples': n_followers,
-                                      'mu_basis': "followers"}, index = [0])
-    estimated_ideology_batch = estimated_ideology_batch.append(follower_estimate, ignore_index = True)
-
+    # Create empirical prior from posterior
+    mu = from_posterior('mu', prior_mu, lower_bound = -5, upper_bound = 5, dims = "user_id")
+    sigma = from_posterior('sigma', prior_sigma, lower_bound = 0, upper_bound = 5, dims = "user_id")
+     
+    # Likelihood function
+    mu_i = mu[user_idx]
+    sigma_i = sigma[user_idx]
+    observed_data = pm.Normal('observed_data', mu = mu_i, sigma = sigma_i, observed = followers.follower_ideology)
+    
+    # Best estimate of distribution shape
+    est_parameters = pm.find_MAP()
+    
+# Create dataframe to collect data
+user_info = followers[['user_id', 'user_idx']].drop_duplicates()
+user_info = user_info.sort_values(by = 'user_idx')
+follower_sample_count = pd.DataFrame(followers['user_id'].value_counts().reset_index())
+follower_sample_count.columns = ['user_id', 'follower_samples']
+user_info = user_info.merge(follower_sample_count, on = 'user_id')
+estimated_ideology_batch = pd.DataFrame({'user_id': user_info['user_id'],
+                                         'user_id_str': ["\"" + x + "\"" for x in user_info['user_id']],
+                                         'n_follower_samples': user_info['follower_samples'],
+                                         'mu': est_parameters['mu'],
+                                         'sigma': est_parameters['sigma'],
+                                         'basis': "followers"})    
+    
+    
+####################
+# Use population-level estimates for users we don't have follower samples for
+####################
 # Load MAP estimate of population-level ideology distribution
 population_MAP_estimate = pd.read_csv(map_estimate_file)
 
@@ -198,7 +198,7 @@ missing_user_estimates = pd.DataFrame({'user_id': missing_users,
 missing_user_estimates['mu'] = population_MAP_estimate['mu'].iloc[0]
 missing_user_estimates['sigma'] = population_MAP_estimate['sigma'].iloc[0]
 missing_user_estimates['n_follower_samples'] = 0
-missing_user_estimates['mu_basis'] = "population"
+missing_user_estimates['basis'] = "population"
 
 # Append to all estiamtes and save to temporary folder to hold partial results
 estimated_ideology_batch = estimated_ideology_batch.append(missing_user_estimates, ignore_index = True)
@@ -222,27 +222,13 @@ if len(temp_files) == n_batches:
     estimated_ideology_distributions.to_csv(outpath + 'follower_ideology_distribution_shapes.csv', index = False)
     os.rmdir(temp_dir)
 
-
-
-#for user_id in missing_users:
-#    user_ideology = follower_ideologies.follower_ideology[follower_ideologies.follower_id == user_id] #grab user's own ideology
-#    if len(user_ideology) > 0:
-#        mu = user_ideology.iloc[0]
-#        sigma = log_pop_posterior.sigma[log_pop_posterior.log_pr == max(log_pop_posterior['log_pr'])]
-#        basis = "user"
-#    else:
-#        mu = log_pop_posterior.mu[log_pop_posterior.log_pr == max(log_pop_posterior['log_pr'])]
-#        sigma = log_pop_posterior.sigma[log_pop_posterior.log_pr == max(log_pop_posterior['log_pr'])]
-#        basis = "population"
-#    new_row = pd.DataFrame({'user_id': user_id, 
-#                            'user_id_str': "\"" + user_id + "\"", 
-#                            'mu': mu, 
-#                            'sigma': sigma, 
-#                            'mu_basis': basis})
-#    estimated_ideology_batch = estimated_ideology_batch.append(new_row, ignore_index = True)   
-
     
-
+####################
+# Uncomment to see individual fits
+####################
+#select_est_parameters = select_user = 2
+#
+#import matplotlib.pyplot as plt
 #x = np.linspace(-4, 4, 100)
-#plt.plot(x, stats.norm(loc = est_parameters['mu'], scale = est_parameters['sigma']).pdf(x))    
-#plt.hist(followers, density = True)
+#plt.plot(x, stats.norm(loc = est_parameters['mu'][select_est_parameters], scale = est_parameters['sigma'][select_est_parameters]).pdf(x))    
+#plt.hist(followers.follower_ideology[followers.user_idx == select_user], density = True, bins = np.arange(-5, 5, 0.25))
