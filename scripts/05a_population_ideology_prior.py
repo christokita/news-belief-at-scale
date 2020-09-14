@@ -164,14 +164,16 @@ if __name__ == '__main__':
     followers_data = followers_data[['follower_id', 'follower_ideology']].drop_duplicates()
     
     # Prepare data for inference
-    samples = followers_data['follower_ideology']
+#    samples = followers_data['follower_ideology']
+    samples = followers_data['follower_ideology'].sample(frac = 0.1, replace = False, random_state = 323) #downsample for now
+    del followers_data
     sample_mu = np.array([np.mean(samples)])
     sample_sigma = np.array([np.std(samples)])
     
     # Run inference using NUTS
-    n_cores = 4
+    n_cores = 2
     total_samples = 1000
-    burn_in = 100
+    burn_in = 0
     niter = int( (total_samples + n_cores*burn_in) / n_cores ) #account for removal of burn in at the beginning of each chain
     with pm.Model() as model:
         # define priors
@@ -187,12 +189,15 @@ if __name__ == '__main__':
         map_estimate = pm.find_MAP()
         step = pm.NUTS(target_accept = 0.90)
         trace = pm.sample(draws = niter, start = None, init = 'advi_map', step = step, random_seed = 323, cores = n_cores, chains = n_cores)
+     
+    print("Done with inference!")    
         
     # Get samples of population-level posterior for use as prior in individual-level inference later
+    del samples
     posterior_mu = trace.get_values('mu', burn = burn_in, combine = True)
     posterior_sigma = trace.get_values('sigma', burn = burn_in, combine = True)
-    posterior_samples = pd.DataFrame({'mu_samples': posterior_mu.ravel(), 
-                                      'sigma_samples': posterior_sigma.ravel()})
+    posterior_samples = pd.DataFrame({'mu_samples': posterior_mu.flatten(), 
+                                      'sigma_samples': posterior_sigma.flatten()})
     posterior_samples.to_csv(posterior_samples_file, index = False)
     
     # Get MAP estimate
