@@ -104,7 +104,8 @@ def update_exposure_data(exposure_df):
 if __name__ == '__main__':
     
     # Load exposure timeseries data
-    exposure_data = pd.read_csv(data_directory + "data_derived/exposure/users_exposed_over_time.csv", dtype = {'user_id': object})
+    exposure_data = pd.read_csv(data_directory + "data_derived/exposure/users_exposed_over_time.csv", 
+                                dtype = {'user_id': object, 'tweet_id': object})
     
     # Load inferred follower distribution shape for each tweeter
     follower_distributions = pd.read_csv(data_directory + "data_derived/ideological_scores/estimated_ideol_distributions/follower_ideology_distribution_shapes.csv", dtype = {'user_id': object})
