@@ -299,6 +299,7 @@ ggsave(gg_ideol_avg, filename = paste0(outpath, "ideol_avg_exposed.png"), width 
 # Exposure time series
 ####################
 gg_ideoltime <- exposure_ideol %>% 
+  filter(hour_bin >= 0) %>% 
   group_by(!!sym(grouping), hour_bin, ideology_bin) %>% 
   summarise(count = sum(count)) %>%
   ggplot(., aes(x = hour_bin, y = count, fill = ideology_bin)) +
@@ -327,12 +328,6 @@ ggsave(gg_ideoltime, filename = paste0(outpath, "ideol_exposed_hourbin.png"), wi
 library(vegan)
 
 # Set up data
-# diversity_data <- exposure_ideol %>% 
-#   filter(hour_bin >= 0) %>% 
-#   select(!!sym(grouping), total_article_number, hour_bin, ideology_bin, count) %>% 
-#   group_by(!!sym(grouping), total_article_number, hour_bin, ideology_bin) %>% 
-#   summarise(total_exposed = sum(count)) %>% 
-#   pivot_wider(names_from = ideology_bin, values_from = total_exposed)
 diversity_data <- exposure_ideol %>% 
   filter(hour_bin >= 0) %>% 
   select(total_article_number, !!sym(grouping), tweet_id, user_id, tweet_number, time, hour_bin, new_exposed_users, ideology_bin, count) %>% 
@@ -391,7 +386,7 @@ gg_expos_diversity_raw <- diversity_data %>%
   filter(hour_bin < 31, 
          !is.na(ideol_diversity)) %>% 
   ggplot(., aes(x = time, y = ideol_diversity, group = total_article_number)) +
-  geom_point(size = 0.1, alpha = 0.4, color = line_color) +
+  geom_point(size = 0.1, alpha = 0.2, color = line_color) +
   theme_ctokita() + 
   facet_wrap(as.formula(paste("~", grouping)), 
              ncol = 1,
@@ -399,7 +394,56 @@ gg_expos_diversity_raw <- diversity_data %>%
              scales = "fixed")
 gg_expos_diversity_raw
 
+# Fit bayesian regression to data
+library(brms)
+diversity_split <- diversity_data %>%
+  ungroup() %>%
+  select(time, ideol_diversity, !!sym(grouping)) %>% 
+  filter(!is.na(ideol_diversity))
+if (grouping == "article_fc_rating") {
+  diversity_split <- diversity_split %>% 
+    split(.$article_fc_rating)
+  group_names <- unique(diversity_data$article_fc_rating)
+} else if (grouping == "source_type") {
+  diversity_split <- diversity_split %>% 
+    split(.$source_type)
+  group_names <- unique(diversity_data$source_type)
+}
+regression_diversity <- brm_multiple(data = diversity_split,
+                                    # formula = ideol_diversity ~ 1 + time + I(time^2),
+                                    formula = ideol_diversity ~ 1 + time, 
+                                    prior = c(prior(uniform(-10, 10), class = Intercept),
+                                              prior(normal(0, 1), class = b),
+                                              prior(normal(0, 1), class = sigma)),
+                                    iter = 3000,
+                                    warmup = 1000,
+                                    chains = 4,
+                                    seed = 323,
+                                    combine = FALSE)
 
+# Get fitted values from model to data range/space
+x_values <- data.frame(time = seq(0, 32, 0.1))
+fit_diversity <- lapply(seq(1:length(group_names)), function(i) {
+  group <- group_names[i]
+  fit_line <- fitted(regression_diversity[[i]], newdata = x_values) %>% 
+    as.data.frame() %>% 
+    mutate(group = group,
+           time = seq(0, 32, 0.1))
+})
+fit_diversity <- do.call("rbind", fit_diversity)
+
+gg_diversity_fit <- ggplot(fit_diversity, aes(x = time, y = Estimate, group = group, color = group)) +
+  geom_ribbon(aes(ymax = Q97.5, ymin = Q2.5, fill = group),
+              color = NA, alpha = 0.2) +
+  geom_line(size = 0.3) +
+  scale_x_continuous(breaks = seq(0, 48, 6)) +
+  scale_y_continuous(breaks = seq(0, 3, 0.05)) +
+  scale_color_manual(values = c("#F18805", line_color), name = "") +
+  scale_fill_manual(values = c("#F18805", line_color), name = "") +
+  xlab("Time since first article share (hrs)") +
+  ylab("Ideological diversity of exposed users") +
+  theme_ctokita()
+gg_diversity_fit
 
 # Calculate diversity index by story by hour
 diversity_indices <- data.frame(diversity_index = diversity(diversity_data[ , 8:24], index = "simpson"))
