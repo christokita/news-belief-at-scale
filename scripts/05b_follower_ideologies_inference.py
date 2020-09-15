@@ -23,7 +23,7 @@ import pymc3 as pm
 
 # Get batch number
 batch = int(sys.argv[1]) 
-n_batches = 200
+n_batches = 400
 
 # high level directory (external HD or cluster storage)
 data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster storage
@@ -156,17 +156,19 @@ prior = pd.read_csv(prior_file)
 prior_mu = np.array([ prior['mu_samples'] ]).T #needs to be column format for from_posterior function
 prior_sigma = np.array([ prior['sigma_samples'] ]).T #needs to be column format for from_posterior function
 
+# Load MAP estimate of population-level ideology distribution
+population_MAP_estimate = pd.read_csv(map_estimate_file)
+
 # Unpooled model   
 followers = ideology_data[ideology_data['user_id'].isin(users_with_scored_followers)]
 followers = followers.assign(user_idx = pd.factorize(followers['user_id'])[0])
-coords = {"user_id": followers['user_id'].unique(), "obs_id": np.arange(followers['follower_ideology'].size)}
+coords = {"user_id": followers['user_id'].drop_duplicates(), "obs_id": np.arange(followers['follower_ideology'].size)}
 with pm.Model(coords = coords) as unpooled_model:
-    
     user_idx = pm.Data("user_idx", followers.user_idx, dims = "obs_id")
     
     # Create empirical prior from posterior
-    mu = from_posterior('mu', prior_mu, lower_bound = -5, upper_bound = 5, dims = "user_id")
-    sigma = from_posterior('sigma', prior_sigma, lower_bound = 0, upper_bound = 5, dims = "user_id")
+    mu = from_posterior('mu', prior_mu, lower_bound = -6, upper_bound = 6, dims = "user_id")
+    sigma = from_posterior('sigma', prior_sigma, lower_bound = 0, upper_bound = 6, dims = "user_id")
      
     # Likelihood function
     mu_i = mu[user_idx]
@@ -174,8 +176,9 @@ with pm.Model(coords = coords) as unpooled_model:
     observed_data = pm.Normal('observed_data', mu = mu_i, sigma = sigma_i, observed = followers.follower_ideology)
     
     # Best estimate of distribution shape
-    est_parameters = pm.find_MAP(progressbar = False)
-    
+    est_parameters = pm.find_MAP(progressbar = False, 
+                                 start = {'mu': population_MAP_estimate['mu'].iloc[0], 'sigma': population_MAP_estimate['sigma'].iloc[0]})
+
 # Create dataframe to collect data
 user_info = followers[['user_id', 'user_idx']].drop_duplicates()
 user_info = user_info.sort_values(by = 'user_idx')
@@ -193,9 +196,6 @@ estimated_ideology_batch = pd.DataFrame({'user_id': user_info['user_id'],
 ####################
 # Use population-level estimates for users we don't have follower samples for
 ####################
-# Load MAP estimate of population-level ideology distribution
-population_MAP_estimate = pd.read_csv(map_estimate_file)
-
 # For tweeters that didn't have followers, use population-level estimate
 missing_users = [x for x in user_ids if x not in users_with_scored_followers]
 missing_user_estimates = pd.DataFrame({'user_id': missing_users,
@@ -207,6 +207,7 @@ missing_user_estimates['basis'] = "population"
 
 # Append to all estiamtes and save to temporary folder to hold partial results
 estimated_ideology_batch = estimated_ideology_batch.append(missing_user_estimates, ignore_index = True)
+estimated_ideology_batch['batch'] = batch
 temp_dir = outpath + 'TEMP_follower_ideology_dist_shapes/'
 os.makedirs(temp_dir, exist_ok = True)
 estimated_ideology_batch.to_csv(temp_dir + 'batch_' + str(batch).zfill(3) + '.csv', index = False)
