@@ -61,11 +61,19 @@ def unique_exposed_over_time(story_id, tweets, data_directory, ideol_bin_size):
     # Drop duplicates so we only keep first instance of exposure per follower
     followers_per_tweeter = followers_per_tweeter.drop_duplicates(subset = "follower_id", keep = "first")
     
-    # Merge in follower ideology data
+    # Load ideology scores--of both followers and tweeters (since tweeters can also be followers)
     follower_ideologies = pd.read_csv(data_directory + "data_derived/ideological_scores/cleaned_followers_ideology_scores.csv",
                                       dtype = {'user_id': 'int64', 'pablo_score': float})
     follower_ideologies = follower_ideologies.rename(columns = {'user_id': 'follower_id'})
-    follower_ideologies = follower_ideologies.drop(columns = ['accounts_followed'])
+    follower_ideologies = follower_ideologies.drop(columns = ['accounts_followed']) 
+    tweeter_ideologies = tweets[['user_id', 'user_ideology']]
+    tweeter_ideologies = tweeter_ideologies.rename(columns = {'user_id': 'follower_id', 'user_ideology': 'pablo_score'})
+    tweeter_ideologies = tweeter_ideologies[~pd.isna(tweeter_ideologies['pablo_score'])]
+    follower_ideologies = follower_ideologies.append(tweeter_ideologies, ignore_index = True)
+    follower_ideologies = follower_ideologies.drop_duplicates()
+    del tweeter_ideologies
+    
+    # Merge in follower ideology data
     followers_per_tweeter = followers_per_tweeter.merge(follower_ideologies, how = "left", on = "follower_id")
     
     # Determine bin edges from size. Ideologies are in range [-2.654, 5.001]
