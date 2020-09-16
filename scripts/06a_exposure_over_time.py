@@ -49,6 +49,10 @@ def unique_exposed_over_time(story_id, tweets, data_directory, ideol_bin_size):
     selected_tweets['relative_tweet_time'] = selected_tweets['relative_tweet_time'] / np.timedelta64(1, 'h') #convert to hours
     selected_tweets = selected_tweets.sort_values('relative_tweet_time')
     
+    # We will now create a list of uniquely exposed followers, matched to ideology.
+    # Becuase we want to also count users that we do not have ideology scores for, 
+    # we will not use our paired tweeter-follower ideology dataset crated in script 5a
+    
     # Load follower IDs for each tweeter
     followers_per_tweeter = gather_followers(selected_tweets)
     
@@ -75,9 +79,9 @@ def unique_exposed_over_time(story_id, tweets, data_directory, ideol_bin_size):
     
     # Merge in follower ideology data
     followers_per_tweeter = followers_per_tweeter.merge(follower_ideologies, how = "left", on = "follower_id")
-    
-    # Determine bin edges from size. Ideologies are in range [-2.654, 5.001]
-    ideol_bins, bin_labels = create_ideology_bins(follower_ideologies, ideol_bin_size)
+
+    # Determine bin edges from size. Ideologies are in range [-2.654, 5.009]
+    ideol_bins, bin_labels = create_ideology_bins(followers_per_tweeter.pablo_score, ideol_bin_size)
     
     # Create data frame to collect exposure data
     cols = ['relative_time', 'tweet_number', 'tweet_id', 'user_id', 'follower_count', 'new_exposed_users', 'cumulative_exposed'] + list(bin_labels)
@@ -199,16 +203,16 @@ def create_exposure_dataset(collection_df, follower_count, article_tweets, follo
     return collection_df
         
 
-def create_ideology_bins(ideologes, bin_size):
+def create_ideology_bins(ideologies, bin_size):
     """
-    Function that computes bins for ideology scores
+    Function that computes and creates bins for ideology scores. "Center" bin break is at 0.
     
     OUTPUT:
     - bins:     bin edges (numpy array).
     - labels:   labels for bins (list of str).
     """
-    lower_edge = math.floor(ideologes['pablo_score'].min() / bin_size) * bin_size
-    upper_edge = math.ceil(ideologes['pablo_score'].max() / bin_size) * bin_size
+    lower_edge = math.floor(ideologies.min() / bin_size) * bin_size
+    upper_edge = math.ceil(ideologies.max() / bin_size) * bin_size
     bins = np.arange(lower_edge, upper_edge + 0.001, bin_size) #stop number in range is non-inclusive, so need to add small amount
     labels = np.delete(bins, -1) #delete upper edge of last bin
     labels = ["ideol_" + str(s) + "_" + str(s+0.5) for s in labels]
