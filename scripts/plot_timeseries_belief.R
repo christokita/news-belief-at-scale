@@ -120,7 +120,7 @@ belief_timeseries <- belief_timeseries %>%
 
 # Prep data
 belief_ideol <- belief_timeseries %>% 
-  select(-source_lean, -relative_cumulative_exposed, -relative_tweet_count) %>% 
+  select(-source_lean, -relative_cumulative_exposed, -relative_tweet_count, -follower_count) %>% 
   gather(key = "ideology_bin", value = "count", 
          -time, -tweet_number, -tweet_id, -user_id, -user_ideology, -new_exposed_users, -cumulative_exposed, -total_article_number, -hour_bin, -source_type, -article_fc_rating, -article_lean) %>% 
   mutate(ideology_bin = gsub("ideol_", "", ideology_bin)) %>% 
@@ -201,7 +201,7 @@ ggsave(gg_ideol_avg, filename = paste0(outpath, "ideol_avg_belief.png"), width =
 
 
 ####################
-# Exposure time series
+# Belief time series
 ####################
 gg_ideoltime <- belief_ideol %>% 
   group_by(!!sym(grouping), hour_bin, ideology_bin) %>% 
