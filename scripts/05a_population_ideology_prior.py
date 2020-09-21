@@ -99,7 +99,8 @@ if __name__ == '__main__':
     # Load (or create) data set of paired tweeters-follower ideology scores
     ####################
     if os.path.exists(data_directory + 'data_derived/ideological_scores/paired_tweeter-follower_ideology.csv'):
-        followers_data = pd.read_csv(data_directory + 'data_derived/ideological_scores/paired_tweeter-follower_ideology.csv')
+        followers_data = pd.read_csv(data_directory + 'data_derived/ideological_scores/paired_tweeter-follower_ideology.csv',
+                                     dtype = {'user_id': object, 'follower_id': object})
     
     else:
         # Load tweets and follower ideology data 
