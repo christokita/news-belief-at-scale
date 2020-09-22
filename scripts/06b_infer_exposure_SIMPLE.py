@@ -19,8 +19,8 @@ import re
 import multiprocessing as mp
 
 # high level directory (external HD or cluster storage)
-#data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster storage
-data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
+data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster storage
+#data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
 
 ####################
 # Functions for analysis
