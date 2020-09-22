@@ -26,7 +26,7 @@ data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
 # Paths for ideology distrubtion data
 outpath = data_directory + "data_derived/ideological_scores/estimated_ideol_distributions/"
 pop_dist_file = outpath + "_population_distribution.csv"
-ind_dist_file = outpath + "follower_distributions.csv"
+ind_dist_file = outpath + "follower_ideology_distributions.csv"
 
 
 ####################
@@ -216,23 +216,21 @@ if __name__ == '__main__':
     # Create bins
     ideol_bin_size = 0.5
     ideol_bins, bin_labels = create_ideology_bins(bin_ends = [-3, 5.5], bin_size = ideol_bin_size)
-    bin_centers = [np.mean([ideol_bins[i], ideol_bins[i-1]]) for i in np.arange(1, len(ideol_bins))]
-    bin_centers = ["ideol_" + str(i) for i in bin_centers]
 
     # Count up each users followers
     follower_dists = followers_data[['user_id', 'follower_ideology']].groupby(['user_id']).apply(lambda x: np.histogram(x, bins = ideol_bins)[0])
-    follower_dists = pd.DataFrame(follower_dists.values.tolist(), columns = bin_centers, index = follower_dists.index)
+    follower_dists = pd.DataFrame(follower_dists.values.tolist(), columns = bin_labels, index = follower_dists.index)
     
     # Normalize into frequency
     norm_follower_dists = follower_dists.div(follower_dists.sum(axis = 1), axis = 0)
     norm_follower_dists = norm_follower_dists.reset_index()
     norm_follower_dists['user_id_str'] = "\"" + norm_follower_dists['user_id'].astype(str) + "\""
     norm_follower_dists['basis'] = "followers"
-    norm_follower_dists = norm_follower_dists[ ['user_id', 'user_id_str', 'basis'] + bin_centers ]
+    norm_follower_dists = norm_follower_dists[ ['user_id', 'user_id_str', 'basis'] + bin_labels ]
     
     # Add in missing tweeters
     missing_tweeters = tweeters[~np.isin(tweeters, norm_follower_dists.user_id)]
-    missing_dists = pd.DataFrame([ideol_dist['frequency'].values], columns = bin_centers)
+    missing_dists = pd.DataFrame([ideol_dist['frequency'].values], columns = bin_labels)
     missing_dists = missing_dists.loc[missing_dists.index.repeat(len(missing_tweeters))]
     missing_dists['user_id'] = missing_tweeters
     missing_dists['basis'] = "population"
