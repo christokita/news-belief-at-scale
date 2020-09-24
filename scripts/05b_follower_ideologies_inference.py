@@ -23,7 +23,7 @@ import pymc3 as pm
 
 # Get batch number
 batch = int(sys.argv[1]) 
-n_batches = 400
+n_batches = 200
 
 # high level directory (external HD or cluster storage)
 data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster storage
@@ -167,8 +167,8 @@ with pm.Model(coords = coords) as unpooled_model:
     user_idx = pm.Data("user_idx", followers.user_idx, dims = "obs_id")
     
     # Create empirical prior from posterior
-    mu = from_posterior('mu', prior_mu, lower_bound = -6, upper_bound = 6, dims = "user_id")
-    sigma = from_posterior('sigma', prior_sigma, lower_bound = 0, upper_bound = 6, dims = "user_id")
+    mu = from_posterior('mu', prior_mu, lower_bound = -10, upper_bound = 10, dims = "user_id")
+    sigma = from_posterior('sigma', prior_sigma, lower_bound = 0, upper_bound = 15, dims = "user_id")
      
     # Likelihood function
     mu_i = mu[user_idx]
@@ -232,9 +232,9 @@ if len(temp_files) == n_batches:
 ####################
 # Uncomment to see individual fits
 ####################
-select_est_parameters = select_user = 0
-
-import matplotlib.pyplot as plt
-x = np.linspace(-4, 4, 100)
-plt.plot(x, stats.norm(loc = est_parameters['mu'][select_est_parameters], scale = est_parameters['sigma'][select_est_parameters]).pdf(x))    
-plt.hist(followers.follower_ideology[followers.user_idx == select_user], density = True, bins = np.arange(-5, 5, 0.25))
+#select_est_parameters = select_user = 0
+#
+#import matplotlib.pyplot as plt
+#x = np.linspace(-4, 4, 100)
+#plt.plot(x, stats.norm(loc = est_parameters['mu'][select_est_parameters], scale = est_parameters['sigma'][select_est_parameters]).pdf(x))    
+#plt.hist(followers.follower_ideology[followers.user_idx == select_user], density = True, bins = np.arange(-5, 5, 0.25))
