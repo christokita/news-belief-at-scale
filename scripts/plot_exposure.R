@@ -215,6 +215,7 @@ ggsave(gg_expVnum, filename = paste0(outpath, "relative_tweet_vs_exposure.png"),
 
 # Prep data
 exposure_ideol <- exposure_timeseries %>% 
+  filter(hour_bin >= 0) %>% 
   select(-source_lean, -relative_cumulative_exposed, -relative_tweet_count) %>% 
   gather(key = "ideology_bin", value = "count", 
          -time, -tweet_number, -tweet_id, -user_id, -user_ideology, -follower_count, -new_exposed_users, -cumulative_exposed, -total_article_number, -hour_bin, -source_type, -article_fc_rating, -article_lean) %>% 
@@ -225,22 +226,6 @@ exposure_ideol <- exposure_timeseries %>%
   mutate(ideology_bin = (lower + upper) / 2) %>% 
   select(-lower, -upper)
 
-
-####################
-# Single story exposure heatmap
-####################
-# Grab example story for now
-story <- 28
-example_story <- exposure_ideol %>% 
-  filter(total_article_number == story) %>% 
-  group_by(hour_bin, ideology_bin) %>% 
-  summarise(count = sum(count))
-
-# 
-ggplot(data = example_story, aes(x = ideology_bin, y = hour_bin, fill = count)) +
-  geom_tile() +
-  scale_fill_gradientn(name = "count", trans = "log", colors = c("white", "red"), na.value = "white") +
-  theme_ctokita()
 
 ####################
 # Total ideologies exposed to articles by type
@@ -296,6 +281,42 @@ ggsave(gg_ideol_avg, filename = paste0(outpath, "ideol_avg_exposed.png"), width 
 
 
 ####################
+# Ideological distributions of exposure
+####################
+axis_labels <- as.character(unique(exposure_ideol$ideology_bin))
+axis_labels[seq(1, length(axis_labels)+1, 2)] <- ""
+gg_ideol_dist <- exposure_ideol %>% 
+  # filter(total_article_number == 28) %>%
+  # For each article, determine proportion exposed by ideology bin
+  group_by(!!sym(grouping), ideology_bin, total_article_number) %>% 
+  summarise(count = sum(count)) %>% 
+  ungroup() %>% 
+  group_by(total_article_number) %>% 
+  mutate(exposed_prop = count / sum(count)) %>% 
+  # Now determine average distribution shape by article grouping
+  group_by(!!sym(grouping), ideology_bin) %>% 
+  summarise(avg_exposed_prop = mean(exposed_prop)) %>% 
+  # Plot
+  ggplot(., aes(x = as.factor(ideology_bin), y = avg_exposed_prop, fill = ideology_bin)) +
+  geom_bar(stat = "identity") +
+  scale_x_discrete(labels = axis_labels) +
+  scale_y_continuous(breaks = seq(0, 1, 0.05)) +
+  scale_fill_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish) +
+  xlab("Follower ideology") +
+  ylab("Avg. proportion of article exposure") +
+  theme_ctokita() +
+  theme(legend.position = "none",
+        aspect.ratio = NULL) +
+  facet_wrap(as.formula(paste("~", grouping)), 
+             ncol = 1,
+             strip.position = "right",
+             scales = "fixed")
+gg_ideol_dist  
+  
+ggsave(gg_ideol_dist, filename = paste0(outpath, "ideol_avg_exposure_distribution.png"), width = 90, height = 90, units = "mm", dpi = 400)
+
+
+####################
 # Exposure time series
 ####################
 gg_ideoltime <- exposure_ideol %>% 
@@ -322,189 +343,4 @@ gg_ideoltime
 ggsave(gg_ideoltime, filename = paste0(outpath, "ideol_exposed_hourbin.png"), width = 90, height = 90, units = "mm", dpi = 400)
 
 
-
-############################## Plot article ideological diversity of exposure ##############################
-
-# Function to calcualte diversity as expected ideological difference between two randomly chosen exposed users
-ideological_diversity <- function(distance_matrix, ideological_counts) {
-  
-  diversity_data <- c()
-  for (i in 1:nrow(ideological_counts)) {
-    # Normalize counts into proportions and compute ideology X ideology encounter probability
-    count_row <- ideological_counts[i , ]
-    normalized_counts <- as.matrix( count_row / sum(count_row) )
-    encounter_probs <- t(normalized_counts) %*% normalized_counts
-    
-    # Compute ideological distance X probability of encounter
-    weighted_difference <- encounter_probs *  distance_matrix 
-    expected_difference <- sum(weighted_difference)
-    diversity_data <- c(diversity_data, expected_difference)
-  }
-  return(diversity_data)
-}
-
-# Distance matrix between ideology bins
-bin_centers <- unique(exposure_ideol$ideology_bin)
-ideol_distance_matrix <- as.matrix( dist(bin_centers, diag = TRUE, upper = TRUE, method = "euclidean") )
-
-####################
-# Diversity of exposure at tweet level
-####################
-# Calculate 
-diversity_tweet <- exposure_ideol %>% 
-  filter(hour_bin >= 0) %>% 
-  select(total_article_number, !!sym(grouping), tweet_id, user_id, tweet_number, time, hour_bin, new_exposed_users, ideology_bin, count) %>% 
-  pivot_wider(names_from = ideology_bin, values_from = count) 
-ideol_bins_cols <- grep("[-.0-9]+", names(diversity_tweet)) #list of ideology bin columns
-diversity_index <- data.frame(ideol_diversity = ideological_diversity(distance_matrix = ideol_distance_matrix, ideological_counts = diversity_tweet[ , ideol_bins_cols]))
-diversity_tweet <- diversity_tweet %>% 
-  select(!!sym(grouping), total_article_number, user_id, tweet_id, time, hour_bin, new_exposed_users) %>% 
-  cbind(diversity_index)
-  
-# Raw plot of tweets
-gg_expos_diversity_raw <- diversity_tweet %>% 
-  filter(hour_bin < 31, 
-         !is.na(ideol_diversity)) %>% 
-  ggplot(., aes(x = time, y = ideol_diversity, group = total_article_number)) +
-  geom_point(size = 0.1, alpha = 0.2, color = line_color) +
-  theme_ctokita() + 
-  facet_wrap(as.formula(paste("~", grouping)), 
-             ncol = 1,
-             strip.position = "right",
-             scales = "fixed")
-gg_expos_diversity_raw
-
-# Fit bayesian regression to data
-library(brms)
-diversity_split <- diversity_tweet %>%
-  ungroup() %>%
-  select(time, ideol_diversity, !!sym(grouping)) %>% 
-  filter(!is.na(ideol_diversity))
-if (grouping == "article_fc_rating") {
-  diversity_split <- diversity_split %>% 
-    split(.$article_fc_rating)
-  group_names <- unique(diversity_tweet$article_fc_rating)
-} else if (grouping == "source_type") {
-  diversity_split <- diversity_split %>% 
-    split(.$source_type)
-  group_names <- unique(diversity_tweet$source_type)
-}
-regression_diversity <- brm_multiple(data = diversity_split,
-                                    # formula = ideol_diversity ~ 1 + time + I(time^2),
-                                    formula = ideol_diversity ~ 1 + time, 
-                                    prior = c(prior(uniform(-10, 10), class = Intercept),
-                                              prior(normal(0, 1), class = b),
-                                              prior(normal(0, 1), class = sigma)),
-                                    iter = 3000,
-                                    warmup = 1000,
-                                    chains = 4,
-                                    seed = 323,
-                                    combine = FALSE)
-
-# Get fitted values from model to data range/space
-x_values <- data.frame(time = seq(0, 32, 0.1))
-fit_diversity <- lapply(seq(1:length(group_names)), function(i) {
-  group <- group_names[i]
-  fit_line <- fitted(regression_diversity[[i]], newdata = x_values) %>% 
-    as.data.frame() %>% 
-    mutate(group = group,
-           time = seq(0, 32, 0.1))
-})
-fit_diversity <- do.call("rbind", fit_diversity)
-
-# Plot fitted model
-gg_diversity_fit <- ggplot(fit_diversity, aes(x = time, y = Estimate, group = group, color = group)) +
-  geom_ribbon(aes(ymax = Q97.5, ymin = Q2.5, fill = group),
-              color = NA, alpha = 0.2) +
-  geom_line(size = 0.3) +
-  scale_x_continuous(breaks = seq(0, 48, 6)) +
-  scale_y_continuous(breaks = seq(0, 3, 0.05)) +
-  scale_color_manual(values = c("#F18805", line_color), name = "") +
-  scale_fill_manual(values = c("#F18805", line_color), name = "") +
-  xlab("Time since first article share (hrs)") +
-  ylab("Ideological diversity of exposed users") +
-  theme_ctokita()
-gg_diversity_fit
-
-
-####################
-# Diversity of exposure at article level (per hour)
-####################
-# Calculate diversity of exposure at article level (per hour)
-diveristy_article <- exposure_ideol %>% 
-  filter(hour_bin >= 0) %>% 
-  group_by(total_article_number, !!sym(grouping), hour_bin, ideology_bin) %>% 
-  summarise(count = sum(count)) %>% 
-  pivot_wider(names_from = ideology_bin, values_from = count) 
-ideol_bins_cols <- grep("[-.0-9]+", names(diveristy_article)) #list of ideology bin columns
-diversity_index <- data.frame(ideol_diversity = ideological_diversity(distance_matrix = ideol_distance_matrix, ideological_counts = diveristy_article[ , ideol_bins_cols]))
-diveristy_article <- diveristy_article %>% 
-  select(!!sym(grouping), total_article_number, hour_bin) %>% 
-  cbind(diversity_index)
-
-# Raw plot of tweets
-gg_expos_diversity_raw <- diveristy_article %>% 
-  filter(hour_bin < 31, 
-         !is.na(ideol_diversity)) %>% 
-  ggplot(., aes(x = hour_bin, y = ideol_diversity, group = total_article_number)) +
-  geom_point(size = 0.3, alpha = 0.2, color = line_color) +
-  theme_ctokita() + 
-  facet_wrap(as.formula(paste("~", grouping)), 
-             ncol = 1,
-             strip.position = "right",
-             scales = "fixed")
-gg_expos_diversity_raw
-
-
-# Fit bayesian regression to data
-library(brms)
-diversity_split <- diveristy_article %>%
-  ungroup() %>%
-  select(hour_bin, ideol_diversity, !!sym(grouping)) %>% 
-  filter(!is.na(ideol_diversity))
-if (grouping == "article_fc_rating") {
-  diversity_split <- diversity_split %>% 
-    split(.$article_fc_rating)
-  group_names <- unique(diveristy_article$article_fc_rating)
-} else if (grouping == "source_type") {
-  diversity_split <- diversity_split %>% 
-    split(.$source_type)
-  group_names <- unique(diveristy_article$source_type)
-}
-regression_diversity <- brm_multiple(data = diversity_split,
-                                     # formula = ideol_diversity ~ 1 + time + I(time^2),
-                                     formula = ideol_diversity ~ 1 + hour_bin, 
-                                     prior = c(prior(uniform(-10, 10), class = Intercept),
-                                               prior(normal(0, 1), class = b),
-                                               prior(normal(0, 1), class = sigma)),
-                                     iter = 3000,
-                                     warmup = 1000,
-                                     chains = 4,
-                                     seed = 323,
-                                     combine = FALSE)
-
-# Get fitted values from model to data range/space
-x_values <- data.frame(hour_bin = seq(0, 32, 0.1))
-fit_diversity <- lapply(seq(1:length(group_names)), function(i) {
-  group <- group_names[i]
-  fit_line <- fitted(regression_diversity[[i]], newdata = x_values) %>% 
-    as.data.frame() %>% 
-    mutate(group = group,
-           hour_bin = seq(0, 32, 0.1))
-})
-fit_diversity <- do.call("rbind", fit_diversity)
-
-# Plot fitted model
-gg_diversity_fit <- ggplot(fit_diversity, aes(x = hour_bin, y = Estimate, group = group, color = group)) +
-  geom_ribbon(aes(ymax = Q97.5, ymin = Q2.5, fill = group),
-              color = NA, alpha = 0.2) +
-  geom_line(size = 0.3) +
-  scale_x_continuous(breaks = seq(0, 48, 6)) +
-  scale_y_continuous(breaks = seq(0, 3, 0.05)) +
-  scale_color_manual(values = c("#F18805", line_color), name = "") +
-  scale_fill_manual(values = c("#F18805", line_color), name = "") +
-  xlab("Time since first article share (hrs)") +
-  ylab("Ideological diversity of exposed users") +
-  theme_ctokita()
-gg_diversity_fit
 
