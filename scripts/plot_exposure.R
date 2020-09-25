@@ -344,3 +344,22 @@ ggsave(gg_ideoltime, filename = paste0(outpath, "ideol_exposed_hourbin.png"), wi
 
 
 
+####################
+# Find exposure to fake news
+####################
+gg_fake_expos <- exposure_ideol %>% 
+  filter(article_fc_rating == "Fake news") %>% 
+  group_by(total_article_number, ideology_bin) %>% 
+  summarise(count = sum(count, na.rm = TRUE)) %>% 
+  ggplot(., aes(x = as.factor(ideology_bin), y = count, fill = ideology_bin)) +
+  geom_bar(stat = "identity") +
+  scale_x_discrete(labels = axis_labels) +
+  scale_y_continuous(labels = comma) +
+  scale_fill_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish) +
+  xlab("Follower ideology") +
+  ylab("Avg. users exposed to article") +
+  theme_ctokita() +
+  theme(legend.position = "none") +
+  facet_wrap(~total_article_number)
+gg_fake_expos
+ggsave(gg_fake_expos, filename = paste0(outpath, "fake_news_exposure_by_article.png"), width = 180, height = 180, units = "mm", dpi = 400)
