@@ -362,7 +362,7 @@ diversity_tweet <- diversity_tweet %>%
   cbind(diversity_index)
   
 # Raw plot of tweets
-gg_expos_diversity_raw <- diversity_data %>% 
+gg_expos_diversity_raw <- diversity_tweet %>% 
   filter(hour_bin < 31, 
          !is.na(ideol_diversity)) %>% 
   ggplot(., aes(x = time, y = ideol_diversity, group = total_article_number)) +
@@ -376,18 +376,18 @@ gg_expos_diversity_raw
 
 # Fit bayesian regression to data
 library(brms)
-diversity_split <- diversity_data %>%
+diversity_split <- diversity_tweet %>%
   ungroup() %>%
   select(time, ideol_diversity, !!sym(grouping)) %>% 
   filter(!is.na(ideol_diversity))
 if (grouping == "article_fc_rating") {
   diversity_split <- diversity_split %>% 
     split(.$article_fc_rating)
-  group_names <- unique(diversity_data$article_fc_rating)
+  group_names <- unique(diversity_tweet$article_fc_rating)
 } else if (grouping == "source_type") {
   diversity_split <- diversity_split %>% 
     split(.$source_type)
-  group_names <- unique(diversity_data$source_type)
+  group_names <- unique(diversity_tweet$source_type)
 }
 regression_diversity <- brm_multiple(data = diversity_split,
                                     # formula = ideol_diversity ~ 1 + time + I(time^2),
