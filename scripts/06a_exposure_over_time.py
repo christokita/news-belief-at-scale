@@ -81,7 +81,7 @@ def unique_exposed_over_time(story_id, tweets, data_directory, ideol_bin_size):
     followers_per_tweeter = followers_per_tweeter.merge(follower_ideologies, how = "left", on = "follower_id")
 
     # Determine bin edges from size. Ideologies are in range [-2.654, 5.009]
-    ideol_bins, bin_labels = create_ideology_bins(followers_per_tweeter.pablo_score, ideol_bin_size)
+    ideol_bins, bin_labels = create_ideology_bins(follower_ideologies.pablo_score, ideol_bin_size)
     
     # Create data frame to collect exposure data
     cols = ['relative_time', 'tweet_number', 'tweet_id', 'user_id', 'follower_count', 'new_exposed_users', 'cumulative_exposed'] + list(bin_labels)
