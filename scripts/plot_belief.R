@@ -21,7 +21,7 @@ source("scripts/_plot_themes/theme_ctokita.R")
 # Choose grouping of interest. Options: 
 #     (1) article veracity: "article_fc_rating"
 #     (2) source: "source_type"
-grouping <- "article_fc_rating"
+grouping <- "source_type"
 
 # Paths to files/directories
 tweet_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv' #path to fitness cascade data
@@ -120,6 +120,7 @@ belief_timeseries <- belief_timeseries %>%
 
 # Prep data
 belief_ideol <- belief_timeseries %>% 
+  filter(hour_bin >= 0) %>% 
   select(-source_lean, -relative_cumulative_exposed, -relative_tweet_count, -follower_count) %>% 
   gather(key = "ideology_bin", value = "count", 
          -time, -tweet_number, -tweet_id, -user_id, -user_ideology, -new_exposed_users, -cumulative_exposed, -total_article_number, -hour_bin, -source_type, -article_fc_rating, -article_lean) %>% 
@@ -198,6 +199,42 @@ gg_ideol_avg <- belief_ideol %>%
              scales = "free")
 gg_ideol_avg
 ggsave(gg_ideol_avg, filename = paste0(outpath, "ideol_avg_belief.png"), width = 90, height = 90, units = "mm", dpi = 400)
+
+
+####################
+# Ideological distributions of belief
+####################
+axis_labels <- as.character(unique(belief_ideol$ideology_bin))
+axis_labels[seq(1, length(axis_labels)+1, 2)] <- ""
+gg_ideol_dist <- belief_ideol %>% 
+  # filter(total_article_number == 28) %>%
+  # For each article, determine proportion exposed by ideology bin
+  group_by(!!sym(grouping), ideology_bin, total_article_number) %>% 
+  summarise(count = sum(count)) %>% 
+  ungroup() %>% 
+  group_by(total_article_number) %>% 
+  mutate(exposed_prop = count / sum(count)) %>% 
+  # Now determine average distribution shape by article grouping
+  group_by(!!sym(grouping), ideology_bin) %>% 
+  summarise(avg_exposed_prop = mean(exposed_prop)) %>% 
+  # Plot
+  ggplot(., aes(x = as.factor(ideology_bin), y = avg_exposed_prop, fill = ideology_bin)) +
+  geom_bar(stat = "identity") +
+  scale_x_discrete(labels = axis_labels) +
+  scale_y_continuous(breaks = seq(0, 1, 0.05)) +
+  scale_fill_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish) +
+  xlab("Follower ideology") +
+  ylab("Avg. proportion of article beliefs") +
+  theme_ctokita() +
+  theme(legend.position = "none",
+        aspect.ratio = NULL) +
+  facet_wrap(as.formula(paste("~", grouping)), 
+             ncol = 1,
+             strip.position = "right",
+             scales = "fixed")
+gg_ideol_dist
+
+ggsave(gg_ideol_dist, filename = paste0(outpath, "ideol_avg_belief_distribution.png"), width = 90, height = 90, units = "mm", dpi = 400)
 
 
 ####################
