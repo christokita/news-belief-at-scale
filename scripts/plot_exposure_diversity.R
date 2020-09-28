@@ -26,11 +26,7 @@ grouping <- "article_fc_rating"
 
 # Paths to files/directories
 tweet_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv' #path to fitness cascade data
-if (grouping == "article_fc_rating") {
-  outpath <- 'output/exposure/veracity/'
-} else if(grouping == "source_type") {
-  outpath <- 'output/exposure/source_type/'
-}
+outpath <- 'output/ideology/'
 
 # Color palette
 line_color <- "#495867"
