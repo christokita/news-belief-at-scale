@@ -25,8 +25,8 @@ data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
 
 # Paths for ideology distrubtion data
 outpath = data_directory + "data_derived/ideological_scores/estimated_ideol_distributions/"
-pop_dist_file = outpath + "_population_distribution.csv"
-ind_dist_file = outpath + "follower_ideology_distributions.csv"
+pop_dist_file = outpath + "_population_binned_ideology_distribution.csv"
+ind_dist_file = outpath + "follower_binned_ideology_distributions.csv"
 
 
 ####################
