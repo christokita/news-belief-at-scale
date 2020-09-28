@@ -162,7 +162,7 @@ prior_sigma = np.array([ prior['sigma_samples'] ]).T #needs to be column format 
 population_MAP_estimate = pd.read_csv(map_estimate_file)
 
 # Unpooled model
-n_samples = 500
+n_samples = 1000
 burn_in = int(n_samples/2)
 estimated_ideology_batch = pd.DataFrame(columns = ['user_id', 'user_id_str', 'n_follower_samples', 'mu', 'sigma', 'basis'])   
 for user in users_with_scored_followers:
