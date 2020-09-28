@@ -24,7 +24,7 @@ import multiprocessing as mp
 data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
 
 # Paths for ideology distrubtion data
-outpath = data_directory + "data_derived/ideological_scores/estimated_ideol_distributions/"
+outpath = data_directory + "data_derived/ideological_scores/estimated_ideol_distributions/simple_estimate/"
 pop_dist_file = outpath + "_population_binned_ideology_distribution.csv"
 ind_dist_file = outpath + "follower_binned_ideology_distributions.csv"
 

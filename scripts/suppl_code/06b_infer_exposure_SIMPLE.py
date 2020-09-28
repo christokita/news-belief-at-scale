@@ -67,7 +67,7 @@ if __name__ == '__main__':
     exposure_data = exposure_data.fillna(0)
     
     # Load follower distributions of each tweeter
-    follower_distributions = pd.read_csv(data_directory + "data_derived/ideological_scores/estimated_ideol_distributions/follower_binned_ideology_distributions.csv", 
+    follower_distributions = pd.read_csv(data_directory + "data_derived/ideological_scores/estimated_ideol_distributions/simple_estimate/follower_binned_ideology_distributions.csv", 
                                          dtype = {'user_id': object})
 
     # Prepare for parallel computation
