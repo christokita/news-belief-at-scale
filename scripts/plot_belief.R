@@ -21,7 +21,7 @@ source("scripts/_plot_themes/theme_ctokita.R")
 # Choose grouping of interest. Options: 
 #     (1) article veracity: "article_fc_rating"
 #     (2) source: "source_type"
-grouping <- "source_type"
+grouping <- "article_fc_rating"
 
 # Paths to files/directories
 tweet_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv' #path to fitness cascade data
@@ -213,12 +213,12 @@ gg_ideol_dist <- belief_ideol %>%
   summarise(count = sum(count)) %>% 
   ungroup() %>% 
   group_by(total_article_number) %>% 
-  mutate(exposed_prop = count / sum(count)) %>% 
+  mutate(belief_prop = count / sum(count)) %>% 
   # Now determine average distribution shape by article grouping
   group_by(!!sym(grouping), ideology_bin) %>% 
-  summarise(avg_exposed_prop = mean(exposed_prop)) %>% 
+  summarise(avg_belief_prop = mean(belief_prop)) %>% 
   # Plot
-  ggplot(., aes(x = as.factor(ideology_bin), y = avg_exposed_prop, fill = ideology_bin)) +
+  ggplot(., aes(x = as.factor(ideology_bin), y = avg_belief_prop, fill = ideology_bin)) +
   geom_bar(stat = "identity") +
   scale_x_discrete(labels = axis_labels) +
   scale_y_continuous(breaks = seq(0, 1, 0.05)) +
