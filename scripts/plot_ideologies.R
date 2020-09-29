@@ -17,6 +17,7 @@ source("scripts/_plot_themes/theme_ctokita.R")
 # Paramters for analysis: paths to data, paths for output, and filename
 ####################
 tweeter_score_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv' 
+follower_ideol_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ideological_scores/cleaned_followers_ideology_scores.csv'
 outpath <- 'output/ideology/'
 
 # For labeling facet plots
@@ -40,14 +41,37 @@ source_pal <- c(ideol_pal[c(5,1)], "#9D69A3", "#C5CBD3")
 ####################
 # Load data 
 ####################
-# Read in data
+# Read in tweet data
 tweets <- read.csv(tweeter_score_path, header = TRUE) %>% 
   mutate(article_ideology = article_con_feel - article_lib_feel) %>% 
   filter(total_article_number > 10) #discard first 10 articles from analysis
 
+# Read in ideology data
+follower_ideologies <- read.csv(follower_ideol_path, colClasses = c('user_id'='character')) %>% 
+  select(-accounts_followed)
 
+############################## Ideological distribution of all users in data set ##############################
+
+####################
+# Plot: Distribution of all ideologies in our set
+####################
+# FIX later. We are including followers from articles 1-10 (or excluding tweeters from )
+ideologies <- tweets %>% 
+  select(user_id, user_ideology) %>% 
+  rename(pablo_score = user_ideology) %>% 
+  rbind(follower_ideologies) %>% 
+  distinct()
+
+
+gg_ideologies <- ggplot(ideologies, aes(x = pablo_score)) +
+  geom_histogram(binwidth = 0.25) +
+  theme_ctokita()
+gg_ideologies
 
 ############################## Ideological distribution of tweeters ##############################
+
+tweets <- tweets %>% 
+  filter(total_article_number > 10)
 
 ####################
 # Plot: Tweeter ideology distribution by article source lean
