@@ -21,7 +21,7 @@ source("scripts/_plot_themes/theme_ctokita.R")
 # Choose grouping of interest. Options: 
 #     (1) article veracity: "article_fc_rating"
 #     (2) source: "source_type"
-grouping <- "source_type"
+grouping <- "article_fc_rating"
 
 # Paths to files/directories
 tweet_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv' #path to fitness cascade data
@@ -242,7 +242,7 @@ gg_ideol_total <- exposure_ideol %>%
   scale_x_continuous(limits = c(-5.5, 5.5), expand = c(0, 0), breaks = seq(-5, 5, 1)) +
   scale_y_continuous(labels = comma) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish) +
-  xlab("Follower ideology") +
+  xlab("User ideology") +
   ylab("Total users exposed to articles") +
   theme_ctokita() +
   theme(legend.position = "none",
@@ -266,7 +266,7 @@ gg_ideol_avg <- exposure_ideol %>%
   scale_x_continuous(limits = c(-5.5, 5.5), expand = c(0, 0), breaks = seq(-5, 5, 1)) +
   scale_y_continuous(labels = comma) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish) +
-  xlab("Follower ideology") +
+  xlab("User ideology") +
   ylab("Avg. users exposed to article") +
   theme_ctokita() +
   theme(legend.position = "none",
@@ -299,7 +299,7 @@ gg_ideol_dist <- exposure_ideol %>%
   scale_x_continuous(limits = c(-5.5, 5.5), expand = c(0, 0), breaks = seq(-5, 5, 1)) +
   scale_y_continuous(breaks = seq(0, 1, 0.05)) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish) +
-  xlab("Follower ideology") +
+  xlab("User ideology") +
   ylab("Avg. proportion of article exposure") +
   theme_ctokita() +
   theme(legend.position = "none",
@@ -353,7 +353,7 @@ gg_fake_expos <- exposure_ideol %>%
   scale_x_discrete(labels = axis_labels) +
   scale_y_continuous(labels = comma) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish) +
-  xlab("Follower ideology") +
+  xlab("User ideology") +
   ylab("Avg. users exposed to article") +
   theme_ctokita() +
   theme(legend.position = "none") +
