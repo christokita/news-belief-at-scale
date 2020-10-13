@@ -20,7 +20,7 @@ source("scripts/_plot_themes/theme_ctokita.R")
 # Choose grouping of interest. Options: 
 #     (1) article veracity: "article_fc_rating"
 #     (2) source: "source_type"
-grouping <- "article_fc_rating"
+grouping <- "source_type"
 
 # Paths to data
 tweeter_score_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv' 
@@ -53,7 +53,7 @@ tweets <- read.csv(tweeter_score_path, header = TRUE, colClasses = c('user_id'='
                                                                            ifelse(article_lean == "N", "Neutral", 
                                                                                   ifelse(article_lean == "U", "Unclear", source_type)))) ) %>% 
   # bin ideologies
-  mutate(bin = cut(user_ideology, breaks = seq(-5, 5, 0.5))) %>% 
+  mutate(bin = cut(user_ideology, breaks = seq(-5.5, 5.5, 0.5))) %>% 
   mutate(lower_edge = as.numeric( gsub("^[^0-9]([-\\.0-9]+),.*", "\\1", bin, perl = TRUE) ),
          upper_edge = as.numeric( gsub(".*,([-\\.0-9]+)[^0-9]$", "\\1", bin, perl = TRUE) )) %>% 
   mutate(ideology_bin = (lower_edge + upper_edge) / 2) %>% 
@@ -94,7 +94,7 @@ gg_ideoltweets <- tweets %>%
   geom_bar(stat = "identity") +
   xlab("Tweeter ideology") +
   ylab("Number of tweets") +
-  scale_x_continuous(limits = c(-4.5, 5), expand = c(0, 0), breaks = seq(-5, 5, 1)) +
+  scale_x_continuous(limits = c(-5.5, 5.5), expand = c(0, 0), breaks = seq(-5, 5, 1)) +
   scale_fill_gradientn(colors = ideol_pal, limits = c(-2, 2), oob = scales::squish) +
   scale_color_gradientn(colors = ideol_pal, limits = c(-2, 2), oob = scales::squish) +
   theme_ctokita() +
@@ -140,7 +140,7 @@ gg_ideoldist_tweeters <- tweets %>%
   geom_bar(stat = "identity") +
   xlab("Tweeter ideology") +
   ylab("Avg. proportion of article tweeters") +
-  scale_x_continuous(limits = c(-4.5, 5), expand = c(0, 0), breaks = seq(-5, 5, 1)) +
+  scale_x_continuous(limits = c(-5.5, 5.5), expand = c(0, 0), breaks = seq(-5, 5, 1)) +
   scale_fill_gradientn(colors = ideol_pal, limits = c(-2, 2), oob = scales::squish) +
   theme_ctokita() +
   theme(aspect.ratio = NULL, 
@@ -173,7 +173,7 @@ gg_ideoldist_retweet <- tweets %>%
   geom_bar(stat = "identity") +
   xlab("Tweeter ideology") +
   ylab("Avg. proportion of article re-tweeters") +
-  scale_x_continuous(limits = c(-4.5, 5), expand = c(0, 0), breaks = seq(-5, 5, 1)) +
+  scale_x_continuous(limits = c(-5.5, 5.5), expand = c(0, 0), breaks = seq(-5, 5, 1)) +
   scale_fill_gradientn(colors = ideol_pal, limits = c(-2, 2), oob = scales::squish) +
   theme_ctokita() +
   theme(aspect.ratio = NULL, 
@@ -201,7 +201,7 @@ gg_ideoldist_article <- tweets %>%
   geom_bar(stat = "identity") +
   xlab("Tweeter ideology") +
   ylab("Avg. proportion of article re-tweeters") +
-  scale_x_continuous(limits = c(-4.5, 5), expand = c(0, 0), breaks = seq(-5, 5, 1)) +
+  scale_x_continuous(limits = c(-5.5, 5,5), expand = c(0, 0), breaks = seq(-5, 5, 1)) +
   scale_fill_gradientn(colors = ideol_pal, limits = c(-2, 2), oob = scales::squish) +
   theme_ctokita() +
   theme(aspect.ratio = NULL, 
@@ -295,7 +295,7 @@ gg_fmtweeters <- tweets %>%
   xlab("Tweeter ideology") +
   ylab("Log number of tweets") +
   scale_fill_manual(values = source_pal[c(1,2,4)], name = "Article type", labels = c("False, Conservative source", "False, Liberal source", "False, Unclear source")) +
-  scale_x_continuous(limits = c(-4, 4), expand = c(0, 0)) +
+  scale_x_continuous(limits = c(-5.5, 5.5), expand = c(0, 0)) +
   scale_y_continuous(trans = "log10", limits = c(1, 12000), expand = c(0,0)) +
   theme_ctokita() +
   theme(aspect.ratio = 0.5)
@@ -311,7 +311,7 @@ gg_fmtweeters_libcon <- tweets %>%
   xlab("Tweeter ideology") +
   ylab("Number of tweets") +
   scale_fill_manual(values = source_pal[c(1,2,4)], name = "Article type", labels = c("False, Conservative source", "False, Liberal source")) +
-  scale_x_continuous(limits = c(-4, 4)) +
+  scale_x_continuous(limits = c(-5.5, 5.5)) +
   theme_ctokita() +
   theme(aspect.ratio = 0.5)
 gg_fmtweeters_libcon

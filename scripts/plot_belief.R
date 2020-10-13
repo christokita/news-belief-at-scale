@@ -229,7 +229,7 @@ gg_ideol_dist <- belief_ideol %>%
   facet_wrap(as.formula(paste("~", grouping)), 
              ncol = 1,
              strip.position = "right",
-             scales = "free")
+             scales = "free_x")
 gg_ideol_dist
 
 ggsave(gg_ideol_dist, filename = paste0(outpath, "ideol_avg_belief_distribution.png"), width = 90, height = 90, units = "mm", dpi = 400)
