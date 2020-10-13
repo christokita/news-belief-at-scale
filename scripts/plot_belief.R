@@ -116,7 +116,7 @@ belief_timeseries <- belief_timeseries %>%
 
 
 
-############################## Plot belief exposure by ideology ##############################
+############################## Plot belief by ideology ##############################
 
 # Prep data
 belief_ideol <- belief_timeseries %>% 
@@ -129,8 +129,10 @@ belief_ideol <- belief_timeseries %>%
   mutate(ideology_bin = gsub("_\\.", "_-", ideology_bin)) %>% 
   separate(ideology_bin, c("lower", "upper"), sep = "_", convert = TRUE) %>% 
   mutate(ideology_bin = (lower + upper) / 2) %>% 
-  select(-lower, -upper)
-
+  select(-lower, -upper) %>% 
+  # count number of articles per grouping (useful for average distributions)
+  group_by(!!sym(grouping)) %>% 
+  mutate(n_articles_in_grouping = length(unique(total_article_number)))
 
 ####################
 # Single story exposure heatmap
@@ -149,20 +151,20 @@ ggplot(data = example_story, aes(x = ideology_bin, y = hour_bin, fill = count)) 
   theme_ctokita()
 
 ####################
-# Total ideologies exposed to articles by type
+# Total ideologies believing articles (by type)
 ####################
-axis_labels <- as.character(unique(belief_ideol$ideology_bin))
-axis_labels[seq(1, length(axis_labels)+1, 2)] <- ""
 gg_ideol_total <- belief_ideol %>% 
+  # Calculate totals
   group_by(!!sym(grouping), ideology_bin) %>% 
   summarise(count = sum(count, na.rm = TRUE),
-            avg_count = sum(count, na.rm = TRUE) / length(unique(total_article_number))) %>% 
-  ggplot(., aes(x = as.factor(ideology_bin), y = count, fill = ideology_bin)) +
+            avg_count = sum(count, na.rm = TRUE) / unique(n_articles_in_grouping)) %>% 
+  # Plot
+  ggplot(., aes(x = ideology_bin, y = count, fill = ideology_bin)) +
   geom_bar(stat = "identity") +
-  scale_x_discrete(labels = axis_labels) +
+  scale_x_continuous(limits = c(-5.5, 5.5), expand = c(0, 0), breaks = seq(-5, 5, 1)) +
   scale_y_continuous(labels = comma) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish) +
-  xlab("Follower ideology") +
+  xlab("User ideology") +
   ylab("Total users believing news") +
   theme_ctokita() +
   theme(legend.position = "none",
@@ -176,19 +178,19 @@ ggsave(gg_ideol_total, filename = paste0(outpath, "ideol_total_belief.png"), wid
 
 
 ####################
-# Avg ideologies exposed per article (by type)
+# Avg number of believing article across ideologies (by type)
 ####################
-axis_labels <- as.character(unique(belief_ideol$ideology_bin))
-axis_labels[seq(1, length(axis_labels)+1, 2)] <- ""
 gg_ideol_avg <- belief_ideol %>% 
+  # Calculate average exposed
   group_by(!!sym(grouping), ideology_bin) %>% 
-  summarise(avg_count = sum(count, na.rm = TRUE) / length(unique(total_article_number))) %>% 
-  ggplot(., aes(x = as.factor(ideology_bin), y = avg_count, fill = ideology_bin)) +
+  summarise(avg_count = sum(count, na.rm = TRUE) / unique(n_articles_in_grouping)) %>% 
+  # Plot
+  ggplot(., aes(x = ideology_bin, y = avg_count, fill = ideology_bin)) +
   geom_bar(stat = "identity") +
-  scale_x_discrete(labels = axis_labels) +
+  scale_x_continuous(limits = c(-5.5, 5.5), expand = c(0, 0), breaks = seq(-5, 5, 1)) +
   scale_y_continuous(labels = comma) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish) +
-  xlab("Follower ideology") +
+  xlab("User ideology") +
   ylab("Avg. users believing article") +
   theme_ctokita() +
   theme(legend.position = "none",
@@ -204,26 +206,22 @@ ggsave(gg_ideol_avg, filename = paste0(outpath, "ideol_avg_belief.png"), width =
 ####################
 # Ideological distributions of belief
 ####################
-axis_labels <- as.character(unique(belief_ideol$ideology_bin))
-axis_labels[seq(1, length(axis_labels)+1, 2)] <- ""
 gg_ideol_dist <- belief_ideol %>% 
-  # filter(total_article_number == 28) %>%
-  # For each article, determine proportion exposed by ideology bin
-  group_by(!!sym(grouping), ideology_bin, total_article_number) %>% 
+  # Calculate average distribution of belief
+  group_by(!!sym(grouping), ideology_bin, total_article_number, n_articles_in_grouping) %>% 
   summarise(count = sum(count)) %>% 
   ungroup() %>% 
   group_by(total_article_number) %>% 
   mutate(belief_prop = count / sum(count)) %>% 
-  # Now determine average distribution shape by article grouping
   group_by(!!sym(grouping), ideology_bin) %>% 
-  summarise(avg_belief_prop = mean(belief_prop)) %>% 
+  summarise(avg_belief_prop = sum(belief_prop) / unique(n_articles_in_grouping)) %>% 
   # Plot
-  ggplot(., aes(x = as.factor(ideology_bin), y = avg_belief_prop, fill = ideology_bin)) +
+  ggplot(., aes(x = ideology_bin, y = avg_belief_prop, fill = ideology_bin)) +
   geom_bar(stat = "identity") +
-  scale_x_discrete(labels = axis_labels) +
+  scale_x_continuous(limits = c(-5.5, 5.5), expand = c(0, 0), breaks = seq(-5, 5, 1)) +
   scale_y_continuous(breaks = seq(0, 1, 0.05)) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish) +
-  xlab("Follower ideology") +
+  xlab("User ideology") +
   ylab("Avg. proportion of article beliefs") +
   theme_ctokita() +
   theme(legend.position = "none",
@@ -231,7 +229,7 @@ gg_ideol_dist <- belief_ideol %>%
   facet_wrap(as.formula(paste("~", grouping)), 
              ncol = 1,
              strip.position = "right",
-             scales = "fixed")
+             scales = "free")
 gg_ideol_dist
 
 ggsave(gg_ideol_dist, filename = paste0(outpath, "ideol_avg_belief_distribution.png"), width = 90, height = 90, units = "mm", dpi = 400)
