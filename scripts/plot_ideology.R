@@ -20,7 +20,7 @@ source("scripts/_plot_themes/theme_ctokita.R")
 # Choose grouping of interest. Options: 
 #     (1) article veracity: "article_fc_rating"
 #     (2) source: "source_type"
-grouping <- "source_type"
+grouping <- "article_fc_rating"
 
 # Paths to data
 tweeter_score_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv' 
@@ -186,11 +186,11 @@ gg_ideoldist_retweet
 ggsave(gg_ideoldist_retweet, file = paste0(outpath, "average_retweeter_ideoldist.png"), width = 90, height = 90, units = "mm", dpi = 400)
 
 # Plot by total article number
-gg_ideoldist_retweet <- tweets %>% 
+gg_ideoldist_article <- tweets %>% 
   # Calculate distribution of tweeter ideologies per article
   filter(!is.na(user_ideology),
          # is_retweet == "True",
-         article_fc_rating == "Fake news") %>% 
+         article_fc_rating == "True news") %>% 
   group_by(!!sym(grouping), total_article_number, ideology_bin) %>% 
   summarise(count = n()) %>% 
   ungroup() %>% 
@@ -208,7 +208,7 @@ gg_ideoldist_retweet <- tweets %>%
         legend.position = "none") +
   facet_wrap(~total_article_number, 
              scales = 'free')
-gg_ideoldist_retweet
+gg_ideoldist_article
 
 ############################## Plot follower distribution shapes ##############################
 
