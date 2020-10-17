@@ -42,7 +42,7 @@ tweets = pd.read_csv(data_directory + "data_derived/tweets/tweets_parsed.csv",
                               'user_id': object, 'tweet_id': object, 
                               'retweeted_user_id': object, 'retweet_id': object,
                               'quoted_user_id': object, 'quoted_id': object})
-tweets = tweets.drop(['total_article_number'], axis=1, errors='ignore') #drop article ID column if it had previously been assigned
+tweets = tweets.drop(['total_article_number'], axis = 1, errors = 'ignore') #drop article ID column if it had previously been assigned
 tweets = tweets.join(pd.DataFrame(np.repeat(np.nan, tweets.shape[0]), columns = ['total_article_number']))
 for j in range(articles.shape[0]):
     # Prep links for pattern matching
