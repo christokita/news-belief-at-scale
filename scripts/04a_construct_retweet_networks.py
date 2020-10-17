@@ -46,11 +46,11 @@ def article_tweet_edges(article_id, tweets, articles, fuzzy_matched_URLs, friend
     n_tweets = len(selected_tweets)
     
     # Loop over tweets sharing this specific article and create edgelist
-    retweet_edges = pd.DataFrame(columns = ['Source', 'Target', 'RT_type', 'total_article_number', 'tweet_id'])
+    retweet_edges = pd.DataFrame(columns = ['Source', 'Target', 'RT_type', 'total_article_number', 'source_tweet_id', 'target_tweet_id'])
     for i in range(n_tweets):
         edge = determine_retweet_edges(i, selected_tweets, articles, fuzzy_matched_URLs, friend_files)
         if edge is not None:
-            edge['tweet_id'] = selected_tweets.tweet_id.iloc[i]
+            edge['target_tweet_id'] = selected_tweets.tweet_id.iloc[i]
             retweet_edges = retweet_edges.append(edge, sort = False)
             
     # Create total nodelist
@@ -77,9 +77,10 @@ def determine_retweet_edges(i, tweets, articles, manually_matched_URLs, friend_f
     """
 
     # Grab specific tweet and preliinary information    
-    tweet = tweets.iloc[i,:]
+    tweet = tweets.iloc[i,:] #i is passed to this function, so grab specific tweet of interest
     user_id = tweet['user_id']
-    rt_edge = pd.DataFrame({'Source': None, 'Target': user_id, 'RT_type': None, 'total_article_number': tweet['total_article_number']}, index = [0])
+    rt_edge = pd.DataFrame({'Source': None, 'Target': user_id, 'RT_type': None, 'total_article_number': tweet['total_article_number'],
+                            'source_tweet_id': None, 'target_tweet_id': tweet['tweet_id']}, index = [0])
     
     # If retweet determine who they were actually retweeting
     if tweet['is_retweet']:
@@ -100,7 +101,7 @@ def parse_retweet(tweet, user_id, rt_edge, friend_files, all_tweets):
     """
     
     # Ensure IDs and times are in proper format
-    all_tweets = all_tweets.astype({'retweeted_user_id': object, 'retweet_id': object, 'user_id': object}) 
+    all_tweets = all_tweets.astype({'retweeted_user_id': object, 'retweet_id': object, 'user_id': object, 'tweet_id': object}) 
     
     # Filter tweets to only those talking about this news article
     article_id = tweet['total_article_number']
@@ -125,11 +126,13 @@ def parse_retweet(tweet, user_id, rt_edge, friend_files, all_tweets):
     if rt_user_id in friends:
         rt_edge['Source'] = rt_user_id
         rt_edge['RT_type'] = "Direct RT"
+        rt_edge['source_tweet_id'] = rt_id
         
     # Check if self-retweet
     elif rt_user_id == user_id:
         rt_edge['Source'] = rt_user_id
         rt_edge['RT_type'] = "Self RT"
+        rt_edge['source_tweet_id'] = tweet['tweet_id']
         
     # Otherwise determine if indirect RT or phantom RT
     else:
@@ -149,11 +152,13 @@ def parse_retweet(tweet, user_id, rt_edge, friend_files, all_tweets):
             retweeted = candidate_tweets.loc[ candidate_tweets['tweet_time'].idxmax() ]
             rt_edge['Source'] = retweeted['user_id']
             rt_edge['RT_type'] = "Indirect RT"
+            rt_edge['source_tweet_id'] = retweeted['tweet_id']
             
         except:
             # set phantom RT edge
             rt_edge['Source'] = rt_user_id
             rt_edge['RT_type'] = "Phantom RT"
+            rt_edge['source_tweet_id'] = rt_id
     
     return rt_edge
 
@@ -191,6 +196,7 @@ def parse_quotedtweet(tweet, rt_edge, articles, fuzzy_matched_URLs):
     if in_quoted:
         rt_edge['Source'] = tweet['quoted_user_id']
         rt_edge['RT_type'] = "Quote"
+        rt_edge['source_tweet_id'] = tweet['quoted_id']
     elif in_main and not in_quoted:
         rt_edge = None #this is treated as an original tweet of the article
     elif not in_main and not in_quoted:
@@ -198,6 +204,7 @@ def parse_quotedtweet(tweet, rt_edge, articles, fuzzy_matched_URLs):
         if result is not None:
             rt_edge['Source'] = tweet['quoted_user_id']
             rt_edge['RT_type'] = "Quote"
+            rt_edge['source_tweet_id'] = tweet['quoted_id']
         else:
             rt_edge = None
     
