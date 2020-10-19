@@ -77,7 +77,7 @@ def determine_retweet_edges(i, tweets, articles, manually_matched_URLs, friend_f
     """
 
     # Grab specific tweet and preliinary information    
-    tweet = tweets.iloc[i,:] #i is passed to this function, so grab specific tweet of interest
+    tweet = tweets.iloc[i,:].copy() #i is passed to this function, so grab specific tweet of interest
     user_id = tweet['user_id']
     rt_edge = pd.DataFrame({'Source': None, 'Target': user_id, 'RT_type': None, 'total_article_number': tweet['total_article_number'],
                             'source_tweet_id': None, 'target_tweet_id': tweet['tweet_id']}, index = [0])
@@ -117,6 +117,7 @@ def parse_retweet(tweet, user_id, rt_edge, friend_files, all_tweets):
     if len(fr_file) == 0: #don't have friend file for user, could be because it is private
         rt_edge['Source'] = rt_user_id
         rt_edge['RT_type'] = "Presumed Phantom RT"
+        rt_edge['source_tweet_id'] = rt_id
         return rt_edge
     else: 
         friends = np.genfromtxt(data_directory + "data/friends/" + fr_file[0], dtype = str)
