@@ -294,5 +294,5 @@ for i in np.arange(n_replicates):
 # Bind together and save
 all_intervention_tweets = pd.concat(all_intervention_tweets)
 all_exposure_timeseries = pd.concat(all_exposure_timeseries)
-all_intervention_tweets.to_csv(sub_dir + 'article' + str(story) + "_tweets_rep" + str(i) + ".csv", index = False)
-all_exposure_timeseries.to_csv(sub_dir + 'article' + str(story) + "_exposetime_rep" + str(i) + ".csv", index = False)
+all_intervention_tweets.to_csv(sub_dir + 'article' + str(story) + "_intervention_tweets.csv", index = False)
+all_exposure_timeseries.to_csv(sub_dir + 'article' + str(story) + "_intervention_exposetime.csv", index = False)
