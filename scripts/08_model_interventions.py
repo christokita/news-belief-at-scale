@@ -44,7 +44,7 @@ def simulate_intervention(tweets, paired_tweets_followers, RT_network, visibilit
     # Run intervention on dataset
     # We assume people are ::odds_reduction:: less likely to see tweet sharing fake news, 
     # therefore RTs are ::odds_reduction:: less likely to happen after intervention kicks in at ::intervention_time::
-    print("Calculate RT removals")
+    print("Remove tweets after intervention kick in")
     story_RTs = tweets[tweets.is_retweet == True].copy()
     affected_RTs = story_RTs[story_RTs.relative_tweet_time >= intervention_time]
     removed = np.random.choice([True, False], 
@@ -54,18 +54,18 @@ def simulate_intervention(tweets, paired_tweets_followers, RT_network, visibilit
     removed_RTs = affected_RTs.iloc[removed].copy()
     
     # Remove RTs of RTs that were already removed by intervention (i.e., can't RT a tweet that didn't happen)
-    print("Calculate indirect RT removals")
+    print("Remove RTs of removed tweets")
     removed_indirect_RTs = RT_network.target_tweet_id[RT_network['source_tweet_id'].isin(removed_RTs.tweet_id)]
     removed_RTs = removed_RTs.append( affected_RTs[affected_RTs['tweet_id'].isin(removed_indirect_RTs)] ) #remove RTs of RTs that now did not happen
         
     # Create set of tweets that actually would've occured under this intervention
-    print("Filter tweets")
+    print("Create final set of intervention tweets")
     intervention_tweets = tweets[~tweets['tweet_id'].isin(removed_RTs.tweet_id)].copy()
     intervention_tweets['replicate'] = replicate_number
     intervention_tweets['tweet_number'] = np.arange(intervention_tweets.shape[0])
     
     # Estimate who would've seen a given tweet under intervention and determine first exposure of each unique individual
-    print("Estimate exposure")
+    print("Calculate exposure")
     exposed_followers = estimate_exposure_under_intervention(tweets = intervention_tweets, 
                                                              paired_tweets_followers = paired_tweets_followers, 
                                                              visibility_reduction = visibility_reduction, 
@@ -76,11 +76,13 @@ def simulate_intervention(tweets, paired_tweets_followers, RT_network, visibilit
     exposed_per_tweet = pd.DataFrame({'tweet_id': exposed_per_tweet.index, 'new_exposed_users': exposed_per_tweet.values})
     
     # Merge tweets and exposure count, and return
-    print("Merge tweets and exposure")
+    print("Merge tweets and exposure summary")
     intervention_tweets = intervention_tweets.merge(exposed_per_tweet, on = 'tweet_id', how = 'left')
     intervention_tweets['new_exposed_users'] = intervention_tweets['new_exposed_users'].fillna(0)
     intervention_tweets = intervention_tweets.sort_values(by = ['relative_tweet_time', 'tweet_number'])
     intervention_tweets['cumulative_exposed'] = intervention_tweets['new_exposed_users'].cumsum()
+    
+    print("return intervention tweets")
     return intervention_tweets
 
 
@@ -109,7 +111,7 @@ def estimate_exposure_under_intervention(tweets, paired_tweets_followers, visibi
     return exposed_followers
       
     
-def match_followers_to_tweet(tweets, data_directory):
+def match_followers_to_tweet(tweets, story_id, data_directory):
     """
     Function that will load followers that would have seen a given tweet.
     
@@ -117,25 +119,37 @@ def match_followers_to_tweet(tweets, data_directory):
     - matched_followers:   dataframe listing tweet ID with the set of follower IDs that could have potentially seen it (i.e., the followers of the user who tweeted it).
     """
     
-    # Get list of unique users and tweets in this set 
-    unique_users = tweets['user_id'].unique()
-    tweet_list = tweets[['user_id', 'tweet_id', 'tweet_time', 'tweet_number', 'relative_tweet_time']]
+    # TEMP: Load pre-made dataset
+    temp_file_name = data_directory + 'data_derived/interventions/tmp_exposedfollowers_story' + str(story_id) + '.csv'
+    col_names = ['user_id', 'follower_id', 'tweet_id', 'tweet_time', 'tweet_number', 'relative_tweet_time']
+    if not os.path.exists(temp_file_name):
     
-    # Create paired list of tweeters and followers
-    paired_followers = []
-    follower_files = os.listdir(data_directory + "data/followers/")
-    for user_id in unique_users:
-        regex = re.compile(r"[0-9].*_%s.csv" % user_id)
-        file = list(filter(regex.match, follower_files))
-        followers = load_followers(file, data_directory)
-        new_row = pd.DataFrame({'user_id': user_id, 'follower_id': followers}, dtype = 'int64')
-        paired_followers.append(new_row)
-    paired_followers = pd.concat(paired_followers)
+        # Get list of unique users and tweets in this set 
+        unique_users = tweets['user_id'].unique()
+        tweet_list = tweets[['user_id', 'tweet_id', 'tweet_time', 'tweet_number', 'relative_tweet_time']].copy()
+        del tweets
     
-    # Merge into our list of tweets
-    matched_followers = tweet_list.merge(paired_followers, how = "left", on = "user_id")
-    matched_followers = matched_followers.sort_values('relative_tweet_time')
-    matched_followers = matched_followers.reset_index(drop = True)
+        # Create paired list of tweeters and followers, batching out to a temp csv   
+        follower_files = os.listdir(data_directory + "data/followers/")
+        for user_id in unique_users:
+            regex = re.compile(r"[0-9].*_%s.csv" % user_id)
+            file = list(filter(regex.match, follower_files))
+            followers = load_followers(file, data_directory)
+            matched_followers = pd.DataFrame({'user_id': user_id, 'follower_id': followers}, dtype = 'int64')
+            matched_followers = matched_followers.merge(tweet_list, how = "left", on = "user_id")
+            matched_followers.to_csv(temp_file_name, mode = "a", index = False, header = False)
+            col_names = matched_followers.columns
+            del matched_followers, followers
+        
+    # Load in compiled list, sort by time, and return
+    print("Load compiled tweet-follower list")
+    matched_followers = pd.read_csv(temp_file_name, header = None, names = col_names)
+    print("Convert to datetime")
+    matched_followers['tweet_time'] = pd.to_datetime(matched_followers['tweet_time'], format = '%Y-%m-%d %H:%M:%S%z')
+    # os.remove(temp_file_name)
+    print("Sort tweet-follower list")
+    matched_followers = matched_followers.sort_values(by = ['tweet_number'])
+    print("Return tweet-follower list")
     return matched_followers
         
     
@@ -197,12 +211,11 @@ story_tweets = story_tweets[['user_id', 'tweet_id', 'is_retweet', 'is_quote',
                              'total_article_number', 'article_fc_rating', 'source_type']]
 
 # Create list of tweets that includes list of followers per tweets
-print("Match tweets to followers")
-tweets_with_followers = match_followers_to_tweet(tweets = story_tweets, data_directory = data_directory)
+tweets_with_followers = match_followers_to_tweet(tweets = story_tweets, story_id = story, data_directory = data_directory)
 
 # Load retweet network
 RT_network = pd.read_csv(data_directory + "data_derived/networks/specific_article_networks/article" + str(story)+ "_edges.csv",
-                         dtype = {'Source': 'int64', 'Target': 'int64', 'source_tweet_id': 'int64', 'target_tweet_id': 'int64'})
+                          dtype = {'Source': 'int64', 'Target': 'int64', 'source_tweet_id': 'int64', 'target_tweet_id': 'int64'})
 
 
 ####################
@@ -220,4 +233,4 @@ for i in np.arange(n_replicates):
                                           visibility_reduction = visibility_reduction, 
                                           intervention_time = intervention_time, 
                                           replicate_number = i)
-    replicate_sim.to_csv(sub_dir + 'article' + str(story) + "_intervention_rep" + str(i) + ".csv")
+    replicate_sim.to_csv(sub_dir + 'article' + str(story) + "_intervention_rep" + str(i) + ".csv", index = False)
