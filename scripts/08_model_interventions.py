@@ -14,12 +14,13 @@ Simulate simple interventions to prevent the spread of fake news
 ####################
 import pandas as pd
 import numpy as np
+import scipy.stats as stats 
 import os
 import re
 import sys
 
 # high level directory (external HD or cluster storage)
-#data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
+# data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
 data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster storage
 outpath = data_directory + "data_derived/interventions/"
 
@@ -34,7 +35,7 @@ which_story = int(sys.argv[1]) #get from command line
 # Functions for modeling interventions
 ####################
 # Simualte the proposed intervention in which users are x% less likely to see a tweet after time point t
-def simulate_intervention(tweets, paired_tweets_followers, RT_network, visibility_reduction, intervention_time, replicate_number):
+def simulate_intervention(tweets, paired_tweets_followers, RT_network, visibility_reduction, intervention_time, replicate_number, mean_time_to_exposure, sd_time_to_exposure):
     """
     Function that will simulate an intervention in which users are ::visibility_reduction::% less likely to see a tweet after time point ::intervention_time::
         
@@ -44,7 +45,6 @@ def simulate_intervention(tweets, paired_tweets_followers, RT_network, visibilit
     # Run intervention on dataset
     # We assume people are ::odds_reduction:: less likely to see tweet sharing fake news, 
     # therefore RTs are ::odds_reduction:: less likely to happen after intervention kicks in at ::intervention_time::
-    print("Remove tweets after intervention kick in")
     story_RTs = tweets[tweets.is_retweet == True].copy()
     affected_RTs = story_RTs[story_RTs.relative_tweet_time >= intervention_time]
     removed = np.random.choice([True, False], 
@@ -54,40 +54,44 @@ def simulate_intervention(tweets, paired_tweets_followers, RT_network, visibilit
     removed_RTs = affected_RTs.iloc[removed].copy()
     
     # Remove RTs of RTs that were already removed by intervention (i.e., can't RT a tweet that didn't happen)
-    print("Remove RTs of removed tweets")
     removed_indirect_RTs = RT_network.target_tweet_id[RT_network['source_tweet_id'].isin(removed_RTs.tweet_id)]
     removed_RTs = removed_RTs.append( affected_RTs[affected_RTs['tweet_id'].isin(removed_indirect_RTs)] ) #remove RTs of RTs that now did not happen
         
     # Create set of tweets that actually would've occured under this intervention
-    print("Create final set of intervention tweets")
     intervention_tweets = tweets[~tweets['tweet_id'].isin(removed_RTs.tweet_id)].copy()
     intervention_tweets['replicate'] = replicate_number
     intervention_tweets['tweet_number'] = np.arange(intervention_tweets.shape[0])
     
     # Estimate who would've seen a given tweet under intervention and determine first exposure of each unique individual
-    print("Calculate exposure")
     exposed_followers = estimate_exposure_under_intervention(tweets = intervention_tweets, 
                                                              paired_tweets_followers = paired_tweets_followers, 
                                                              visibility_reduction = visibility_reduction, 
-                                                             intervention_time = intervention_time)
-    exposed_followers = exposed_followers.sort_values(by = ['relative_tweet_time', 'tweet_number'])
+                                                             intervention_time = intervention_time,
+                                                             mean_exposure_time = mean_time_to_exposure,
+                                                             sd_exposure_time = sd_time_to_exposure)
+    exposed_followers = exposed_followers.sort_values(by = ['relative_exposure_time'])
     exposed_followers = exposed_followers.drop_duplicates(subset = ['follower_id'], keep = 'first')
     exposed_per_tweet = exposed_followers['tweet_id'].value_counts()
     exposed_per_tweet = pd.DataFrame({'tweet_id': exposed_per_tweet.index, 'new_exposed_users': exposed_per_tweet.values})
     
+    # Bin exposure by time
+    bin_counts, bin_edges = np.histogram(exposed_followers.relative_exposure_time, bins = 48*4, range = (0, 48))
+    exposure_over_time = pd.DataFrame({'total_article_number': intervention_tweets.total_article_number.unique().item(), 
+                                       'replicate': replicate_number,
+                                       'time': bin_edges[1:], 
+                                       'new_exposed_users': bin_counts})
+    exposure_over_time['cumulative_exposed'] = exposure_over_time['new_exposed_users'].cumsum()
+    
     # Merge tweets and exposure count, and return
-    print("Merge tweets and exposure summary")
     intervention_tweets = intervention_tweets.merge(exposed_per_tweet, on = 'tweet_id', how = 'left')
     intervention_tweets['new_exposed_users'] = intervention_tweets['new_exposed_users'].fillna(0)
     intervention_tweets = intervention_tweets.sort_values(by = ['relative_tweet_time', 'tweet_number'])
     intervention_tweets['cumulative_exposed'] = intervention_tweets['new_exposed_users'].cumsum()
-    
-    print("return intervention tweets")
-    return intervention_tweets
+    return intervention_tweets, exposure_over_time
 
 
 # Estimate exposure of unique users to the story, assuming the story, assuming users are x% less likely to see a tweet after time point t
-def estimate_exposure_under_intervention(tweets, paired_tweets_followers, visibility_reduction, intervention_time):
+def estimate_exposure_under_intervention(tweets, paired_tweets_followers, visibility_reduction, intervention_time, mean_exposure_time, sd_exposure_time):
     """
     Function that will determine estimate many unique users would be exposed to a story that is under an intevention in viewership.
     We assume people are ::odds_reduction:: less likely to see tweet sharing article
@@ -96,20 +100,50 @@ def estimate_exposure_under_intervention(tweets, paired_tweets_followers, visibi
     - exposed_over_time: a dataframe that contains the time series of tweets and exposure over time for that story.
     """
     
-    exposed_followers = []
-    for index, tweet in tweets.iterrows():
-        tweet_id = tweet['tweet_id']
-        followers = paired_tweets_followers[paired_tweets_followers.tweet_id == tweet_id]
-        if tweet['relative_tweet_time'] >= intervention_time:
-            tweet_visible = np.random.choice([True, False], 
-                                             size = followers.shape[0], 
-                                             replace = True, 
-                                             p = [1-visibility_reduction, visibility_reduction])
-            followers = followers[tweet_visible] #only grab followers who would've seen the tweet
-        exposed_followers.append(followers)
-    exposed_followers = pd.concat(exposed_followers)
+    # Filter out paired tweet-follower sets of removed tweets
+    exposed_followers = paired_tweets_followers[paired_tweets_followers['tweet_id'].isin(tweets.tweet_id)].copy()
+    del paired_tweets_followers
+    
+    # Estimate exposure time for each user
+    exposure_time_offset = time_distribute_exposure(n_followers = exposed_followers.shape[0],
+                                                    mean_exposure_time = mean_exposure_time,
+                                                    sd_exposure_time = sd_exposure_time)
+    exposed_followers['relative_exposure_time'] = exposed_followers['relative_tweet_time'] + exposure_time_offset
+    exposed_followers = exposed_followers.sort_values(by = ['relative_exposure_time'])
+    
+    # Simulate intervention of reduced visibility
+    under_intervention = exposed_followers.relative_exposure_time > intervention_time
+    tweet_visible_pre = np.repeat(True, sum(~under_intervention))
+    tweet_visible_post = np.random.choice([True, False], 
+                                          size = sum(under_intervention), 
+                                          replace = True, 
+                                          p = [1-visibility_reduction, visibility_reduction])
+    tweet_visible = np.append(tweet_visible_pre, tweet_visible_post)
+    exposed_followers = exposed_followers[tweet_visible]    
     return exposed_followers
-      
+
+
+def time_distribute_exposure(n_followers, mean_exposure_time, sd_exposure_time):
+    """
+    Distribute the exposure to a tweet over the time following the tweets, so that exposure for all followers isn't instantaneous
+    For now, we assume a truncated normal distribution cut off at time +0 and time +48 (the upper bound should matter)
+    
+    Parameters:
+        n_followers (int):          number of followers for which to calcualte the exposure time delay.
+        mean_expsoure_time (float): mean of truncated normal distribution.
+        sd_exposure_time (float):   standard devistion of truncated normal distribution.
+        
+    Returns:
+        added_exposure_time (float): vector that describes at what point after the tweet that the follower was exposed.
+    """
+    
+    lower, upper = 0, 48
+    a = (lower - mean_exposure_time) / sd_exposure_time
+    b = (upper - mean_exposure_time) / sd_exposure_time
+    exposure_dist = stats.truncnorm(a, b, loc = mean_exposure_time, scale = sd_exposure_time)
+    added_exposure_time = exposure_dist.rvs(n_followers)
+    return added_exposure_time
+
     
 def match_followers_to_tweet(tweets, story_id, data_directory):
     """
@@ -141,15 +175,11 @@ def match_followers_to_tweet(tweets, story_id, data_directory):
             col_names = matched_followers.columns
             del matched_followers, followers
         
-    # Load in compiled list, sort by time, and return
-    print("Load compiled tweet-follower list")
+    # Load in compiled list, sort, and return
     matched_followers = pd.read_csv(temp_file_name, header = None, names = col_names)
-    print("Convert to datetime")
+    # os.remove(temp_file_name) #remove temp file
     matched_followers['tweet_time'] = pd.to_datetime(matched_followers['tweet_time'], format = '%Y-%m-%d %H:%M:%S%z')
-    # os.remove(temp_file_name)
-    print("Sort tweet-follower list")
     matched_followers = matched_followers.sort_values(by = ['tweet_number'])
-    print("Return tweet-follower list")
     return matched_followers
         
     
@@ -210,8 +240,10 @@ story_tweets = story_tweets[['user_id', 'tweet_id', 'is_retweet', 'is_quote',
                              'tweet_time', 'article_first_time', 'relative_tweet_time', 'tweet_number', 
                              'total_article_number', 'article_fc_rating', 'source_type']]
 
-# Create list of tweets that includes list of followers per tweets
-tweets_with_followers = match_followers_to_tweet(tweets = story_tweets, story_id = story, data_directory = data_directory)
+# Create list of tweets that includes list of followers per tweets, and simulated
+tweets_with_followers = match_followers_to_tweet(tweets = story_tweets, 
+                                                 story_id = story, 
+                                                 data_directory = data_directory)
 
 # Load retweet network
 RT_network = pd.read_csv(data_directory + "data_derived/networks/specific_article_networks/article" + str(story)+ "_edges.csv",
@@ -226,11 +258,23 @@ sub_dir = outpath + 'reduceviz' + str(visibility_reduction) + '_t' + str(interve
 os.makedirs(sub_dir, exist_ok = True)
 
 # Loop through replicate simulations
+all_intervention_tweets = []
+all_exposure_timeseries = []
 for i in np.arange(n_replicates):
-    replicate_sim = simulate_intervention(tweets = story_tweets, 
-                                          paired_tweets_followers = tweets_with_followers, 
-                                          RT_network = RT_network,
-                                          visibility_reduction = visibility_reduction, 
-                                          intervention_time = intervention_time, 
-                                          replicate_number = i)
-    replicate_sim.to_csv(sub_dir + 'article' + str(story) + "_intervention_rep" + str(i) + ".csv", index = False)
+    replicate_tweets, replicate_exposure_time = simulate_intervention(tweets = story_tweets, 
+                                                                      paired_tweets_followers = tweets_with_followers, 
+                                                                      RT_network = RT_network,
+                                                                      visibility_reduction = visibility_reduction, 
+                                                                      intervention_time = intervention_time, 
+                                                                      replicate_number = i,
+                                                                      mean_time_to_exposure = 1,
+                                                                      sd_time_to_exposure = 2)
+    all_intervention_tweets.append(replicate_tweets)
+    all_exposure_timeseries.append(replicate_exposure_time)
+    del replicate_tweets, replicate_exposure_time
+    
+# Bind together and save
+all_intervention_tweets = pd.concat(all_intervention_tweets)
+all_exposure_timeseries = pd.concat(all_exposure_timeseries)
+all_intervention_tweets.to_csv(sub_dir + 'article' + str(story) + "_intertweets_rep" + str(i) + ".csv", index = False)
+all_exposure_timeseries.to_csv(sub_dir + 'article' + str(story) + "_interexposetime_rep" + str(i) + ".csv", index = False)
