@@ -1,0 +1,8 @@
+# Core packages
+numpy
+pandas
+scipy
+matplotlib
+bs4
+fuzzywuzzy
+pymc3
