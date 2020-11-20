@@ -24,7 +24,7 @@ source("scripts/_plot_themes/theme_ctokita.R")
 grouping <- "article_fc_rating"
 
 # Paths to files/directories
-tweet_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv' #path to fitness cascade data
+tweet_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv'
 if (grouping == "article_fc_rating") {
   outpath <- 'output/exposure/veracity/'
 } else if(grouping == "source_type") {
@@ -43,19 +43,9 @@ ideol_dist_pal[3] <- "#e0e0e0"
 # Load and prep data 
 ####################
 # Read in tweet data for article info
-tweets <- read.csv(tweet_path, header = TRUE, colClasses = c("user_id"="character", "tweet_id"="character")) %>% 
+article_data <- read.csv(tweet_path, header = TRUE, colClasses = c("user_id"="character", "tweet_id"="character")) %>% 
   filter(total_article_number > 10) %>% #discard first 10 articles from analysis
-  mutate(article_ideology = article_con_feel - article_lib_feel,
-         tweet_time_text = tweet_time,
-         tweet_time = as.POSIXct(tweet_time, format = "%a %b %d %H:%M:%S %z %Y")) %>% 
-  arrange(total_article_number, tweet_time) %>% 
-  group_by(total_article_number) %>% 
-  mutate(article_first_time = min(tweet_time)) %>% 
-  mutate(tweet_number = 1:length(tweet_time), #order tweets for plotting purposes
-         relative_tweet_time = as.numeric( (tweet_time - article_first_time) / (60*60) ) ) %>%  #time diff is in seconds, so convert to hours
-  mutate(relative_tweet_count = tweet_number / max(tweet_number))
-
-article_data <- tweets %>% 
+  mutate(article_ideology = article_con_feel - article_lib_feel) %>% 
   select(tweet_id, total_article_number, source_type, source_lean, article_fc_rating, article_lean, user_ideology) 
 
 # Load exposure data 
