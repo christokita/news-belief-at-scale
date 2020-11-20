@@ -78,6 +78,8 @@ if (grouping == "article_fc_rating") {
     filter(article_fc_rating %in% c("True news", "Fake news"))
 }
 
+
+
 ############################## Basics ##############################
 
 ####################
@@ -94,6 +96,14 @@ degree_data <- exposure_data %>%
          cdf = cumsum(count) / sum(count)) %>%
   rename(degree = follower_count) %>% 
   arrange(!!sym(grouping), degree)
+
+# igraph
+igraph_data <-  exposure_data %>% 
+  select(user_id, !!sym(grouping), follower_count) %>% 
+  distinct() %>%
+  rename(degree = follower_count) %>% 
+  filter(degree > 0)
+power.law.fit(igraph_data$degree[igraph_data$article_fc_rating == "True news"])
 
 # Plot
 gg_degree_dist <- degree_data %>% 
@@ -127,12 +137,32 @@ binned_degree_data <- degree_data %>%
   mutate(bin = cut(degree, breaks = seq(0, 10^8, 100))) %>% 
   group_by(!!sym(grouping), bin) %>% 
   summarise(count = sum(count)) %>% 
-  mutate(prob = count / sum(count),
-         cdf = cumsum(count) / sum(count)) %>% 
   mutate(bin_char = as.character(bin)) %>% 
   mutate(bin_low = as.numeric(gsub("^[^0-9]([.0-9+e]+).*", "\\1", bin_char, perl = T)),
          bin_high = as.numeric(gsub(".*,([.0-9+e]+)[^0-9]$", "\\1", bin_char, perl = T))) %>% 
-  mutate(degree = (bin_low + bin_high) / 2)
+  mutate(degree = (bin_low + bin_high) / 2) %>% 
+  arrange(desc(degree)) %>% 
+  mutate(prob = count / sum(count),
+         cdf = cumsum(count) / sum(count))
+
+# powerRlaw fit
+bin_data <- exposure_data %>% 
+  select(user_id, !!sym(grouping), follower_count) %>% 
+  distinct() %>%
+  mutate(bin = cut(follower_count, breaks = seq(0, 10^8, 100))) %>% 
+  mutate(bin_char = as.character(bin)) %>% 
+  mutate(bin_low = as.numeric(gsub("^[^0-9]([.0-9+e]+).*", "\\1", bin_char, perl = T)),
+         bin_high = as.numeric(gsub(".*,([.0-9+e]+)[^0-9]$", "\\1", bin_char, perl = T))) %>% 
+  mutate(degree = (bin_low + bin_high) / 2) %>% 
+  filter(!is.na(degree)) #removes zero-follower account
+d_pl = conlnorm$new(bin_data$degree[bin_data$article_fc_rating == "Fake news"])
+est = estimate_xmin(d_pl, xmax = 10^8)
+d_pl$setXmin(est)
+plot(d_pl)
+lines(d_pl, col = 2, lwd = 2)
+
+# igraph
+power.law.fit(bin_data$degree[bin_data$article_fc_rating == "Fake news"])
 
 # Prep data for bayesian regression
 grouping_levels <- binned_degree_data %>% 
@@ -172,11 +202,11 @@ fit_degree <- do.call("rbind", fit_degree)
 # Plot
 gg_bin_deg_dist <- ggplot() +
   geom_point(data = binned_degree_data,
-             aes(x = degree, y = prob, color = !!sym(grouping)),
+             aes(x = degree, y = cdf, color = !!sym(grouping)),
              size = 1, alpha = 0.2, stroke = 0) +
-  geom_line(data = fit_degree,
-            aes(x = degree, y = prob, color = grouping_val),
-            size = 0.5) +
+  # geom_line(data = fit_degree,
+  #           aes(x = degree, y = prob, color = grouping_val),
+  #           size = 0.5) +
   scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
                 labels = scales::trans_format("log10", scales::math_format(10^.x)),
                 limits = c(10^1, 10^8)) +
