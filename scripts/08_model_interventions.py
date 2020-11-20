@@ -260,6 +260,23 @@ os.makedirs(sub_dir, exist_ok = True)
 # Loop through replicate simulations
 all_intervention_tweets = []
 all_exposure_timeseries = []
+
+# First, no intervention
+noint_tweets, noint_exposure_time = simulate_intervention(tweets = story_tweets, 
+                                                          paired_tweets_followers = tweets_with_followers, 
+                                                          RT_network = RT_network,
+                                                          visibility_reduction = 0, #NO INTERVENTION
+                                                          intervention_time = intervention_time, 
+                                                          replicate_number = -1,
+                                                          mean_time_to_exposure = 1,
+                                                          sd_time_to_exposure = 2)
+noint_tweets['simulation_type'] = noint_exposure_time['simulation_type'] = "no intervention"
+all_intervention_tweets.append(noint_tweets)
+all_exposure_timeseries.append(noint_exposure_time)
+del noint_tweets, noint_exposure_time
+
+
+# Next, intervention in effect
 for i in np.arange(n_replicates):
     replicate_tweets, replicate_exposure_time = simulate_intervention(tweets = story_tweets, 
                                                                       paired_tweets_followers = tweets_with_followers, 
@@ -269,6 +286,7 @@ for i in np.arange(n_replicates):
                                                                       replicate_number = i,
                                                                       mean_time_to_exposure = 1,
                                                                       sd_time_to_exposure = 2)
+    replicate_tweets['simulation_type'] = replicate_exposure_time['simulation_type'] = "intervention"
     all_intervention_tweets.append(replicate_tweets)
     all_exposure_timeseries.append(replicate_exposure_time)
     del replicate_tweets, replicate_exposure_time
@@ -276,5 +294,5 @@ for i in np.arange(n_replicates):
 # Bind together and save
 all_intervention_tweets = pd.concat(all_intervention_tweets)
 all_exposure_timeseries = pd.concat(all_exposure_timeseries)
-all_intervention_tweets.to_csv(sub_dir + 'article' + str(story) + "_intertweets_rep" + str(i) + ".csv", index = False)
-all_exposure_timeseries.to_csv(sub_dir + 'article' + str(story) + "_interexposetime_rep" + str(i) + ".csv", index = False)
+all_intervention_tweets.to_csv(sub_dir + 'article' + str(story) + "_tweets_rep" + str(i) + ".csv", index = False)
+all_exposure_timeseries.to_csv(sub_dir + 'article' + str(story) + "_exposetime_rep" + str(i) + ".csv", index = False)
