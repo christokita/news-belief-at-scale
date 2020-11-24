@@ -75,7 +75,7 @@ def simulate_intervention(tweets, paired_tweets_followers, RT_network, visibilit
     exposed_per_tweet = pd.DataFrame({'tweet_id': exposed_per_tweet.index, 'new_exposed_users': exposed_per_tweet.values})
     
     # Bin exposure by time
-    bin_counts, bin_edges = np.histogram(exposed_followers.relative_exposure_time, bins = 48*4, range = (0, 48))
+    bin_counts, bin_edges = np.histogram(exposed_followers.relative_exposure_time, bins = 72*4, range = (0, 72))
     exposure_over_time = pd.DataFrame({'total_article_number': intervention_tweets.total_article_number.unique().item(), 
                                        'replicate': replicate_number,
                                        'time': bin_edges[1:], 
