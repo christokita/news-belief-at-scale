@@ -165,8 +165,7 @@ if __name__ == '__main__':
     followers_data = followers_data[['follower_id', 'follower_ideology']].drop_duplicates()
     
     # Prepare data for inference
-#    samples = followers_data['follower_ideology']
-    samples = followers_data['follower_ideology'].sample(frac = 0.1, replace = False, random_state = 323) #downsample for now
+    samples = followers_data['follower_ideology'].sample(frac = 0.1, replace = False, random_state = 323) #downsample due to sheer size of data
     del followers_data
     sample_mu = np.array([np.mean(samples)])
     sample_sigma = np.array([np.std(samples)])
