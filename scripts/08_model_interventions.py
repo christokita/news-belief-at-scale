@@ -153,10 +153,14 @@ def match_followers_to_tweet(tweets, story_id, data_directory):
     - matched_followers:   dataframe listing tweet ID with the set of follower IDs that could have potentially seen it (i.e., the followers of the user who tweeted it).
     """
     
-    # TEMP: Load pre-made dataset
-    temp_file_name = data_directory + 'data_derived/interventions/tmp_exposedfollowers_story' + str(story_id) + '.csv'
+    # Set place to store compiled lists
+    data_subdir = data_directory + 'data_derived/interventions/compiled_exposed_follower_lists/'
+    os.makedirs(data_subdir, exist_ok = True)
+    
+    # If file already exists, load; otherwise, compile and save.
+    file_name = data_subdir + 'exposedfollowers_story' + str(story_id) + '.csv'
     col_names = ['user_id', 'follower_id', 'tweet_id', 'tweet_time', 'tweet_number', 'relative_tweet_time']
-    if not os.path.exists(temp_file_name):
+    if not os.path.exists(file_name):
     
         # Get list of unique users and tweets in this set 
         unique_users = tweets['user_id'].unique()
@@ -171,13 +175,12 @@ def match_followers_to_tweet(tweets, story_id, data_directory):
             followers = load_followers(file, data_directory)
             matched_followers = pd.DataFrame({'user_id': user_id, 'follower_id': followers}, dtype = 'int64')
             matched_followers = matched_followers.merge(tweet_list, how = "left", on = "user_id")
-            matched_followers.to_csv(temp_file_name, mode = "a", index = False, header = False)
+            matched_followers.to_csv(file_name, mode = "a", index = False, header = False)
             col_names = matched_followers.columns
             del matched_followers, followers
         
     # Load in compiled list, sort, and return
-    matched_followers = pd.read_csv(temp_file_name, header = None, names = col_names)
-    # os.remove(temp_file_name) #remove temp file
+    matched_followers = pd.read_csv(file_name, header = None, names = col_names)
     matched_followers['tweet_time'] = pd.to_datetime(matched_followers['tweet_time'], format = '%Y-%m-%d %H:%M:%S%z')
     matched_followers = matched_followers.sort_values(by = ['tweet_number'])
     return matched_followers
