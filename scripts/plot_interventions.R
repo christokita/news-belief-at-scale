@@ -70,13 +70,14 @@ for (dir in intervention_dirs) {
 }
 
 # Create measure of relative exposure (relative to actual tweet data)
+max_time_of_expsoure <-  max(intervention_exposure$time[intervention_exposure$new_exposed_users > 0]) # find where new users are no longer being exposed. 55hrs
 intervention_exposure <- intervention_exposure %>% 
   group_by(total_article_number) %>% 
   mutate(relative_cumulative_exposed = cumulative_exposed / max(cumulative_exposed), 
          simulation_number = paste0(total_article_number, "-", replicate, "-", intervention_time, "-", intervention_amount),
          simulation_type = factor(simulation_type, levels = c("no intervention", "intervention")),
          intervention = paste0(intervention_time, "-", intervention_amount)) %>% 
-  filter(time <= 55)
+  filter(time <= max_time_of_expsoure) 
 
   
 ####################
@@ -102,6 +103,9 @@ gg_exposed_raw
 # Plot relative exposure by intervention
 ####################
 # Filter to data of interest
+low_exposure_stories <- intervention_exposure %>% 
+  filter(replicate == -1,
+         time == 55)
 exposure_decrease <-  intervention_exposure %>% 
   filter(time == 55,
          replicate != -1) %>% 
@@ -153,18 +157,23 @@ gg_example_timeseries <- intervention_exposure %>%
   mutate(intervention_time = ifelse(simulation_type == "no intervention", "No intervention", paste(intervention_time, "hr."))) %>% 
   mutate(intervention_time = factor(intervention_time, levels = c("No intervention", "6 hr.", "5 hr.", "4 hr.", "3 hr.", "2 hr."))) %>% 
   ggplot(., aes(x = time, y = cumulative_exposed, color = intervention_time, group = simulation_number, alpha = simulation_type)) +
-  geom_line(size = 0.5) +
+  geom_line(size = 0.3) +
   scale_y_continuous(breaks = seq(0, 10000000, 2000000), 
                      limits = c(0, 10000000),
                      labels = scales::comma) +
   scale_x_continuous(breaks = seq(0, 48, 12)) +
   scale_color_manual(values = c("black", intervention_pal),
-                     name = "Intervention time,\n50% vis. reduction") +
-  scale_alpha_manual(values = c(1, 0.3), 
+                     name = "Intervention time") +
+  scale_alpha_manual(values = c(1, 0.2), 
                     guide = NULL) +
   xlab("Time since first article share (hrs)") +
   ylab("Total users exposed") +
-  theme_ctokita()
+  theme_ctokita() +
+  theme(legend.position = c(0.85, 0.27),
+        aspect.ratio = 0.5,
+        legend.key.height = unit(0.5, 'mm'),
+        legend.spacing = unit(0, 'mm'),
+        legend.title = element_text(vjust = -1))
 gg_example_timeseries
-ggsave(gg_example_timeseries, filename = paste0(outpath, "exampleintervention_article28.png"), width = 110, height = 90, units = "mm", dpi = 400)
+ggsave(gg_example_timeseries, filename = paste0(outpath, "exampleintervention_article28.png"), width = 90, height = 45, units = "mm", dpi = 400)
 
