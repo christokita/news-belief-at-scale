@@ -8,6 +8,7 @@
 ##########
 # Liberal vs. Conservative colors
 ##########
-# From eduardo's figure
-Blue - #317fca
-Red - #e00203
+Blue - #0571b0
+Red - #ca0020
+Centrist = #e0e0e0
+NA - #878787
