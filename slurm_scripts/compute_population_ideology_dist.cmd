@@ -12,4 +12,4 @@ module purge
 module load anaconda3 
 conda activate my_conda
 ##Run script
-srun python3 scripts/05a_population_ideology_prior.py
+srun python3 scripts/04a_population_ideology_prior.py

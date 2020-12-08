@@ -9,4 +9,4 @@
 ##Load anaconda python packages
 module load anaconda3 
 ##Run script
-srun python3 scripts/07_estimate_belief.py
+srun python3 scripts/06_estimate_belief.py

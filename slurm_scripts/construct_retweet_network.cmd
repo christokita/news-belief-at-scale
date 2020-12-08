@@ -9,4 +9,4 @@
 ##Load anaconda python packages
 module load anaconda3 
 ##Run script
-srun python3 scripts/04a_construct_retweet_networks.py
+srun python3 scripts/07a_construct_retweet_networks.py

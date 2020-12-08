@@ -9,4 +9,4 @@
 ##Load anaconda python packages
 module load anaconda3 
 ##Run script
-srun python3 scripts/06b_infer_exposure.py
+srun python3 scripts/05b_infer_exposure.py

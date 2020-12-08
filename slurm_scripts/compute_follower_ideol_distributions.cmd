@@ -13,4 +13,4 @@ module purge
 module load anaconda3 
 conda activate my_conda
 ##Run script passing the array job number to the script
-srun python3 scripts/05b_follower_ideologies_inference.py $SLURM_ARRAY_TASK_ID 
+srun python3 scripts/04b_follower_ideologies_inference.py $SLURM_ARRAY_TASK_ID 
