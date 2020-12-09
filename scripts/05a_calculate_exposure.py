@@ -22,6 +22,7 @@ import os
 import math
 import sys
 import time
+from scipy import stats
 
 # Get chunk number from SLURM script
 i = int(sys.argv[1])
@@ -30,12 +31,20 @@ i = int(sys.argv[1])
 # Functions to determine unique exposed users over time
 ####################
 
-def unique_exposed_over_time(story_id, tweets, data_directory, ideol_bin_size):
+def unique_exposed_over_time(story_id, tweets, data_directory, ideol_bin_size, mean_exposure_time, sd_exposure_time):
     """
     Function that will determine how many unique users had been exposed to a story over time.
     
-    OUTPUT:
-    - exposed_over_time: a dataframe that contains the time series of tweets and exposure over time for that story.
+    Parameters:
+        story_id (int):             id of article of interest.
+        tweets (dataframe):         dataframe containing all tweets.
+        data_directory (str):       path to high-level data directory.
+        ideol_bin_size (float):     width of bins for ideology, with break at zero.
+        mean_expsoure_time (float): mean time for a user to be exposed to a tweet from someone they follow.
+        sd_exposure_time (float):   standard devistion of time for a user to be exposed to a tweet from someone they follow.
+    
+    Returns:
+        exposed_over_time (dataframe): contains the time series of tweets and exposure over time for that story.
     """
     
     # Filter tweets to those sharing story and sort by time
@@ -48,22 +57,32 @@ def unique_exposed_over_time(story_id, tweets, data_directory, ideol_bin_size):
     selected_tweets['relative_tweet_time'] = selected_tweets['tweet_time'] - selected_tweets['article_first_time']
     selected_tweets['relative_tweet_time'] = selected_tweets['relative_tweet_time'] / np.timedelta64(1, 'h') #convert to hours
     selected_tweets = selected_tweets.sort_values('relative_tweet_time')
+    selected_tweets['tweet_number'] = np.arange(selected_tweets.shape[0])
     
     # We will now create a list of uniquely exposed followers, matched to ideology.
     # Becuase we want to also count users that we do not have ideology scores for, 
     # we will not use our paired tweeter-follower ideology dataset crated in script 5a
     
-    # Load follower IDs for each tweeter
-    followers_per_tweeter = gather_followers(selected_tweets)
+    # Load follower IDs for each tweeter and include important tweet metadata
+    tweets_with_followers = match_followers_to_tweet(article_tweets = selected_tweets, 
+                                                     story_id = story_id, 
+                                                     data_directory = data_directory)
     
     # Count total followers for each user
-    follower_count = pd.DataFrame(followers_per_tweeter['user_id'].value_counts())
+    follower_count = pd.DataFrame(tweets_with_followers[['user_id', 'follower_id']].drop_duplicates()['user_id'].value_counts()) #make sure to get filter first to unique tweeter-follower pairs before counting
     follower_count = follower_count.rename(columns = {'user_id': 'followers'})
     follower_count['user_id'] = follower_count.index.astype('int64')
     follower_count = follower_count.reset_index(drop = True)
     
+    # Account for delay in exposure to each follower
+    exposure_time_offset = time_distribute_exposure(n_followers = tweets_with_followers.shape[0],
+                                                    mean_exposure_time = mean_exposure_time,
+                                                    sd_exposure_time = sd_exposure_time)
+    tweets_with_followers['relative_exposure_time'] = tweets_with_followers['relative_tweet_time'] + exposure_time_offset
+    
     # Drop duplicates so we only keep first instance of exposure per follower
-    followers_per_tweeter = followers_per_tweeter.drop_duplicates(subset = "follower_id", keep = "first")
+    tweets_with_followers = tweets_with_followers.sort_values('relative_exposure_time')
+    tweets_with_followers = tweets_with_followers.drop_duplicates(subset = "follower_id", keep = "first")
     
     # Load ideology scores--of both followers and tweeters (since tweeters can also be followers)
     follower_ideologies = pd.read_csv(data_directory + "data_derived/ideological_scores/cleaned_followers_ideology_scores.csv",
@@ -78,7 +97,7 @@ def unique_exposed_over_time(story_id, tweets, data_directory, ideol_bin_size):
     del tweeter_ideologies
     
     # Merge in follower ideology data
-    followers_per_tweeter = followers_per_tweeter.merge(follower_ideologies, how = "left", on = "follower_id")
+    tweets_with_followers = tweets_with_followers.merge(follower_ideologies, how = "left", on = "follower_id")
 
     # Determine bin edges from size. Ideologies are in range [-2.654, 5.009]
     ideol_bins, bin_labels = create_ideology_bins(follower_ideologies.pablo_score, ideol_bin_size)
@@ -95,7 +114,7 @@ def unique_exposed_over_time(story_id, tweets, data_directory, ideol_bin_size):
     exposed_over_time = create_exposure_dataset(collection_df = exposed_over_time, 
                                                 follower_count = follower_count,
                                                 article_tweets = selected_tweets, 
-                                                follower_data = followers_per_tweeter,
+                                                follower_data = tweets_with_followers,
                                                 bins = ideol_bins,
                                                 bin_labels = bin_labels)
     
@@ -105,40 +124,62 @@ def unique_exposed_over_time(story_id, tweets, data_directory, ideol_bin_size):
     return(exposed_over_time)
     
     
-def gather_followers(article_tweets):
-    """
-    Function that will go through each tweet and will load the follower IDs for each tweeter.
-    
-    OUTPUT
-    - followers_exposed: dataframe listing user ID of each tweeter and all user IDs of their respective followers.
-    """
-    # Drop duplicate tweets from same user so we only gather followers once
-    article_tweets = article_tweets.drop_duplicates(subset = ['user_id'], keep = "first")
-    
-    # Load follower IDs for each tweeter
-    follower_files = os.listdir(data_directory + "data/followers/")
-    followers_exposed = pd.DataFrame(columns = ['user_id', 'follower_id'], dtype = 'int64')
-    for j in np.arange(article_tweets.shape[0]):
-        
-        # Get user ID and appropriate file
-        user_id = article_tweets['user_id'].iloc[j]
-        regex = re.compile(r"[0-9].*_%s.csv" % user_id)
-        file = list(filter(regex.match, follower_files))
-        
-        # Load followers, bind to dataframe
-        followers = load_followers(file, data_directory)
-        if len(followers) > 0:
-            new_row = pd.DataFrame({'user_id': user_id, 'follower_id': followers}, dtype = 'int64')
-            followers_exposed = followers_exposed.append(new_row, ignore_index = True)
-    return followers_exposed
+def match_followers_to_tweet(article_tweets, story_id, data_directory):
+   """
+   Function that will load followers that would have seen a given tweet.
+   
+   Parameters:
+       article_tweets (dataframe): all tweets for this story/article.
+       story_id (int):             id of story/article of interest.
+       data_directory (str):       path to high-level data directory.
+   
+   Returns:
+       matched_followers (dataframe):   dataframe listing tweet ID with the set of follower IDs that could have potentially seen it (i.e., the followers of the user who tweeted it).
+   """
+   
+   # Set place to store compiled lists
+   data_subdir = data_directory + 'data_derived/exposure/compiled_exposed_follower_lists/'
+   os.makedirs(data_subdir, exist_ok = True)
+   
+   # If file already exists, load; otherwise, compile and save.
+   file_name = data_subdir + 'exposedfollowers_story' + str(story_id) + '.csv'
+   col_names = ['user_id', 'follower_id', 'tweet_id', 'tweet_time', 'tweet_number', 'relative_tweet_time']
+   if not os.path.exists(file_name):
+   
+       # Get list of unique users and tweets in this set 
+       unique_users = article_tweets['user_id'].unique()
+       tweet_list = article_tweets[['user_id', 'tweet_id', 'tweet_time', 'tweet_number', 'relative_tweet_time']].copy()
+       del article_tweets
+   
+       # Create paired list of tweeters and followers, batching out to a temp csv   
+       follower_files = os.listdir(data_directory + "data/followers/")
+       for user_id in unique_users:
+           regex = re.compile(r"[0-9].*_%s.csv" % user_id)
+           file = list(filter(regex.match, follower_files))
+           followers = load_followers(file, data_directory)
+           matched_followers = pd.DataFrame({'user_id': user_id, 'follower_id': followers}, dtype = 'int64')
+           matched_followers = matched_followers.merge(tweet_list, how = "left", on = "user_id")
+           matched_followers.to_csv(file_name, mode = "a", index = False, header = False)
+           col_names = matched_followers.columns
+           del matched_followers, followers
+       
+   # Load in compiled list, sort, and return
+   matched_followers = pd.read_csv(file_name, header = None, names = col_names)
+   matched_followers['tweet_time'] = pd.to_datetime(matched_followers['tweet_time'], format = '%Y-%m-%d %H:%M:%S%z')
+   matched_followers = matched_followers.sort_values(by = ['tweet_number'])
+   return matched_followers
     
     
 def load_followers(file, data_directory):
     """
-    Function that will load the follower files or return an empty array if there are no followers for this user
+    Function that will load the follower files or return an empty array if there are no followers for this user.
 
-    OUTPUT
-    - followers:   array of follower user IDs (numpy array, str)
+    Parameters:
+        file (str):           file name of this user's follower data file.
+        data_directory (str): path to high-level data directory.
+        
+    Returns:
+        followers (int64): array of follower user IDs.
     """
     if len(file) == 0: #no followers, no follower file
         followers = np.array([])
@@ -151,9 +192,42 @@ def load_followers(file, data_directory):
     return followers
 
 
+def time_distribute_exposure(n_followers, mean_exposure_time, sd_exposure_time):
+    """
+    Distribute the exposure to a tweet over the time following the tweets, so that exposure for all followers isn't instantaneous.
+    For now, we assume a truncated normal distribution cut off at time +0 and time +48 (the upper bound shouldnbe sufficiently large).
+    
+    Parameters:
+        n_followers (int):          number of followers for which to calcualte the exposure time delay.
+        mean_expsoure_time (float): mean of truncated normal distribution.
+        sd_exposure_time (float):   standard devistion of truncated normal distribution.
+        
+    Returns:
+        added_exposure_time (float): vector that describes at what point after the tweet that the follower was exposed.
+    """
+    
+    lower, upper = 0, 48
+    a = (lower - mean_exposure_time) / sd_exposure_time
+    b = (upper - mean_exposure_time) / sd_exposure_time
+    exposure_dist = stats.truncnorm(a, b, loc = mean_exposure_time, scale = sd_exposure_time)
+    added_exposure_time = exposure_dist.rvs(n_followers)
+    return added_exposure_time
+
+
 def create_exposure_dataset(collection_df, follower_count, article_tweets, follower_data, bins, bin_labels):
     """
-    Function that will go construct our dataset
+    Function that will go construct our dataset.
+    
+    Parameters:
+        collection_df (dataframe):  dataframe that will collect our data.
+        follower_count (dataframe): data for how many followers each tweeter has.
+        article_tweets (dataframe): all tweets for this story/article.
+        follower_data (dataframe):  list of all uniquely exposed followers--i.e., each unique follower only apears once at the point they were exposed--and their ideologies, for those that we have that data.
+        bins (numpy array):         list of all bin edges for binning follower ideologies.
+        bin_labels (numpy array):   list of labels for each bin.
+        
+    Returns:
+        collection_df (dataframe): completed dataset of exposure.
     """
     cumulative_exposed = 0
     already_tweeted = [] #list to keep track of which users have already shown up sequentially
@@ -207,9 +281,13 @@ def create_ideology_bins(ideologies, bin_size):
     """
     Function that computes and creates bins for ideology scores. "Center" bin break is at 0.
     
-    OUTPUT:
-    - bins:     bin edges (numpy array).
-    - labels:   labels for bins (list of str).
+    Parameters:
+        ideologies (pandas series): list of all ideology scores that we have for followers.
+        bin_size (float):           desired width of bins for ideology.
+    
+    Returns:
+        bins (numpy array):     bin edges .
+        labels (list of str):   labels for bins.
     """
     lower_edge = math.floor(ideologies.min() / bin_size) * bin_size
     upper_edge = math.ceil(ideologies.max() / bin_size) * bin_size
@@ -253,7 +331,9 @@ if __name__ == '__main__':
     story_exposed = unique_exposed_over_time(story_id = story, 
                                              tweets = labeled_tweets, 
                                              data_directory = data_directory, 
-                                             ideol_bin_size = 0.5)
+                                             ideol_bin_size = 0.5,
+                                             mean_exposure_time = 1,
+                                             sd_exposure_time = 2)
     story_exposed.to_csv(data_directory + "data_derived/exposure/individual_articles/article_" + str(story) + ".csv", index = False)
 
     # Check if all stories are processed at this point.
