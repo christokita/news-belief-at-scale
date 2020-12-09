@@ -21,7 +21,7 @@ source("scripts/_plot_themes/theme_ctokita.R")
 # Choose grouping of interest. Options: 
 #     (1) article veracity: "article_fc_rating"
 #     (2) source: "source_type"
-grouping <- "article_fc_rating"
+grouping <- "source_type"
 
 # Paths to files/directories
 tweet_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv'
@@ -177,11 +177,6 @@ ggsave(gg_exposuretweet, filename = paste0(outpath, "total_exposed_tweetnumber.p
 ####################
 # Relative tweet time tweet number vs exposure
 ####################
-# Merge data to create relevant dataset
-exposure_vs_tweet <- tweets %>% 
-  select(total_article_number, tweet_number, relative_tweet_count) %>% 
-  merge(exposure_timeseries, ., all.x = TRUE)
-
 # Plot
 gg_expVnum <- exposure_timeseries %>% 
   filter(tweet_number > -1) %>% 
@@ -279,7 +274,8 @@ gg_ideol_dist <- exposure_ideol %>%
   summarise(count = sum(count)) %>% 
   ungroup() %>% 
   group_by(total_article_number, n_articles_in_grouping) %>% 
-  mutate(exposed_prop = count / sum(count)) %>% 
+  mutate(exposed_prop = count / sum(count),
+         exposed_prop = ifelse( is.na(exposed_prop), 0, exposed_prop)) %>% 
   # Now determine average distribution shape by article grouping
   group_by(!!sym(grouping), ideology_bin, n_articles_in_grouping) %>% 
   summarise(avg_exposed_prop = sum(exposed_prop) / unique(n_articles_in_grouping)) %>% 
@@ -338,9 +334,9 @@ gg_fake_expos <- exposure_ideol %>%
   filter(article_fc_rating == "Fake news") %>% 
   group_by(total_article_number, ideology_bin) %>% 
   summarise(count = sum(count, na.rm = TRUE)) %>% 
-  ggplot(., aes(x = as.factor(ideology_bin), y = count, fill = ideology_bin)) +
+  ggplot(., aes(x = ideology_bin, y = count, fill = ideology_bin)) +
   geom_bar(stat = "identity") +
-  scale_x_discrete(labels = axis_labels) +
+  scale_x_continuous(breaks = seq(-3, 6, 3)) +
   scale_y_continuous(labels = comma) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish) +
   xlab("User ideology") +
