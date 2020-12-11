@@ -23,7 +23,7 @@ outpath = data_directory + "data_derived/interventions/"
 
 # Load story and intervention of interest
 story_id = 28
-intervention_time = 2
+intervention_time = 1
 visibility_reduction = 0.5
 intervention_tweets_file = data_directory + "data_derived/interventions/reduceviz{}_t{}/article{}_intervention_tweets.csv".format(visibility_reduction, intervention_time, story_id)
 intervention_tweets = pd.read_csv(intervention_tweets_file, dtype = {'user_id': object, 'tweet_id': object})
@@ -47,6 +47,7 @@ RT_edges_intervention = RT_edges_intervention[RT_edges_intervention['source_twee
 RT_nodes_intervention = RT_nodes[RT_nodes['user_id'].isin(intervention['user_id'])]
 
 # Add total exposed by user 
+RT_nodes_intervention = RT_nodes_intervention.drop(columns = ['new_exposed_users'])
 total_exposed = intervention.groupby(['user_id'])['new_exposed_users'].sum()
 total_exposed = total_exposed.reset_index()
 RT_nodes_intervention = RT_nodes_intervention.merge(total_exposed, on = 'user_id')

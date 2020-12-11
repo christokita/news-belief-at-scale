@@ -54,7 +54,7 @@ def article_tweet_edges(article_id, tweets, articles, fuzzy_matched_URLs, friend
             retweet_edges = retweet_edges.append(edge, sort = False)
             
     # Create total nodelist
-    nodes = selected_tweets[['user_id', 'user_name', 'user_ideology', 'total_article_number']]
+    nodes = selected_tweets[['user_id', 'user_name', 'user_ideology', 'total_article_number']].copy()
     node_tweet_count = pd.value_counts(nodes['user_id']).to_frame().reset_index()
     node_tweet_count = node_tweet_count.rename(columns = {'index': 'user_id', 'user_id': 'tweet_count'}) #count up multiple tweets by same user
     nodes = nodes.drop_duplicates()

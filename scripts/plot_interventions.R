@@ -21,7 +21,8 @@ intervention_dirs <- c('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/inter
                        '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/interventions/reduceviz0.5_t5/',
                        '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/interventions/reduceviz0.5_t4/',
                        '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/interventions/reduceviz0.5_t3/',
-                       '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/interventions/reduceviz0.5_t2/')
+                       '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/interventions/reduceviz0.5_t2/',
+                       '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/interventions/reduceviz0.5_t1/')
 outpath <- 'output/interventions/'
 
 
@@ -103,9 +104,6 @@ gg_exposed_raw
 # Plot relative exposure by intervention
 ####################
 # Filter to data of interest
-low_exposure_stories <- intervention_exposure %>% 
-  filter(replicate == -1,
-         time == 55)
 exposure_decrease <-  intervention_exposure %>% 
   filter(time == 55,
          replicate != -1) %>% 
@@ -135,9 +133,9 @@ gg_relative_exposure <- ggplot(exposure_reduction_estimate, aes(x = intervention
   geom_errorbar(aes(ymin = ci_95_low, ymax = ci_95_high),
                 width = 0, size = 0.5) +
   geom_point(aes(y = est_mean),
-             size = 2) +
+             size = 1) +
   scale_x_continuous(breaks = seq(2, 6, 1)) +
-  scale_y_continuous(breaks = seq(0, 1, 0.05), limits = c(0.6, 0.8)) +
+  scale_y_continuous(breaks = seq(0, 1, 0.05), limits = c(0.5, 0.8), expand = c(0,0)) +
   scale_colour_viridis_c(option = "plasma", direction = -1, end = 0.9, guide = NULL) +
   xlab("Intervention time (hrs)") + 
   ylab("Relative user exposure") +
@@ -150,12 +148,12 @@ ggsave(gg_relative_exposure, filename = paste0(outpath, "relexposure_0.5reductio
 # Plot example intervention time series
 ####################
 intervention_pal <- scales::viridis_pal(begin = 0, end = 0.9, direction = 1, option = "plasma")
-intervention_pal <- intervention_pal(5)
+intervention_pal <- intervention_pal(6)
 
 gg_example_timeseries <- intervention_exposure %>% 
   filter(total_article_number == 28) %>% 
   mutate(intervention_time = ifelse(simulation_type == "no intervention", "No intervention", paste(intervention_time, "hr."))) %>% 
-  mutate(intervention_time = factor(intervention_time, levels = c("No intervention", "6 hr.", "5 hr.", "4 hr.", "3 hr.", "2 hr."))) %>% 
+  mutate(intervention_time = factor(intervention_time, levels = c("No intervention", "6 hr.", "5 hr.", "4 hr.", "3 hr.", "2 hr.", "1 hr."))) %>% 
   ggplot(., aes(x = time, y = cumulative_exposed, color = intervention_time, group = simulation_number, alpha = simulation_type)) +
   geom_line(size = 0.3) +
   scale_y_continuous(breaks = seq(0, 10000000, 2000000), 
@@ -169,11 +167,11 @@ gg_example_timeseries <- intervention_exposure %>%
   xlab("Time since first article share (hrs)") +
   ylab("Total users exposed") +
   theme_ctokita() +
-  theme(legend.position = c(0.85, 0.27),
+  theme(legend.position = "right",
         aspect.ratio = 0.5,
         legend.key.height = unit(0.5, 'mm'),
         legend.spacing = unit(0, 'mm'),
         legend.title = element_text(vjust = -1))
 gg_example_timeseries
-ggsave(gg_example_timeseries, filename = paste0(outpath, "exampleintervention_article28.png"), width = 90, height = 45, units = "mm", dpi = 400)
+ggsave(gg_example_timeseries, filename = paste0(outpath, "exampleintervention_article28.png"), width = 120, height = 45, units = "mm", dpi = 400)
 
