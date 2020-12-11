@@ -241,8 +241,10 @@ if len(temp_files) == n_batches:
 ####################
 #select_est_parameters = select_user = 0
 #
-#import matplotlib.pyplot as plt
-#x = np.linspace(-4, 4, 100)
+# import matplotlib.pyplot as plt
+# x = np.linspace(-4, 4, 100)
 
-#plt.plot(x, stats.norm(loc = est_parameters['mu'], scale = est_parameters['sigma']).pdf(x))    
-#plt.hist(followers.follower_ideology, density = True, bins = np.arange(-5, 5, 0.25))
+# mu  = np.mean(posterior_mu)
+# sigma = np.mean(posterior_sigma)
+# plt.plot(x, stats.norm(loc = mu, scale = sigma).pdf(x))    
+# plt.hist(followers.follower_ideology, density = True, bins = np.arange(-5, 5, 0.25))
