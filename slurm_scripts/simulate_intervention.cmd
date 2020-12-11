@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
-#SBATCH --mem-per-cpu=12gb
+#SBATCH --mem-per-cpu=48gb
 #SBATCH --array=0-28
 #SBATCH --time=71:00:00
 #SBATCH --mail-type=BEGIN,END,FAIL
@@ -13,4 +13,4 @@
 ##Load anaconda python packages
 module load anaconda3 
 ##Run script
-srun python3 scripts/08_model_interventions.py $SLURM_ARRAY_TASK_ID 
+srun python3 scripts/08a_model_interventions.py $SLURM_ARRAY_TASK_ID 
