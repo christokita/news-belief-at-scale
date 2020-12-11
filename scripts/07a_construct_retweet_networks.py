@@ -31,7 +31,7 @@ import multiprocessing as mp
 ####################
 
 
-def article_tweet_edges(article_id, tweets, articles, fuzzy_matched_URLs, friend_files):
+def article_tweet_edges(article_id, tweets, articles, fuzzy_matched_URLs, friend_files, exposure_data, follower_dist_shapes):
     """
     Function that will take a set of tweets, contruct an edge+node list, and save to file.
     Most inputs are self-explanatory, but fuzzy_matched_URLs is the list of URLs generated for previously unmatched tweets (see script 03b).
@@ -62,6 +62,14 @@ def article_tweet_edges(article_id, tweets, articles, fuzzy_matched_URLs, friend
     nodes['ID'] = nodes['user_id'] #for Gephi
     nodes['Label'] = nodes['user_name'] #for Gephi
     
+    # Add tweet exposure metadata to node
+    article_exposure_data = exposure_data[exposure_data.total_article_number == article_id].copy()
+    article_exposure_data = article_exposure_data.drop(columns = ['total_article_number'])
+    exposure_summary = article_exposure_data.groupby(['user_id', 'follower_count'])['new_exposed_users'].sum().reset_index() #reset_index to get back user_id as column instead of row id
+    nodes = nodes.merge(follower_dist_shapes[['user_id', 'mu']], on = 'user_id', how = 'left')
+    nodes = nodes.merge(exposure_summary, on = 'user_id', how = 'left')
+    nodes = nodes.rename(columns = {'mu': 'avg_follower_ideology'})
+
     # Write to file
     retweet_edges.to_csv(data_directory + "data_derived/networks/specific_article_networks/article" + str(article_id) + "_edges.csv", index = False)
     nodes.to_csv(data_directory + "data_derived/networks/specific_article_networks/article" + str(article_id) + "_nodes.csv", index = False) 
@@ -288,11 +296,16 @@ if __name__ == '__main__':
 
     # Get list of friend files for reference
     friend_files = [file for file in os.listdir(data_directory + "data/friends/") if re.match('^[0-9]', file)] #filter out hidden copies of same files
+    
+    # Load exposure and follower dist shapes to add node info on number exposed and average exposure ideology
+    exposure_data = pd.read_csv(data_directory + 'data_derived/exposure/users_exposed_over_time.csv', dtype = {'user_id': object, 'tweet_id': object})
+    exposure_data = exposure_data[['user_id', 'follower_count', 'new_exposed_users', 'total_article_number']].copy()
+    follower_dist_shapes = pd.read_csv(data_directory + 'data_derived/ideological_scores/estimated_ideol_distributions/follower_ideology_distribution_shapes.csv', dtype = {'user_id': object})
 
     # Process article tweets in parallel, writing individual article networks to file
     pool = mp.Pool(mp.cpu_count())
     for article_id in unique_articles:
-        pool.apply_async(article_tweet_edges, args = (article_id, tweets, articles, confirmed_matches, friend_files))
+        pool.apply_async(article_tweet_edges, args = (article_id, tweets, articles, confirmed_matches, friend_files, exposure_data, follower_dist_shapes))
     pool.close()
     pool.join()
     
