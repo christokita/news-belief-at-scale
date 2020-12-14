@@ -134,7 +134,7 @@ gg_relative_exposure <- ggplot(exposure_reduction_estimate, aes(x = intervention
                 width = 0, size = 0.5) +
   geom_point(aes(y = est_mean),
              size = 1) +
-  scale_x_continuous(breaks = seq(2, 6, 1)) +
+  scale_x_continuous(breaks = seq(1, 6, 1)) +
   scale_y_continuous(breaks = seq(0, 1, 0.05), limits = c(0.5, 0.8), expand = c(0,0)) +
   scale_colour_viridis_c(option = "plasma", direction = -1, end = 0.9, guide = NULL) +
   xlab("Intervention time (hrs)") + 

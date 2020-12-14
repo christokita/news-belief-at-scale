@@ -16,7 +16,7 @@ library(scales)
 source("scripts/_plot_themes/theme_ctokita.R")
 
 ####################
-# Paramters for analysis: grouping of interest, paths to data, paths for output, and filename
+# Parameters for analysis: grouping of interest, paths to data, paths for output, and filename
 ####################
 # Choose grouping of interest. Options: 
 #     (1) article veracity: "article_fc_rating"
