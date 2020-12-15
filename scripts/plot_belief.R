@@ -161,7 +161,7 @@ gg_ideol_total <- belief_ideol %>%
   # Plot
   ggplot(., aes(x = ideology_bin, y = count, fill = ideology_bin)) +
   geom_bar(stat = "identity") +
-  scale_x_continuous(limits = c(-5.5, 5.5), expand = c(0, 0), breaks = seq(-5, 5, 1)) +
+  scale_x_continuous(limits = c(-6, 6), expand = c(0, 0), breaks = seq(-6, 6, 2)) +
   scale_y_continuous(labels = comma) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish) +
   xlab("User ideology") +
@@ -171,10 +171,10 @@ gg_ideol_total <- belief_ideol %>%
         aspect.ratio = NULL) +
   facet_wrap(as.formula(paste("~", grouping)), 
              ncol = 1,
-             strip.position = "right",
+             strip.position = "top",
              scales = "free")
 gg_ideol_total
-ggsave(gg_ideol_total, filename = paste0(outpath, "ideol_total_belief.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideol_total, filename = paste0(outpath, "ideol_total_belief.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
 
 
 ####################
@@ -187,7 +187,7 @@ gg_ideol_avg <- belief_ideol %>%
   # Plot
   ggplot(., aes(x = ideology_bin, y = avg_count, fill = ideology_bin)) +
   geom_bar(stat = "identity") +
-  scale_x_continuous(limits = c(-5.5, 5.5), expand = c(0, 0), breaks = seq(-5, 5, 1)) +
+  scale_x_continuous(limits = c(-6, 6), expand = c(0, 0), breaks = seq(-6, 6, 2)) +
   scale_y_continuous(labels = comma) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish) +
   xlab("User ideology") +
@@ -197,10 +197,10 @@ gg_ideol_avg <- belief_ideol %>%
         aspect.ratio = NULL) +
   facet_wrap(as.formula(paste("~", grouping)), 
              ncol = 1,
-             strip.position = "right",
+             strip.position = "top",
              scales = "free")
 gg_ideol_avg
-ggsave(gg_ideol_avg, filename = paste0(outpath, "ideol_avg_belief.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideol_avg, filename = paste0(outpath, "ideol_avg_belief.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
 
 
 ####################
@@ -219,8 +219,8 @@ gg_ideol_dist <- belief_ideol %>%
   # Plot
   ggplot(., aes(x = ideology_bin, y = avg_belief_prop, fill = ideology_bin)) +
   geom_bar(stat = "identity") +
-  scale_x_continuous(limits = c(-5.5, 5.5), expand = c(0, 0), breaks = seq(-5, 5, 1)) +
-  scale_y_continuous(breaks = seq(0, 1, 0.05)) +
+  scale_x_continuous(limits = c(-6, 6), expand = c(0, 0), breaks = seq(-6, 6, 2)) +
+  scale_y_continuous(breaks = seq(0, 1, 0.05), limits = c(0, 0.25)) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish) +
   xlab("User ideology") +
   ylab("Avg. proportion of article beliefs") +
@@ -229,11 +229,11 @@ gg_ideol_dist <- belief_ideol %>%
         aspect.ratio = NULL) +
   facet_wrap(as.formula(paste("~", grouping)), 
              ncol = 1,
-             strip.position = "right",
+             strip.position = "top",
              scales = "free_x")
 gg_ideol_dist
 
-ggsave(gg_ideol_dist, filename = paste0(outpath, "ideol_avg_belief_distribution.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideol_dist, filename = paste0(outpath, "ideol_avg_belief_distribution.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
 
 
 ####################

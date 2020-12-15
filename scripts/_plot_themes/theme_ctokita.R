@@ -25,7 +25,7 @@ theme_ctokita <- function(base_font_size = 6, base_font_color = "black", base_fo
       legend.key.size = unit(3, "mm"),
       legend.key.width = unit(2, "mm"),
       # Panel/strip settings
-      strip.text      = element_text(size = base_font_size+1, color = base_font_color, family = base_font_family),
+      strip.text      = element_text(size = base_font_size+1, color = base_font_color, family = base_font_family, face = "bold"),
       strip.background = element_blank(),
       # General plot settings
       # plot.background = element_blank(),
