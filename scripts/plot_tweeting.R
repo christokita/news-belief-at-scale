@@ -21,7 +21,7 @@ source("scripts/_plot_themes/theme_ctokita.R")
 # Choose grouping of interest. Options: 
 #     (1) article veracity: "article_fc_rating"
 #     (2) source: "source_type"
-grouping <- "article_fc_rating"
+grouping <- "source_type"
 
 # Paths to files/directories
 tweet_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv' #path to fitness cascade data
@@ -402,10 +402,10 @@ gg_ideoltimesource <- tweets %>%
   filter(!is.na(user_ideology),
          article_fc_rating %in% c("Fake news", "True news")) %>% 
   mutate(ideol_bin = cut(user_ideology, breaks = c(-6, -1, 1, 6), labels = c(-1, 0, 1), right = FALSE, include.lowest = TRUE)) %>%
-  group_by(article_fc_rating, source_type, article_fc_rating, total_article_number, hour_bin) %>% 
+  group_by(article_fc_rating, source_type, total_article_number, hour_bin) %>% 
   count(ideol_bin) %>% 
   mutate(freq_ideol_bin = n / sum(n)) %>% 
-  group_by(article_fc_rating, source_type, article_fc_rating, hour_bin, ideol_bin) %>% 
+  group_by(article_fc_rating, source_type, hour_bin, ideol_bin) %>% 
   summarise(freq_ideol_bin = mean(freq_ideol_bin)) %>% 
   ggplot(., aes(x = hour_bin, y = freq_ideol_bin, fill = factor(ideol_bin, levels = c(1, 0, -1)))) +
   geom_bar(position = "fill", stat = "identity", width = 1) +

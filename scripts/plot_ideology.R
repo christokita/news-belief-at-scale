@@ -20,7 +20,7 @@ source("scripts/_plot_themes/theme_ctokita.R")
 # Choose grouping of interest. Options: 
 #     (1) article veracity: "article_fc_rating"
 #     (2) source: "source_type"
-grouping <- "source_type"
+grouping <- "article_fc_rating"
 
 # Paths to data
 tweeter_score_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv' 
@@ -219,7 +219,7 @@ gg_dist_shapes <- shapes %>%
   filter(basis == "followers") %>% 
   select(user_id, mu, sigma, user_ideology) %>% 
   distinct() %>% 
-  ggplot(., aes(x = mu, y = sigma)) +
+  ggplot(., aes(x = mu, y = sigma, color = user_ideology)) +
   geom_point(alpha = 0.15, size = 0.3, stroke = 0) +
   scale_color_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish, name = "User\nideology") +
   xlab("Est. mean follower ideology") +
@@ -340,7 +340,7 @@ ggsave(gg_articlelean, file = paste0(outpath, "ideologies_byarticlelean.pdf"), w
 
 # Tweeter ideology vs article ideology
 gg_articleideol <- tweets %>% 
-  filter(article_fc_rating %in% c("FM", "T"),
+  filter(article_fc_rating %in% c("Fake news", "True news"),
          !is.na(user_ideology)) %>% 
   ggplot(., aes(x = user_ideology, y = article_ideology, color = article_lean)) +
   geom_hline(aes(yintercept = 0), size = 0.3, linetype = "dotted") +
@@ -362,7 +362,7 @@ ggsave(gg_articleideol, file = paste0(outpath, "ideology_vs_articleideology.pdf"
 
 ###### Just FM articles #####
 gg_articlelean <- tweets %>% 
-  filter(article_fc_rating == "FM") %>% 
+  filter(article_fc_rating == "Fake news") %>% 
   ggplot(., aes(x = user_ideology, group = article_lean, fill = article_lean)) +
   geom_histogram(position = 'identity', binwidth = 0.25) +
   xlab("Tweeter ideology") +
