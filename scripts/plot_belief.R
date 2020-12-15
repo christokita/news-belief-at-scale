@@ -21,7 +21,7 @@ source("scripts/_plot_themes/theme_ctokita.R")
 # Choose grouping of interest. Options: 
 #     (1) article veracity: "article_fc_rating"
 #     (2) source: "source_type"
-grouping <- "source_type"
+grouping <- "article_fc_rating"
 
 # Paths to files/directories
 tweet_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv' #path to fitness cascade data
@@ -212,7 +212,8 @@ gg_ideol_dist <- belief_ideol %>%
   summarise(count = sum(count)) %>% 
   ungroup() %>% 
   group_by(total_article_number) %>% 
-  mutate(belief_prop = count / sum(count)) %>% 
+  mutate(belief_prop = count / sum(count),
+         belief_prop = ifelse( is.na(belief_prop), 0, belief_prop)) %>% 
   group_by(!!sym(grouping), ideology_bin) %>% 
   summarise(avg_belief_prop = sum(belief_prop) / unique(n_articles_in_grouping)) %>% 
   # Plot
