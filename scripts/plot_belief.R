@@ -174,7 +174,7 @@ gg_ideol_total <- belief_ideol %>%
              strip.position = "right",
              scales = "free")
 gg_ideol_total
-ggsave(gg_ideol_total, filename = paste0(outpath, "ideol_total_belief.png"), width = 90, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideol_total, filename = paste0(outpath, "ideol_total_belief.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
 
 
 ####################
@@ -200,7 +200,7 @@ gg_ideol_avg <- belief_ideol %>%
              strip.position = "right",
              scales = "free")
 gg_ideol_avg
-ggsave(gg_ideol_avg, filename = paste0(outpath, "ideol_avg_belief.png"), width = 90, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideol_avg, filename = paste0(outpath, "ideol_avg_belief.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
 
 
 ####################
@@ -232,7 +232,7 @@ gg_ideol_dist <- belief_ideol %>%
              scales = "free_x")
 gg_ideol_dist
 
-ggsave(gg_ideol_dist, filename = paste0(outpath, "ideol_avg_belief_distribution.png"), width = 90, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideol_dist, filename = paste0(outpath, "ideol_avg_belief_distribution.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
 
 
 ####################
@@ -258,7 +258,7 @@ gg_ideoltime <- belief_ideol %>%
              strip.position = "right",
              scales = "free")
 gg_ideoltime
-ggsave(gg_ideoltime, filename = paste0(outpath, "ideol_belief_hourbin.png"), width = 90, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideoltime, filename = paste0(outpath, "ideol_belief_hourbin.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
 
 
 # gg_ideoltime_binned <-  exposure_timeseries %>% 

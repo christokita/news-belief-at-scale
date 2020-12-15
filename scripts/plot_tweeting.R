@@ -141,7 +141,7 @@ gg_totaltweets <- tweets %>%
              ncol = 1,
              strip.position = "right")
 gg_totaltweets
-ggsave(gg_totaltweets, filename = paste0(outpath,"total_tweets_time.png"), width = 90, height = 45, units = "mm", dpi = 400)
+ggsave(gg_totaltweets, filename = paste0(outpath,"total_tweets_time.pdf"), width = 90, height = 45, units = "mm", dpi = 400)
 
 # Color by other factor
 if (grouping == "article_fc_rating") {
@@ -172,7 +172,7 @@ gg_totaltweets_color <- tweets %>%
              ncol = 1,
              strip.position = "right")
 gg_totaltweets_color
-ggsave(gg_totaltweets_color, filename = paste0(outpath,"total_tweets_time_", plot_tag, ".png"), width = 90, height = 45, units = "mm", dpi = 400)
+ggsave(gg_totaltweets_color, filename = paste0(outpath,"total_tweets_time_", plot_tag, ".pdf"), width = 90, height = 45, units = "mm", dpi = 400)
 
 ####################
 # Percentiage of tweets per story
@@ -193,7 +193,7 @@ gg_perctweets <- tweets %>%
              ncol = 1,
              strip.position = "right")
 gg_perctweets
-ggsave(gg_perctweets, filename = paste0(outpath, "relative_tweets_time.png"), width = 90, height = 45, units = "mm", dpi = 400)
+ggsave(gg_perctweets, filename = paste0(outpath, "relative_tweets_time.pdf"), width = 90, height = 45, units = "mm", dpi = 400)
 
 
 ####################
@@ -215,7 +215,7 @@ for (percentile in percentiles) {
                ncol = 1,
                strip.position = "right")
   gg_saturationcount
-  ggsave(gg_saturationcount, filename = paste0(outpath, "story_saturation", percentile*100, ".png"), width = 55, height = 90, units = "mm", dpi = 400)
+  ggsave(gg_saturationcount, filename = paste0(outpath, "story_saturation", percentile*100, ".pdf"), width = 55, height = 90, units = "mm", dpi = 400)
   
 }  
 
@@ -251,7 +251,7 @@ gg_retweets <- tweets %>%
              ncol = 1,
              strip.position = "right")
 gg_retweets
-ggsave(gg_retweets, filename = paste0(outpath, "RTpercentage.png"), width = 55, height = 45, units = "mm", dpi = 400)
+ggsave(gg_retweets, filename = paste0(outpath, "RTpercentage.pdf"), width = 55, height = 45, units = "mm", dpi = 400)
   
 
 
@@ -292,7 +292,7 @@ gg_ideoldisttime <- tweets %>%
              strip.position = "right",
              ncol = 1)
 gg_ideoldisttime
-ggsave(gg_ideoldisttime, filename = paste0(outpath, "relative_ideology_dist.png"), width = 100, height = 45, units = "mm", dpi = 400)
+ggsave(gg_ideoldisttime, filename = paste0(outpath, "relative_ideology_dist.pdf"), width = 100, height = 45, units = "mm", dpi = 400)
 
 
 ####################
@@ -325,7 +325,7 @@ gg_ideoltime <- tweets %>%
              ncol = 1,
              strip.position = "right")
 gg_ideoltime
-ggsave(gg_ideoltime, filename = paste0(outpath,"ideology_dist.png"), width = 90, height = 45, units = "mm", dpi = 400)
+ggsave(gg_ideoltime, filename = paste0(outpath,"ideology_dist.pdf"), width = 90, height = 45, units = "mm", dpi = 400)
 
 # Fine scale breakdown
 gg_ideoltime_fine <- tweets %>% 
@@ -351,7 +351,7 @@ gg_ideoltime_fine <- tweets %>%
         legend.box.margin = unit(c(0, 0, 0, 0), "mm")) +
   facet_grid(as.formula(paste(grouping, "~", "article_lean")))
 gg_ideoltime_fine
-ggsave(gg_ideoltime_fine, filename = paste0(outpath,"ideology_dist_articlelean.png"), width = 120, height = 45, units = "mm", dpi = 400)
+ggsave(gg_ideoltime_fine, filename = paste0(outpath,"ideology_dist_articlelean.pdf"), width = 120, height = 45, units = "mm", dpi = 400)
 
 
 ####################
@@ -373,7 +373,7 @@ gg_ideoltime_raw <- tweets %>%
              ncol = 1,
              strip.position = "right")
 gg_ideoltime_raw
-ggsave(gg_ideoltime_raw, filename = paste0(outpath, "ideology_raw.png"), width = 90, height = 45, units = "mm", dpi = 400)
+ggsave(gg_ideoltime_raw, filename = paste0(outpath, "ideology_raw.pdf"), width = 90, height = 45, units = "mm", dpi = 400)
 
 # Break out additionally by article lean
 gg_ideoltime_raw <- tweets %>% 
@@ -390,7 +390,7 @@ gg_ideoltime_raw <- tweets %>%
         legend.position = "none") +
   facet_grid(as.formula(paste(grouping, "~", "article_lean")))
 gg_ideoltime_raw
-ggsave(gg_ideoltime_raw, filename = paste0(outpath, "ideology_raw_articlelean.png"), width = 90, height = 45, units = "mm", dpi = 400)
+ggsave(gg_ideoltime_raw, filename = paste0(outpath, "ideology_raw_articlelean.pdf"), width = 90, height = 45, units = "mm", dpi = 400)
 
 
 ####################
@@ -420,7 +420,7 @@ gg_ideoltimesource <- tweets %>%
         legend.box.margin = unit(c(0, 0, 0, 0), "mm")) +
   facet_grid(article_fc_rating~source_type)
 gg_ideoltimesource
-ggsave(gg_ideoltimesource, filename = paste0(outpath, "ideology_dist_bysourceandveracity.png"), width = 90, height = 45, units = "mm", dpi = 400)
+ggsave(gg_ideoltimesource, filename = paste0(outpath, "ideology_dist_bysourceandveracity.pdf"), width = 90, height = 45, units = "mm", dpi = 400)
 
 
 

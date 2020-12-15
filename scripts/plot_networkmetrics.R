@@ -126,7 +126,7 @@ gg_degree_dist <- degree_data %>%
         legend.background = element_blank()) +
   guides(color = guide_legend(override.aes = list(size = 1.25)))
 gg_degree_dist
-ggsave(gg_degree_dist, filename = paste0(outpath, subdir_out, "degreedistribution.png"), width = 45, height = 45, units = "mm")
+ggsave(gg_degree_dist, filename = paste0(outpath, subdir_out, "degreedistribution.pdf"), width = 45, height = 45, units = "mm")
 
 
 ####################
@@ -224,7 +224,7 @@ gg_bin_deg_dist <- ggplot() +
         legend.background = element_blank()) +
   guides(color = guide_legend(override.aes = list(size = 1.25)))
 gg_bin_deg_dist
-ggsave(gg_bin_deg_dist, filename = paste0(outpath, subdir_out, "degreedistribution_binned.png"), width = 45, height = 45, units = "mm")
+ggsave(gg_bin_deg_dist, filename = paste0(outpath, subdir_out, "degreedistribution_binned.pdf"), width = 45, height = 45, units = "mm")
 
 
 ####################
@@ -241,7 +241,7 @@ gg_tweettypes <- rt_edges %>%
   theme_ctokita() +
   theme(legend.position = "none")
 gg_tweettypes
-ggsave(gg_tweettypes, filename = paste0(outpath, "RT_type.png"), width = 60, heigh = 60, units = "mm", dpi = 400)
+ggsave(gg_tweettypes, filename = paste0(outpath, "RT_type.pdf"), width = 60, heigh = 60, units = "mm", dpi = 400)
 
 
 ############################## Ideology in networks ##############################
@@ -259,7 +259,7 @@ gg_ideodiversity <- network_metrics %>%
   xlab("") +
   theme_ctokita()
 gg_ideodiversity
-ggsave(gg_ideodiversity, filename = paste0(outpath, "ideodiversity_byveracity.png"), width = 45, height = 45, units = "mm")
+ggsave(gg_ideodiversity, filename = paste0(outpath, "ideodiversity_byveracity.pdf"), width = 45, height = 45, units = "mm")
 
 
 
@@ -279,4 +279,4 @@ gg_veracitydensity <- network_metrics %>%
   xlab("") +
   theme_ctokita()
 gg_veracitydensity
-ggsave(gg_veracitydensity, filename = paste0(outpath, "networkdensity_byveracity.png"), width = 45, height = 45, units = "mm", dpi = 400)
+ggsave(gg_veracitydensity, filename = paste0(outpath, "networkdensity_byveracity.pdf"), width = 45, height = 45, units = "mm", dpi = 400)

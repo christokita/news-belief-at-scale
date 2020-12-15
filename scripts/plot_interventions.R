@@ -141,7 +141,7 @@ gg_relative_exposure <- ggplot(exposure_reduction_estimate, aes(x = intervention
   ylab("Relative user exposure") +
   theme_ctokita()
 gg_relative_exposure
-ggsave(gg_relative_exposure, filename = paste0(outpath, "relexposure_0.5reduction_by_interventiontime.png"), width = 45, height = 45, units = "mm", dpi = 400)
+ggsave(gg_relative_exposure, filename = paste0(outpath, "relexposure_0.5reduction_by_interventiontime.pdf"), width = 45, height = 45, units = "mm", dpi = 400)
 
 
 ####################
@@ -173,5 +173,5 @@ gg_example_timeseries <- intervention_exposure %>%
         legend.spacing = unit(0, 'mm'),
         legend.title = element_text(vjust = -1))
 gg_example_timeseries
-ggsave(gg_example_timeseries, filename = paste0(outpath, "exampleintervention_article28.png"), width = 120, height = 45, units = "mm", dpi = 400)
+ggsave(gg_example_timeseries, filename = paste0(outpath, "exampleintervention_article28.pdf"), width = 120, height = 45, units = "mm", dpi = 400)
 

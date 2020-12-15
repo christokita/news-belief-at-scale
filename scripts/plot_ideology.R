@@ -105,7 +105,7 @@ gg_ideoltweets <- tweets %>%
              ncol = 1, 
              strip.position = "right")
 gg_ideoltweets
-ggsave(gg_ideoltweets, file = paste0(outpath, "total_tweets_by_ideology.png"), width = 90, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideoltweets, file = paste0(outpath, "total_tweets_by_ideology.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
 
 
 # Plot ideological extremity
@@ -150,7 +150,7 @@ gg_ideoldist_tweeters <- tweets %>%
              ncol = 1, 
              strip.position = "right")
 gg_ideoldist_tweeters
-ggsave(gg_ideoldist_tweeters, file = paste0(outpath, "average_tweeter_ideoldist.png"), width = 90, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideoldist_tweeters, file = paste0(outpath, "average_tweeter_ideoldist.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
 
 
 ####################
@@ -183,7 +183,7 @@ gg_ideoldist_retweet <- tweets %>%
              ncol = 1, 
              strip.position = "right")
 gg_ideoldist_retweet
-ggsave(gg_ideoldist_retweet, file = paste0(outpath, "average_retweeter_ideoldist.png"), width = 90, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideoldist_retweet, file = paste0(outpath, "average_retweeter_ideoldist.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
 
 # Plot by total article number
 gg_ideoldist_article <- tweets %>% 
@@ -227,7 +227,7 @@ gg_dist_shapes <- shapes %>%
   theme_ctokita()
 gg_dist_shapes
 
-ggsave(gg_dist_shapes, filename = paste0(outpath, "follower_dist_shapes.png"), width = 60, height = 45, units = "mm", dpi = 400)
+ggsave(gg_dist_shapes, filename = paste0(outpath, "follower_dist_shapes.pdf"), width = 60, height = 45, units = "mm", dpi = 400)
 
 
 ####################
@@ -276,7 +276,7 @@ gg_ideology_comp <- ggMarginal(gg_ideology_comp, type = "histogram", fill = plot
                                yparams = list( bins = 30 ))
 gg_ideology_comp
 
-ggsave(gg_ideology_comp, filename = paste0(outpath, "ideology_comparison_user-follower.png"), width = 60, height = 60, units = "mm", dpi = 400)
+ggsave(gg_ideology_comp, filename = paste0(outpath, "ideology_comparison_user-follower.pdf"), width = 60, height = 60, units = "mm", dpi = 400)
 
 
 
@@ -300,7 +300,7 @@ gg_fmtweeters <- tweets %>%
   theme_ctokita() +
   theme(aspect.ratio = 0.5)
 gg_fmtweeters
-ggsave(gg_fmtweeters, file = paste0(outpath, "FMtweeters_ideologies_bysource.png"), width = 120, height = 45, units = "mm", dpi = 400)
+ggsave(gg_fmtweeters, file = paste0(outpath, "FMtweeters_ideologies_bysource.pdf"), width = 120, height = 45, units = "mm", dpi = 400)
 
 # Just liberal and conservative sources
 gg_fmtweeters_libcon <- tweets %>% 
@@ -315,7 +315,7 @@ gg_fmtweeters_libcon <- tweets %>%
   theme_ctokita() +
   theme(aspect.ratio = 0.5)
 gg_fmtweeters_libcon
-ggsave(gg_fmtweeters_libcon, file = paste0(outpath, "FMtweeters_ideologies_lib-con-sources.png"), width = 120, height = 45, units = "mm", dpi = 400)
+ggsave(gg_fmtweeters_libcon, file = paste0(outpath, "FMtweeters_ideologies_lib-con-sources.pdf"), width = 120, height = 45, units = "mm", dpi = 400)
 
 
 ####################
@@ -336,7 +336,7 @@ gg_articlelean <- ggplot(data = tweets, aes(x = user_ideology, group = article_l
         strip.text = element_blank(),
         aspect.ratio = 0.2)
 gg_articlelean
-ggsave(gg_articlelean, file = paste0(outpath, "ideologies_byarticlelean.png"), width = 90, height = 70, units = "mm", dpi = 400)
+ggsave(gg_articlelean, file = paste0(outpath, "ideologies_byarticlelean.pdf"), width = 90, height = 70, units = "mm", dpi = 400)
 
 # Tweeter ideology vs article ideology
 gg_articleideol <- tweets %>% 
@@ -357,7 +357,7 @@ gg_articleideol <- tweets %>%
   theme_ctokita() +
   facet_wrap(~article_fc_rating, scales = "free")
 gg_articleideol
-ggsave(gg_articleideol, file = paste0(outpath, "ideology_vs_articleideology.png"), width = 100, height = 45, units = "mm", dpi = 400)
+ggsave(gg_articleideol, file = paste0(outpath, "ideology_vs_articleideology.pdf"), width = 100, height = 45, units = "mm", dpi = 400)
 
 
 ###### Just FM articles #####
@@ -375,7 +375,7 @@ gg_articlelean <- tweets %>%
         strip.text = element_blank(),
         aspect.ratio = 0.2)
 gg_articlelean
-ggsave(gg_articlelean, file = paste0(outpath, "FMtweeters_ideologies_byarticlelean.png"), width = 90, height = 70, units = "mm", dpi = 400)
+ggsave(gg_articlelean, file = paste0(outpath, "FMtweeters_ideologies_byarticlelean.pdf"), width = 90, height = 70, units = "mm", dpi = 400)
 
 
 

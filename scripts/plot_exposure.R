@@ -131,7 +131,7 @@ gg_exposuretime <- exposure_timeseries %>%
              ncol = 1,
              strip.position = "right")
 gg_exposuretime
-ggsave(gg_exposuretime, filename = paste0(outpath, "total_exposed_time.png"), width = 90, height = 45, units = "mm", dpi = 400)
+ggsave(gg_exposuretime, filename = paste0(outpath, "total_exposed_time.pdf"), width = 90, height = 45, units = "mm", dpi = 400)
 
 
 ####################
@@ -151,7 +151,7 @@ gg_relexpostime <- exposure_timeseries %>%
              ncol = 1,
              strip.position = "right")
 gg_relexpostime
-ggsave(gg_relexpostime, filename = paste0(outpath, "percentage_exposed_time.png"), width = 90, height = 45, units = "mm", dpi = 400)
+ggsave(gg_relexpostime, filename = paste0(outpath, "percentage_exposed_time.pdf"), width = 90, height = 45, units = "mm", dpi = 400)
 
 
 ####################
@@ -171,7 +171,7 @@ gg_exposuretweet <- exposure_timeseries %>%
              ncol = 1,
              strip.position = "right")
 gg_exposuretweet
-ggsave(gg_exposuretweet, filename = paste0(outpath, "total_exposed_tweetnumber.png"), width = 90, height = 45, units = "mm", dpi = 400)
+ggsave(gg_exposuretweet, filename = paste0(outpath, "total_exposed_tweetnumber.pdf"), width = 90, height = 45, units = "mm", dpi = 400)
 
 
 ####################
@@ -192,7 +192,7 @@ gg_expVnum <- exposure_timeseries %>%
              strip.position = "right",
              scales = "free_x")
 gg_expVnum
-ggsave(gg_expVnum, filename = paste0(outpath, "relative_tweet_vs_exposure.png"), width = 50, height = 90, units = "mm", dpi = 400)
+ggsave(gg_expVnum, filename = paste0(outpath, "relative_tweet_vs_exposure.pdf"), width = 50, height = 90, units = "mm", dpi = 400)
 
 
 
@@ -237,7 +237,7 @@ gg_ideol_total <- exposure_ideol %>%
              strip.position = "right",
              scales = "free")
 gg_ideol_total
-ggsave(gg_ideol_total, filename = paste0(outpath, "ideol_total_exposed.png"), width = 90, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideol_total, filename = paste0(outpath, "ideol_total_exposed.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
 
 
 ####################
@@ -261,7 +261,7 @@ gg_ideol_avg <- exposure_ideol %>%
              strip.position = "right",
              scales = "free")
 gg_ideol_avg
-ggsave(gg_ideol_avg, filename = paste0(outpath, "ideol_avg_exposed.png"), width = 90, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideol_avg, filename = paste0(outpath, "ideol_avg_exposed.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
 
 
 ####################
@@ -296,7 +296,7 @@ gg_ideol_dist <- exposure_ideol %>%
              scales = "free_x")
 gg_ideol_dist  
   
-ggsave(gg_ideol_dist, filename = paste0(outpath, "ideol_avg_exposure_distribution.png"), width = 90, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideol_dist, filename = paste0(outpath, "ideol_avg_exposure_distribution.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
 
 
 ####################
@@ -323,7 +323,7 @@ gg_ideoltime <- exposure_ideol %>%
              strip.position = "right",
              scales = "free")
 gg_ideoltime
-ggsave(gg_ideoltime, filename = paste0(outpath, "ideol_exposed_hourbin.png"), width = 90, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideoltime, filename = paste0(outpath, "ideol_exposed_hourbin.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
 
 
 
@@ -345,4 +345,4 @@ gg_fake_expos <- exposure_ideol %>%
   theme(legend.position = "none") +
   facet_wrap(~total_article_number)
 gg_fake_expos
-ggsave(gg_fake_expos, filename = paste0(outpath, "fake_news_exposure_by_article.png"), width = 180, height = 180, units = "mm", dpi = 400)
+ggsave(gg_fake_expos, filename = paste0(outpath, "fake_news_exposure_by_article.pdf"), width = 180, height = 180, units = "mm", dpi = 400)
