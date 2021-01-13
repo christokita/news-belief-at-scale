@@ -25,9 +25,10 @@ data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster stora
 outpath = data_directory + "data_derived/interventions/"
 
 # Parameters for simulation
-n_replicates = 10
-intervention_time = 6
-visibility_reduction = 0.5
+n_replicates = 20
+# intervention_time = 6
+visibility_reduction = 0
+sharing_reduction = 0.25
 which_story = int(sys.argv[1]) #get from command line
 
 
@@ -35,9 +36,12 @@ which_story = int(sys.argv[1]) #get from command line
 # Functions for modeling interventions
 ####################
 # Simualte the proposed intervention in which users are x% less likely to see a tweet after time point t
-def simulate_intervention(tweets, paired_tweets_followers, RT_network, visibility_reduction, intervention_time, replicate_number, mean_time_to_exposure, sd_time_to_exposure):
+def simulate_intervention(tweets, paired_tweets_followers, RT_network, sharing_reduction, visibility_reduction, intervention_time, replicate_number, mean_time_to_exposure, sd_time_to_exposure):
     """
-    Function that will simulate an intervention in which users are ::visibility_reduction::% less likely to see a tweet after time point ::intervention_time::
+    Function that will simulate an intervention in which users are 
+    ::sharing_reduction::% less likely to share and 
+    ::visibility_reduction::% less likely to see
+    a tweet after time point ::intervention_time::.
         
     OUTPUT:
         - 
@@ -50,7 +54,7 @@ def simulate_intervention(tweets, paired_tweets_followers, RT_network, visibilit
     removed = np.random.choice([True, False], 
                                 size = affected_RTs.shape[0], 
                                 replace = True, 
-                                p = [visibility_reduction, 1-visibility_reduction])
+                                p = [sharing_reduction, 1-sharing_reduction])
     removed_RTs = affected_RTs.iloc[removed].copy()
     
     # Remove RTs of RTs that were already removed by intervention (i.e., can't RT a tweet that didn't happen)
@@ -61,6 +65,9 @@ def simulate_intervention(tweets, paired_tweets_followers, RT_network, visibilit
     intervention_tweets = tweets[~tweets['tweet_id'].isin(removed_RTs.tweet_id)].copy()
     intervention_tweets['replicate'] = replicate_number
     intervention_tweets['tweet_number'] = np.arange(intervention_tweets.shape[0])
+    intervention_tweets.insert(0, 'sharing_reduction', sharing_reduction) #insert column labeling intervention info at beginning
+    intervention_tweets.insert(0, 'visibility_reduction', visibility_reduction) #insert column labeling intervention info at beginning
+    intervention_tweets.insert(0, 'intervention_time', intervention_time) #insert column labeling intervention info at beginning
     
     # Estimate who would've seen a given tweet under intervention and determine first exposure of each unique individual
     exposed_followers = estimate_exposure_under_intervention(tweets = intervention_tweets, 
@@ -76,7 +83,10 @@ def simulate_intervention(tweets, paired_tweets_followers, RT_network, visibilit
     
     # Bin exposure by time
     bin_counts, bin_edges = np.histogram(exposed_followers.relative_exposure_time, bins = 72*4, range = (0, 72))
-    exposure_over_time = pd.DataFrame({'total_article_number': intervention_tweets.total_article_number.unique().item(), 
+    exposure_over_time = pd.DataFrame({'intervention_time': intervention_time,
+                                       'visibility_reduction': visibility_reduction,
+                                       'sharing_reduction': sharing_reduction,
+                                       'total_article_number': intervention_tweets.total_article_number.unique().item(), 
                                        'replicate': replicate_number,
                                        'time': bin_edges[1:], 
                                        'new_exposed_users': bin_counts})
@@ -257,7 +267,7 @@ RT_network = pd.read_csv(data_directory + "data_derived/networks/specific_articl
 # Loop through replicate simulations
 ####################
 # Prep directory for output
-sub_dir = outpath + 'reduceviz' + str(visibility_reduction) + '_t' + str(intervention_time) + '/'
+sub_dir = "{}reduce_sharing{}_visibility{}/".format(outpath, str(sharing_reduction), str(visibility_reduction))
 os.makedirs(sub_dir, exist_ok = True)
 
 # Loop through replicate simulations
@@ -268,8 +278,9 @@ all_exposure_timeseries = []
 noint_tweets, noint_exposure_time = simulate_intervention(tweets = story_tweets, 
                                                           paired_tweets_followers = tweets_with_followers, 
                                                           RT_network = RT_network,
+                                                          sharing_reduction = 0, #NO INTERVENTION
                                                           visibility_reduction = 0, #NO INTERVENTION
-                                                          intervention_time = intervention_time, 
+                                                          intervention_time = 0, 
                                                           replicate_number = -1,
                                                           mean_time_to_exposure = 1,
                                                           sd_time_to_exposure = 2)
@@ -280,19 +291,21 @@ del noint_tweets, noint_exposure_time
 
 
 # Next, intervention in effect
-for i in np.arange(n_replicates):
-    replicate_tweets, replicate_exposure_time = simulate_intervention(tweets = story_tweets, 
-                                                                      paired_tweets_followers = tweets_with_followers, 
-                                                                      RT_network = RT_network,
-                                                                      visibility_reduction = visibility_reduction, 
-                                                                      intervention_time = intervention_time, 
-                                                                      replicate_number = i,
-                                                                      mean_time_to_exposure = 1,
-                                                                      sd_time_to_exposure = 2)
-    replicate_tweets['simulation_type'] = replicate_exposure_time['simulation_type'] = "intervention"
-    all_intervention_tweets.append(replicate_tweets)
-    all_exposure_timeseries.append(replicate_exposure_time)
-    del replicate_tweets, replicate_exposure_time
+for intervention_time in range(1, 7):
+    for i in np.arange(n_replicates):
+        replicate_tweets, replicate_exposure_time = simulate_intervention(tweets = story_tweets, 
+                                                                          paired_tweets_followers = tweets_with_followers, 
+                                                                          RT_network = RT_network,
+                                                                          sharing_reduction = sharing_reduction,
+                                                                          visibility_reduction = visibility_reduction, 
+                                                                          intervention_time = intervention_time, 
+                                                                          replicate_number = i,
+                                                                          mean_time_to_exposure = 1,
+                                                                          sd_time_to_exposure = 2)
+        replicate_tweets['simulation_type'] = replicate_exposure_time['simulation_type'] = "intervention"
+        all_intervention_tweets.append(replicate_tweets)
+        all_exposure_timeseries.append(replicate_exposure_time)
+        del replicate_tweets, replicate_exposure_time
     
 # Bind together and save
 all_intervention_tweets = pd.concat(all_intervention_tweets)
