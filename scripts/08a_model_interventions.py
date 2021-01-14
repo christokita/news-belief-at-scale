@@ -26,7 +26,6 @@ outpath = data_directory + "data_derived/interventions/"
 
 # Parameters for simulation
 n_replicates = 20
-# intervention_time = 6
 visibility_reduction = 0
 sharing_reduction = 0.25
 which_story = int(sys.argv[1]) #get from command line
