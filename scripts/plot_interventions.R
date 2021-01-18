@@ -17,12 +17,9 @@ source("scripts/_plot_themes/theme_ctokita.R")
 # Paramters for analysis: gpaths to data, paths for output, and filename
 ####################
 # Paths to files/directories
-intervention_dirs <- c('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/interventions/reduceviz0.5_t6/',
-                       '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/interventions/reduceviz0.5_t5/',
-                       '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/interventions/reduceviz0.5_t4/',
-                       '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/interventions/reduceviz0.5_t3/',
-                       '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/interventions/reduceviz0.5_t2/',
-                       '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/interventions/reduceviz0.5_t1/')
+path_to_interventions <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/interventions/'
+intervention_dirs <- list.dirs(path_to_interventions)
+intervention_dirs <- intervention_dirs[grepl('reduce_', intervention_dirs)]
 outpath <- 'output/interventions/'
 
 
@@ -33,11 +30,11 @@ outpath <- 'output/interventions/'
 #################### Exposure data ####################
 
 # Function to pre-first share dummy rows of pre-first share for plotting purposes
-add_dummy_time_points <- function(exposure_data, intervention_time, intervention_amount) {
+add_dummy_time_points <- function(exposure_data) {
   # (1) Create dummy rows that make two "non tweets" in at two time points leading up to the first real tweet
   n_articles <- length(unique(exposure_data$total_article_number)) #number of unique articles
   dummy_rows <- exposure_data %>% 
-    distinct(total_article_number, replicate, simulation_type)
+    distinct(total_article_number, intervention_time, visibility_reduction, sharing_reduction, replicate, simulation_type)
   dummy_row_time <- data.frame(total_article_number = rep(unique(exposure_data$total_article_number), each = 2),
                                time = rep(c(-2, 0), n_articles), 
                                new_exposed_users = rep(c(0, 0), n_articles),
@@ -46,9 +43,7 @@ add_dummy_time_points <- function(exposure_data, intervention_time, intervention
   # (2) Join together
   exposure_data <- exposure_data %>% 
     rbind(dummy_rows) %>% 
-    arrange(total_article_number, replicate, time) %>% 
-    mutate(intervention_time = intervention_time, 
-           intervention_amount = intervention_amount)
+    arrange(total_article_number, replicate, time)
   rm(dummy_rows, dummy_row_time)
   return(exposure_data)
 }
@@ -56,14 +51,11 @@ add_dummy_time_points <- function(exposure_data, intervention_time, intervention
 # Load data
 intervention_exposure <- data.frame()
 for (dir in intervention_dirs) {
-  
-  intervention_t <- as.numeric( gsub(".*_t([0-9]+)/", "\\1", dir, perl = TRUE) )
-  intervention_am <- as.numeric( gsub(".*reduceviz([.0-9]+)_.*", "\\1", dir, perl = TRUE) )
   intervention_files <- list.files(dir, full.names = TRUE)
   exposure_file <- intervention_files[grepl("_exposetime.csv", intervention_files)]
   for (file in exposure_file) {
     exposure <- read.csv(file)
-    exposure <- add_dummy_time_points(exposure_data = exposure, intervention_time = intervention_t, intervention_amount = intervention_am)
+    exposure <- add_dummy_time_points(exposure_data = exposure)
     intervention_exposure <- rbind(intervention_exposure, exposure)
     rm(exposure)
   }
@@ -75,9 +67,9 @@ max_time_of_expsoure <-  max(intervention_exposure$time[intervention_exposure$ne
 intervention_exposure <- intervention_exposure %>% 
   group_by(total_article_number) %>% 
   mutate(relative_cumulative_exposed = cumulative_exposed / max(cumulative_exposed), 
-         simulation_number = paste0(total_article_number, "-", replicate, "-", intervention_time, "-", intervention_amount),
+         simulation_number = paste0(total_article_number, "-", replicate, "-", intervention_time, "-visibility", visibility_reduction, "-sharing", sharing_reduction),
          simulation_type = factor(simulation_type, levels = c("no intervention", "intervention")),
-         intervention = paste0(intervention_time, "-", intervention_amount)) %>% 
+         intervention = paste0("t", intervention_time, "-visibility", visibility_reduction, "-sharing", sharing_reduction)) %>% 
   filter(time <= max_time_of_expsoure) 
 
   
@@ -103,30 +95,33 @@ gg_exposed_raw
 ####################
 # Plot relative exposure by intervention
 ####################
-# Filter to data of interest
-exposure_decrease <-  intervention_exposure %>% 
+# Filter to final exposure values (55 hours out from first share is enough)
+exposure_decrease <- intervention_exposure %>% 
   filter(time == 55,
          replicate != -1) %>% 
   mutate(decrease_in_exposure = 1-relative_cumulative_exposed)
 
 # Estimate mean reduction in exposure by intervention
-treatments <- unique(intervention_exposure$intervention)
+treatments <- unique(exposure_decrease$intervention)
 exposure_reduction_estimate <- data.frame()
 for (treatment in treatments) {
   data <- exposure_decrease %>% 
     filter(intervention == treatment)
   est <- Bolstad::normnp(x = data$relative_cumulative_exposed, m.x = 0.5, s.x = 5, quiet = TRUE, plot = FALSE)
-  df_est <- data.frame(intervention_time = unique(data$intervention_time),
-                       intervention_amount = unique(data$intervention_amount),
+  df_est <- data.frame(intervention = unique(data$intervention),
+                       intervention_time = unique(data$intervention_time),
+                       visibility_reduction = unique(data$visibility_reduction),
+                       sharing_reduction = unique(data$sharing_reduction),
                        est_mean = est$mean,
-                       ci_95_low = est$quantileFun(0.025),
-                       ci_95_high = est$quantileFun(0.975))
+                       ci_95_low = est$quantileFun(0.005),
+                       ci_95_high = est$quantileFun(0.995)) %>% 
+    mutate(intervention_amount = paste0("visibility", visibility_reduction, "-", "sharing", sharing_reduction))
   exposure_reduction_estimate <- rbind(exposure_reduction_estimate, df_est)
   rm(df_est, est)
 }
 
 # Plot
-gg_relative_exposure <- ggplot(exposure_reduction_estimate, aes(x = intervention_time, color = intervention_time)) +
+gg_relative_exposure <- ggplot(exposure_reduction_estimate, aes(x = intervention_time, color = intervention_amount)) +
   # geom_point(data = exposure_decrease,
   #            aes(x = intervention_time, y = decrease_in_exposure),
   #            size = 0.8, stroke = 0, alpha = 0.3, position = position_jitter(width = 0.1)) +
@@ -135,13 +130,18 @@ gg_relative_exposure <- ggplot(exposure_reduction_estimate, aes(x = intervention
   geom_point(aes(y = est_mean),
              size = 1) +
   scale_x_continuous(breaks = seq(1, 6, 1)) +
-  scale_y_continuous(breaks = seq(0, 1, 0.05), limits = c(0.5, 0.8), expand = c(0,0)) +
-  scale_colour_viridis_c(option = "plasma", direction = -1, end = 0.9, guide = NULL) +
+  scale_y_continuous(breaks = seq(0, 1, 0.1), limits = c(0.3, 1.0), expand = c(0,0)) +
+  scale_colour_manual(values = c("#74c476", "#238b45", "#6baed6", "#2171b5"),
+                      name = "Intervention",
+                      labels = c("Sharing friction (light)",
+                                 "Sharing friction (heavy)",
+                                 "Visibility reduction (light)",
+                                 "Visibility reduction (heavy)")) +
   xlab("Intervention time (hrs)") + 
-  ylab("Relative user exposure") +
+  ylab("Relative users exposed") +
   theme_ctokita()
 gg_relative_exposure
-ggsave(gg_relative_exposure, filename = paste0(outpath, "relexposure_0.5reduction_by_interventiontime.pdf"), width = 45, height = 45, units = "mm", dpi = 400)
+ggsave(gg_relative_exposure, filename = paste0(outpath, "relexposure_by_intervention.pdf"), width = 90, height = 45, units = "mm", dpi = 400)
 
 
 ####################
@@ -151,7 +151,9 @@ intervention_pal <- scales::viridis_pal(begin = 0, end = 0.9, direction = 1, opt
 intervention_pal <- intervention_pal(6)
 
 gg_example_timeseries <- intervention_exposure %>% 
-  filter(total_article_number == 28) %>% 
+  filter(total_article_number == 28,
+         visibility_reduction == 0,
+         sharing_reduction == 0.75) %>% 
   mutate(intervention_time = ifelse(simulation_type == "no intervention", "No intervention", paste(intervention_time, "hr."))) %>% 
   mutate(intervention_time = factor(intervention_time, levels = c("No intervention", "6 hr.", "5 hr.", "4 hr.", "3 hr.", "2 hr.", "1 hr."))) %>% 
   ggplot(., aes(x = time, y = cumulative_exposed, color = intervention_time, group = simulation_number, alpha = simulation_type)) +
