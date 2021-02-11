@@ -10,7 +10,7 @@ Simulate simple interventions to prevent the spread of fake news
 """
 
 ####################
-# Load packages and data, set important parameters
+# Load packages 
 ####################
 import pandas as pd
 import numpy as np
@@ -18,17 +18,6 @@ import scipy.stats as stats
 import os
 import re
 import sys
-
-# high level directory (external HD or cluster storage)
-# data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
-data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster storage
-outpath = data_directory + "data_derived/interventions/"
-
-# Parameters for simulation
-n_replicates = 20
-visibility_reduction = 0
-sharing_reduction = 0.25
-which_story = int(sys.argv[1]) #get from command line
 
 
 ####################
@@ -213,101 +202,120 @@ def load_followers(file, data_directory):
     return followers
 
 
-####################
-# Load fake news tweets
-####################
-# Load tweet data, esnure in proper format
-labeled_tweets = pd.read_csv(data_directory + "data_derived/tweets/tweets_labeled.csv",
-                             dtype = {'quoted_urls': object, 'quoted_urls_expanded': object, #these two columns cause memory issues if not pre-specified dtype
-                                      'user_id': 'int64', 'tweet_id': 'int64', 
-                                      'retweeted_user_id': object, 'retweet_id': object})
-# Convert RT IDs to int (can't declare them upfront due to NaNs)
-labeled_tweets[['retweeted_user_id', 'retweet_id']] = labeled_tweets[['retweeted_user_id', 'retweet_id']].fillna(-1)
-labeled_tweets[['retweeted_user_id', 'retweet_id']] = labeled_tweets[['retweeted_user_id', 'retweet_id']].astype('int64')
 
-# Filter to fake news tweets
-fm_tweets = labeled_tweets[labeled_tweets.article_fc_rating == "FM"].copy()
-fm_stories = fm_tweets['total_article_number'].unique()
-story = int(fm_stories[which_story])
-del labeled_tweets
-
-
-####################
-# Prep data for this specific story
-####################
-# Grab tweets of this specific article
-story_tweets = fm_tweets[fm_tweets.total_article_number == story].copy()
-story_tweets['tweet_time'] = pd.to_datetime(story_tweets['tweet_time'], format = '%a %b %d %H:%M:%S %z %Y')
-
-# Organize tweets by time since first share of article
-story_tweets['article_first_time'] = min(story_tweets['tweet_time'])
-story_tweets['relative_tweet_time'] = story_tweets['tweet_time'] - story_tweets['article_first_time']
-story_tweets['relative_tweet_time'] = story_tweets['relative_tweet_time'] / np.timedelta64(1, 'h') #convert to hours
-story_tweets = story_tweets.sort_values('relative_tweet_time')   
-story_tweets['tweet_number'] = np.arange(story_tweets.shape[0])
-story_tweets = story_tweets.reset_index(drop = True)
-
-# Only keep columns needed
-story_tweets = story_tweets[['user_id', 'tweet_id', 'is_retweet', 'is_quote',
-                             'tweet_time', 'article_first_time', 'relative_tweet_time', 'tweet_number', 
-                             'total_article_number', 'article_fc_rating', 'source_type']]
-
-# Create list of tweets that includes list of followers per tweets, and simulated
-tweets_with_followers = match_followers_to_tweet(tweets = story_tweets, 
-                                                 story_id = story, 
-                                                 data_directory = data_directory)
-
-# Load retweet network
-RT_network = pd.read_csv(data_directory + "data_derived/networks/specific_article_networks/article" + str(story)+ "_edges.csv",
-                          dtype = {'Source': 'int64', 'Target': 'int64', 'source_tweet_id': 'int64', 'target_tweet_id': 'int64'})
-
-
-####################
-# Loop through replicate simulations
-####################
-# Prep directory for output
-sub_dir = "{}reduce_sharing{}_visibility{}/".format(outpath, str(sharing_reduction), str(visibility_reduction))
-os.makedirs(sub_dir, exist_ok = True)
-
-# Loop through replicate simulations
-all_intervention_tweets = []
-all_exposure_timeseries = []
-
-# First, no intervention
-noint_tweets, noint_exposure_time = simulate_intervention(tweets = story_tweets, 
-                                                          paired_tweets_followers = tweets_with_followers, 
-                                                          RT_network = RT_network,
-                                                          sharing_reduction = 0, #NO INTERVENTION
-                                                          visibility_reduction = 0, #NO INTERVENTION
-                                                          intervention_time = 0, 
-                                                          replicate_number = -1,
-                                                          mean_time_to_exposure = 1,
-                                                          sd_time_to_exposure = 2)
-noint_tweets['simulation_type'] = noint_exposure_time['simulation_type'] = "no intervention"
-all_intervention_tweets.append(noint_tweets)
-all_exposure_timeseries.append(noint_exposure_time)
-del noint_tweets, noint_exposure_time
-
-
-# Next, intervention in effect
-for intervention_time in range(1, 7):
-    for i in np.arange(n_replicates):
-        replicate_tweets, replicate_exposure_time = simulate_intervention(tweets = story_tweets, 
-                                                                          paired_tweets_followers = tweets_with_followers, 
-                                                                          RT_network = RT_network,
-                                                                          sharing_reduction = sharing_reduction,
-                                                                          visibility_reduction = visibility_reduction, 
-                                                                          intervention_time = intervention_time, 
-                                                                          replicate_number = i,
-                                                                          mean_time_to_exposure = 1,
-                                                                          sd_time_to_exposure = 2)
-        replicate_tweets['simulation_type'] = replicate_exposure_time['simulation_type'] = "intervention"
-        all_intervention_tweets.append(replicate_tweets)
-        all_exposure_timeseries.append(replicate_exposure_time)
-        del replicate_tweets, replicate_exposure_time
+# Execution of actual intervention simulation
+if __name__ == "__main__":
     
-# Bind together and save
-all_intervention_tweets = pd.concat(all_intervention_tweets)
-all_exposure_timeseries = pd.concat(all_exposure_timeseries)
-all_intervention_tweets.to_csv(sub_dir + 'article' + str(story) + "_intervention_tweets.csv", index = False)
-all_exposure_timeseries.to_csv(sub_dir + 'article' + str(story) + "_intervention_exposetime.csv", index = False)
+    ####################
+    # Paths and parameters for simulation
+    ####################
+    # high level directory (external HD or cluster storage)
+    # data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
+    data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster storage
+    outpath = data_directory + "data_derived/interventions/"
+    
+    # Parameters for simulation
+    n_replicates = 20
+    visibility_reduction = 0
+    sharing_reduction = 0.25
+    which_story = int(sys.argv[1]) #get from command line
+    
+    
+    ####################
+    # Load fake news tweets
+    ####################
+    # Load tweet data, esnure in proper format
+    labeled_tweets = pd.read_csv(data_directory + "data_derived/tweets/tweets_labeled.csv",
+                                 dtype = {'quoted_urls': object, 'quoted_urls_expanded': object, #these two columns cause memory issues if not pre-specified dtype
+                                          'user_id': 'int64', 'tweet_id': 'int64', 
+                                          'retweeted_user_id': object, 'retweet_id': object})
+    # Convert RT IDs to int (can't declare them upfront due to NaNs)
+    labeled_tweets[['retweeted_user_id', 'retweet_id']] = labeled_tweets[['retweeted_user_id', 'retweet_id']].fillna(-1)
+    labeled_tweets[['retweeted_user_id', 'retweet_id']] = labeled_tweets[['retweeted_user_id', 'retweet_id']].astype('int64')
+    
+    # Filter to fake news tweets
+    fm_tweets = labeled_tweets[labeled_tweets.article_fc_rating == "FM"].copy()
+    fm_stories = fm_tweets['total_article_number'].unique()
+    story = int(fm_stories[which_story])
+    del labeled_tweets
+    
+    
+    ####################
+    # Prep data for this specific story
+    ####################
+    # Grab tweets of this specific article
+    story_tweets = fm_tweets[fm_tweets.total_article_number == story].copy()
+    story_tweets['tweet_time'] = pd.to_datetime(story_tweets['tweet_time'], format = '%a %b %d %H:%M:%S %z %Y')
+    
+    # Organize tweets by time since first share of article
+    story_tweets['article_first_time'] = min(story_tweets['tweet_time'])
+    story_tweets['relative_tweet_time'] = story_tweets['tweet_time'] - story_tweets['article_first_time']
+    story_tweets['relative_tweet_time'] = story_tweets['relative_tweet_time'] / np.timedelta64(1, 'h') #convert to hours
+    story_tweets = story_tweets.sort_values('relative_tweet_time')   
+    story_tweets['tweet_number'] = np.arange(story_tweets.shape[0])
+    story_tweets = story_tweets.reset_index(drop = True)
+    
+    # Only keep columns needed
+    story_tweets = story_tweets[['user_id', 'tweet_id', 'is_retweet', 'is_quote',
+                                 'tweet_time', 'article_first_time', 'relative_tweet_time', 'tweet_number', 
+                                 'total_article_number', 'article_fc_rating', 'source_type']]
+    
+    # Create list of tweets that includes list of followers per tweets, and simulated
+    tweets_with_followers = match_followers_to_tweet(tweets = story_tweets, 
+                                                     story_id = story, 
+                                                     data_directory = data_directory)
+    
+    # Load retweet network
+    RT_network = pd.read_csv(data_directory + "data_derived/networks/specific_article_networks/article" + str(story)+ "_edges.csv",
+                              dtype = {'Source': 'int64', 'Target': 'int64', 'source_tweet_id': 'int64', 'target_tweet_id': 'int64'})
+    
+    
+    ####################
+    # Loop through replicate simulations
+    ####################
+    # Prep directory for output
+    sub_dir = "{}reduce_sharing{}_visibility{}/".format(outpath, str(sharing_reduction), str(visibility_reduction))
+    os.makedirs(sub_dir, exist_ok = True)
+    
+    # Loop through replicate simulations
+    all_intervention_tweets = []
+    all_exposure_timeseries = []
+    
+    # First, no intervention
+    noint_tweets, noint_exposure_time = simulate_intervention(tweets = story_tweets, 
+                                                              paired_tweets_followers = tweets_with_followers, 
+                                                              RT_network = RT_network,
+                                                              sharing_reduction = 0, #NO INTERVENTION
+                                                              visibility_reduction = 0, #NO INTERVENTION
+                                                              intervention_time = 0, 
+                                                              replicate_number = -1,
+                                                              mean_time_to_exposure = 1,
+                                                              sd_time_to_exposure = 2)
+    noint_tweets['simulation_type'] = noint_exposure_time['simulation_type'] = "no intervention"
+    all_intervention_tweets.append(noint_tweets)
+    all_exposure_timeseries.append(noint_exposure_time)
+    del noint_tweets, noint_exposure_time
+    
+    
+    # Next, intervention in effect
+    for intervention_time in range(1, 7):
+        for i in np.arange(n_replicates):
+            replicate_tweets, replicate_exposure_time = simulate_intervention(tweets = story_tweets, 
+                                                                              paired_tweets_followers = tweets_with_followers, 
+                                                                              RT_network = RT_network,
+                                                                              sharing_reduction = sharing_reduction,
+                                                                              visibility_reduction = visibility_reduction, 
+                                                                              intervention_time = intervention_time, 
+                                                                              replicate_number = i,
+                                                                              mean_time_to_exposure = 1,
+                                                                              sd_time_to_exposure = 2)
+            replicate_tweets['simulation_type'] = replicate_exposure_time['simulation_type'] = "intervention"
+            all_intervention_tweets.append(replicate_tweets)
+            all_exposure_timeseries.append(replicate_exposure_time)
+            del replicate_tweets, replicate_exposure_time
+        
+    # Bind together and save
+    all_intervention_tweets = pd.concat(all_intervention_tweets)
+    all_exposure_timeseries = pd.concat(all_exposure_timeseries)
+    all_intervention_tweets.to_csv(sub_dir + 'article' + str(story) + "_intervention_tweets.csv", index = False)
+    all_exposure_timeseries.to_csv(sub_dir + 'article' + str(story) + "_intervention_exposetime.csv", index = False)
