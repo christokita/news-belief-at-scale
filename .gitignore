@@ -1,7 +1,4 @@
-data/followers/*
-data/tweets/*
-data/friends/*
-data/follwing/*
 .Rproj.user
 .Rhistory
 .Rhistory
+__pycache__/
