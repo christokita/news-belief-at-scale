@@ -298,7 +298,7 @@ if __name__ == "__main__":
     
     
     # Next, intervention in effect
-    for intervention_time in range(1, 7):
+    for intervention_time in range(1, 13):
         for i in np.arange(n_replicates):
             replicate_tweets, replicate_exposure_time = simulate_intervention(tweets = story_tweets, 
                                                                               paired_tweets_followers = tweets_with_followers, 
