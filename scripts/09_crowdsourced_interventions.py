@@ -43,6 +43,7 @@ crowd_type = "random" #type of crowd composition ("random" or "balanced", i.e., 
 visibility_reduction = 0.75
 sharing_reduction = 0
 intervention_time = 1 #assumed time of crowd-sourced intervention
+factcheck_rules = ['mean', 'median', 'mode', 'majority', 'unanimity'] #how is the ruling of a crowd assessed
 
 
 ####################
@@ -67,7 +68,8 @@ labeled_tweets[['retweeted_user_id', 'retweet_id']] = labeled_tweets[['retweeted
 labeled_tweets[['retweeted_user_id', 'retweet_id']] = labeled_tweets[['retweeted_user_id', 'retweet_id']].astype('int64')
 
 # Filter to article and tweets of interest
-stories = labeled_tweets['total_article_number'].unique()
+stories = labeled_tweets['total_article_number'].dropna().unique() #drop NAs
+stories = stories[stories > 10] #only focus on articles we have crowd source fact checking for
 story = int(stories[which_story])
 story_tweets = labeled_tweets[labeled_tweets.total_article_number == story].copy()
 story_tweets['tweet_time'] = pd.to_datetime(story_tweets['tweet_time'], format = '%a %b %d %H:%M:%S %z %Y')
@@ -96,6 +98,7 @@ new_cols = [re.sub("crt_", "crtical_reasoning", col) for col in new_cols]
 crowd_data.columns = new_cols
 del new_cols
 
+
 # Identify each row as unique simulated crowd for that article
 crowd_data['crowd_id'] = crowd_data.groupby('article_num').cumcount()
 
@@ -105,6 +108,9 @@ crowd_data = pd.wide_to_long(crowd_data,
                              i = ['article_num', 'crowd_id'],
                              j = 'individual')
 crowd_data = crowd_data.reset_index()
+
+# Convert veracity categorical rating to number. T = 1, F = -1
+crowd_data['veracity_categ'] = crowd_data['veracity_categ'].map({'t': 1, 'c': 0, 'f': -1})
 
 # Label crowd memebers as liberal, conservative, or moderate
 crowd_data['ideology_category'] = ''
@@ -130,38 +136,30 @@ def generate_factcheck_crowds(crowd_data, crowd_size, article_id, n_crowds, crow
     """
     # Loop through individually simulated crowds and analyze their fact-checking
     article_crowds = crowd_data[crowd_data.article_num == article_id].copy()
-    crowd_ratings = pd.DataFrame(columns = ['article_id', 'crowd_id', 'crowd_size', 'true', 'false', 'cnd', 'rating_mode', 'veracity_mean', 'veracity_median'])
+    crowd_ratings = pd.DataFrame(columns = ['article_id', 'crowd_id', 'crowd_size', 'frac_true', 'frac_false', 'frac_cnd', 'veracity_mode', 'veracity_mean', 'veracity_median'])
     if crowd_type == "random":
         for i in np.arange(n_crowds):
             
             # Basic veracity evaluation
+            # REMINDER: T = 1, C = 0, F = -1
             crowd_set = article_crowds[article_crowds.crowd_id == i].copy()
             crowd_set = crowd_set.sort_values(by = ['individual'])
             selected_crowd = crowd_set.iloc[0:crowd_size,] #grab frist ::crowd_size:: individuals
-            rating_true = sum(selected_crowd.veracity_categ == 't') / crowd_size
-            rating_false = sum(selected_crowd.veracity_categ == 'f') / crowd_size
-            rating_cnd = sum(selected_crowd.veracity_categ == 'c') / crowd_size
-            mean_veracity = selected_crowd.veracity_rating.mean()
-            median_veracity = selected_crowd.veracity_rating.median()
-            
-            # Determine modal rating
-            rating_mode = selected_crowd.veracity_categ.mode()
-            crowd_rating_mode = np.nan
-            if len(rating_mode) > 1:
-                crowd_rating_mode = True
-            elif (rating_mode.iloc[0] == 't') or (rating_mode.iloc[0] == 'c'):
-                crowd_rating_mode = True
-            elif rating_mode.iloc[0] == 'f':
-                crowd_rating_mode = False
+            rating_true = sum(selected_crowd.veracity_categ == 1) / crowd_size
+            rating_false = sum(selected_crowd.veracity_categ == -1) / crowd_size
+            rating_cnd = sum(selected_crowd.veracity_categ == 0) / crowd_size
+            mean_veracity = selected_crowd.veracity_categ.mean()
+            median_veracity = selected_crowd.veracity_categ.median()
+            modal_veracity = selected_crowd.veracity_categ.mode().iloc[0] #unlist using iloc
                 
             # Add this crowd's rating
             crowd_ratings = crowd_ratings.append({'article_id': article_id,
                                                   'crowd_id': i, 
                                                   'crowd_size': crowd_size, 
-                                                  'true': rating_true, 
-                                                  'false': rating_false, 
-                                                  'cnd': rating_cnd, 
-                                                  'rating_mode': crowd_rating_mode,
+                                                  'frac_true': rating_true, 
+                                                  'frac_false': rating_false, 
+                                                  'frac_cnd': rating_cnd, 
+                                                  'veracity_mode': modal_veracity,
                                                   'veracity_mean': mean_veracity,
                                                   'veracity_median': median_veracity},
                                                  ignore_index = True)
@@ -225,7 +223,7 @@ all_intervention_tweets = []
 all_exposure_timeseries = []
 
 # First, no intervention
-noint_tweets, noint_exposure_time = simulate_intervention(tweets = story_tweets, 
+_, noint_exposure_time = simulate_intervention(tweets = story_tweets, 
                                                           paired_tweets_followers = tweets_with_followers, 
                                                           RT_network = RT_network,
                                                           sharing_reduction = 0, #NO INTERVENTION
@@ -234,40 +232,49 @@ noint_tweets, noint_exposure_time = simulate_intervention(tweets = story_tweets,
                                                           replicate_number = -1,
                                                           mean_time_to_exposure = 1,
                                                           sd_time_to_exposure = 2)
-noint_tweets['simulation_type'] = noint_exposure_time['simulation_type'] = "baseline"
-all_intervention_tweets.append(noint_tweets)
+noint_exposure_time['simulation_type'] = "baseline"
 all_exposure_timeseries.append(noint_exposure_time)
 
 # Next, interventions based on crowd-sourced fact checking
-for i in np.arange(n_replicates):
+# Loop through fact check rules, and within each, loop through the replicate simulations
+for rule in factcheck_rules:
     
     # Establish if T/F by rule
-    article_crowd_evals['labeled_false'] = article_crowd_evals['veracity_mean'] < 4
+    if rule == 'mean':
+        article_crowd_evals['labeled_false'] = (article_crowd_evals['veracity_mean'] < 0)
+    elif rule == 'median':
+        article_crowd_evals['labeled_false'] = (article_crowd_evals['veracity_median'] < 0)
+    elif rule == 'mode':
+        article_crowd_evals['labeled_false'] = (article_crowd_evals['veracity_mode'] == -1)
+    elif rule == 'majority':
+        article_crowd_evals['labeled_false'] = (article_crowd_evals['frac_false'] > 0.5)
+    elif rule == 'unanimity':
+        article_crowd_evals['labeled_false'] = (article_crowd_evals['frac_false'] == 1)
     
-    # Simulate intervention if marked by crowd, else leave untouched (i.e., use baseline data)
-    if article_crowd_evals['labeled_false'].iloc[i] == True:
-        replicate_tweets, replicate_exposure_time = simulate_intervention(tweets = story_tweets, 
-                                                                          paired_tweets_followers = tweets_with_followers, 
-                                                                          RT_network = RT_network,
-                                                                          sharing_reduction = sharing_reduction,
-                                                                          visibility_reduction = visibility_reduction, 
-                                                                          intervention_time = intervention_time, 
-                                                                          replicate_number = i,
-                                                                          mean_time_to_exposure = 1,
-                                                                          sd_time_to_exposure = 2)
-        replicate_tweets['simulation_type'] = replicate_exposure_time['simulation_type'] = "intervention"
-    elif article_crowd_evals['labeled_false'].iloc[i] == False:
-        replicate_tweets = noint_tweets.copy()
-        replicate_exposure_time = noint_exposure_time.copy()
-        replicate_tweets['simulation_type'] = replicate_exposure_time['simulation_type'] = "no intervention"
-        
-    # Append to data set
-    all_intervention_tweets.append(replicate_tweets)
-    all_exposure_timeseries.append(replicate_exposure_time)
-    del replicate_tweets, replicate_exposure_time
+    # Loop through replicate simulations
+    for i in np.arange(n_replicates):
+        # Simulate intervention if marked by crowd, else leave untouched (i.e., use baseline data)
+        if article_crowd_evals['labeled_false'].iloc[i] == True:
+            _, replicate_exposure_time = simulate_intervention(tweets = story_tweets, 
+                                                                              paired_tweets_followers = tweets_with_followers, 
+                                                                              RT_network = RT_network,
+                                                                              sharing_reduction = sharing_reduction,
+                                                                              visibility_reduction = visibility_reduction, 
+                                                                              intervention_time = intervention_time, 
+                                                                              replicate_number = i,
+                                                                              mean_time_to_exposure = 1,
+                                                                              sd_time_to_exposure = 2)
+            replicate_exposure_time['simulation_type'] = "intervention"
+        elif article_crowd_evals['labeled_false'].iloc[i] == False:
+            replicate_exposure_time = noint_exposure_time.copy()
+            replicate_exposure_time['replicate'] = i
+            replicate_exposure_time['simulation_type'] = "no intervention"
+            
+        # Append to data set
+        replicate_exposure_time['fc_rule'] = rule
+        all_exposure_timeseries.append(replicate_exposure_time)
+        del replicate_exposure_time
     
 # Bind together and save
-all_intervention_tweets = pd.concat(all_intervention_tweets)
 all_exposure_timeseries = pd.concat(all_exposure_timeseries)
-all_intervention_tweets.to_csv(sub_dir + 'article' + str(story) + "_crowdsourced_tweets.csv", index = False)
 all_exposure_timeseries.to_csv(sub_dir + 'article' + str(story) + "_crowdsourced_exposetime.csv", index = False)
