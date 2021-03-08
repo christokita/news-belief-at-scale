@@ -19,7 +19,7 @@ source("scripts/_plot_themes/theme_ctokita.R")
 # Paths to files/directories
 path_to_interventions <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/interventions/'
 intervention_dirs <- list.dirs(path_to_interventions)
-intervention_dirs <- intervention_dirs[grepl('reduce_', intervention_dirs)]
+intervention_dirs <- intervention_dirs[grepl('.*/reduce_', intervention_dirs)]
 outpath <- 'output/interventions/'
 
 
@@ -129,7 +129,7 @@ gg_relative_exposure <- ggplot(exposure_reduction_estimate, aes(x = intervention
                 width = 0, size = 0.5) +
   geom_point(aes(y = est_mean),
              size = 1) +
-  scale_x_continuous(breaks = seq(1, 6, 1)) +
+  scale_x_continuous(breaks = seq(1, 12, 1)) +
   scale_y_continuous(breaks = seq(0, 1, 0.1), limits = c(0.3, 1.0), expand = c(0,0)) +
   scale_colour_manual(values = c("#74c476", "#238b45", "#6baed6", "#2171b5"),
                       name = "Intervention",
@@ -147,19 +147,21 @@ ggsave(gg_relative_exposure, filename = paste0(outpath, "relexposure_by_interven
 ####################
 # Plot example intervention time series
 ####################
-intervention_pal <- scales::viridis_pal(begin = 0, end = 0.9, direction = 1, option = "plasma")
+intervention_pal <- scales::viridis_pal(begin = 0, end = 0.9, direction = -1, option = "plasma")
 intervention_pal <- intervention_pal(6)
 
 gg_example_timeseries <- intervention_exposure %>% 
-  filter(total_article_number == 28,
+  filter(total_article_number == 28, 
+         sharing_reduction == 0.75,
          visibility_reduction == 0,
-         sharing_reduction == 0.75) %>% 
-  mutate(intervention_time = ifelse(simulation_type == "no intervention", "No intervention", paste(intervention_time, "hr."))) %>% 
-  mutate(intervention_time = factor(intervention_time, levels = c("No intervention", "6 hr.", "5 hr.", "4 hr.", "3 hr.", "2 hr.", "1 hr."))) %>% 
+         intervention_time %in% c(seq(0, 12, 2))) %>% 
+  mutate(intervention_time = ifelse(simulation_type == "no intervention", "No intervention", paste(intervention_time, "hr."))) %>%
+  mutate(intervention_time = factor(intervention_time, levels = c("No intervention", paste(seq(2, 12, 2) , "hr.")) )) %>%
   ggplot(., aes(x = time, y = cumulative_exposed, color = intervention_time, group = simulation_number, alpha = simulation_type)) +
   geom_line(size = 0.3) +
   scale_y_continuous(breaks = seq(0, 10000000, 2000000), 
                      limits = c(0, 10000000),
+                     # expand = c(0, 0),
                      labels = scales::comma) +
   scale_x_continuous(breaks = seq(0, 48, 12)) +
   scale_color_manual(values = c("black", intervention_pal),

@@ -292,6 +292,8 @@ if __name__ == "__main__":
                                                               mean_time_to_exposure = 1,
                                                               sd_time_to_exposure = 2)
     noint_tweets['simulation_type'] = noint_exposure_time['simulation_type'] = "no intervention"
+    noint_tweets['visibility_reduction'] = noint_exposure_time['visibility_reduction'] = visibility_reduction #label which simulation run this baseline is part of
+    noint_tweets['sharing_reduction'] = noint_exposure_time['sharing_reduction'] = sharing_reduction #label which simulation run this baseline is part of
     all_intervention_tweets.append(noint_tweets)
     all_exposure_timeseries.append(noint_exposure_time)
     del noint_tweets, noint_exposure_time
