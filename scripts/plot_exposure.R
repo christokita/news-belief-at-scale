@@ -21,7 +21,7 @@ source("scripts/_plot_themes/theme_ctokita.R")
 # Choose grouping of interest. Options: 
 #     (1) article veracity: "article_fc_rating"
 #     (2) source: "source_type"
-grouping <- "source_type"
+grouping <- "article_fc_rating"
 
 # Paths to files/directories
 tweet_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv'
@@ -100,7 +100,7 @@ if (grouping == "article_fc_rating") {
 
 # Clean up some labels
 exposure_timeseries <- exposure_timeseries %>% 
-  mutate(article_fc_rating = ifelse(article_fc_rating == "T", "True news", ifelse(article_fc_rating == "FM", "Fake news", 
+  mutate(article_fc_rating = ifelse(article_fc_rating == "T", "True news", ifelse(article_fc_rating == "FM", "False/Misleading news", 
                                                                                   ifelse(article_fc_rating == "CND", "Borderline", 
                                                                                          ifelse(article_fc_rating == "No Mode!", "No mode", article_fc_rating)))),
          source_type = ifelse(source_type == "mainstream", "Mainstream", ifelse(source_type == "fringe", "Fringe", source_type)),
@@ -224,8 +224,11 @@ gg_ideol_total <- exposure_ideol %>%
             avg_count = sum(count, na.rm = TRUE) / length(unique(total_article_number))) %>% 
   ggplot(., aes(x = ideology_bin, y = count, fill = ideology_bin)) +
   geom_bar(stat = "identity") +
-  scale_x_continuous(limits = c(-5.5, 5.5), expand = c(0, 0), breaks = seq(-5, 5, 1)) +
-  scale_y_continuous(labels = comma) +
+  scale_x_continuous(limits = c(-6, 6), 
+                     expand = c(0, 0), 
+                     breaks = seq(-6, 6, 1)) +
+  scale_y_continuous(expand = c(0, 0), 
+                     labels = comma) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish) +
   xlab("User ideology") +
   ylab("Total users exposed to articles") +
@@ -248,8 +251,11 @@ gg_ideol_avg <- exposure_ideol %>%
   summarise(avg_count = sum(count, na.rm = TRUE) / length(unique(total_article_number))) %>% 
   ggplot(., aes(x = ideology_bin, y = avg_count, fill = ideology_bin)) +
   geom_bar(stat = "identity") +
-  scale_x_continuous(limits = c(-5.5, 5.5), expand = c(0, 0), breaks = seq(-5, 5, 1)) +
-  scale_y_continuous(labels = comma) +
+  scale_x_continuous(limits = c(-6, 6), 
+                     expand = c(0, 0), 
+                     breaks = seq(-6, 6, 1)) +
+  scale_y_continuous(expand = c(0, 0), 
+                     labels = comma) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish) +
   xlab("User ideology") +
   ylab("Avg. users exposed to article") +
@@ -282,9 +288,13 @@ gg_ideol_dist <- exposure_ideol %>%
   # Plot
   ggplot(., aes(x = ideology_bin, y = avg_exposed_prop, fill = ideology_bin)) +
   geom_bar(stat = "identity") +
-  scale_x_continuous(limits = c(-5.5, 5.5), expand = c(0, 0), breaks = seq(-5, 5, 1)) +
-  scale_y_continuous(breaks = seq(0, 1, 0.05)) +
-  scale_fill_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish) +
+  scale_x_continuous(limits = c(-6, 6), 
+                     expand = c(0, 0), 
+                     breaks = seq(-6, 6, 2)) +
+  scale_y_continuous(breaks = seq(0, 1, 0.05),
+                     expand = c(0, 0)) +
+  scale_fill_gradientn(colours = ideol_pal, 
+                       limit = c(-2, 2), oob = scales::squish) +
   xlab("User ideology") +
   ylab("Avg. proportion of article exposure") +
   theme_ctokita() +
@@ -296,7 +306,7 @@ gg_ideol_dist <- exposure_ideol %>%
              scales = "free_x")
 gg_ideol_dist  
   
-ggsave(gg_ideol_dist, filename = paste0(outpath, "ideol_avg_exposure_distribution.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideol_dist, filename = paste0(outpath, "ideol_avg_exposure_distribution.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
 
 
 ####################
@@ -312,12 +322,16 @@ gg_ideoltime <- exposure_ideol %>%
                        name = "User\nideology",
                        limits = c(-2, 2), 
                        oob = squish) +
-  scale_x_continuous(breaks = seq(0, 48, 6)) +
+  scale_x_continuous(breaks = seq(0, 48, 6),
+                     expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
   xlab("Time since first article share (hrs)") +
   ylab("New users exposed") +
   theme_ctokita() +
   theme(aspect.ratio = NULL, 
-        legend.box.margin = unit(c(0, 0, 0, 0), "mm")) +
+        legend.box.margin = unit(c(0, 0, 0, 0), "mm"),
+        panel.border = element_rect(size = 0.6, fill = NA),
+        axis.line = element_blank()) +
   facet_wrap(as.formula(paste("~", grouping)), 
              ncol = 1,
              strip.position = "right",
@@ -330,13 +344,14 @@ ggsave(gg_ideoltime, filename = paste0(outpath, "ideol_exposed_hourbin.pdf"), wi
 ####################
 # Find exposure to fake news
 ####################
-gg_fake_expos <- exposure_ideol %>% 
-  filter(article_fc_rating == "Fake news") %>% 
+gg_fake_exposure_article <- exposure_ideol %>% 
+  filter(article_fc_rating == "False/Misleading news") %>% 
   group_by(total_article_number, ideology_bin) %>% 
   summarise(count = sum(count, na.rm = TRUE)) %>% 
   ggplot(., aes(x = ideology_bin, y = count, fill = ideology_bin)) +
   geom_bar(stat = "identity") +
-  scale_x_continuous(breaks = seq(-3, 6, 3)) +
+  scale_x_continuous(breaks = seq(-3, 6, 3),
+                     limits = c(-3, 6)) +
   scale_y_continuous(labels = comma) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish) +
   xlab("User ideology") +
@@ -344,5 +359,5 @@ gg_fake_expos <- exposure_ideol %>%
   theme_ctokita() +
   theme(legend.position = "none") +
   facet_wrap(~total_article_number)
-gg_fake_expos
-ggsave(gg_fake_expos, filename = paste0(outpath, "fake_news_exposure_by_article.pdf"), width = 180, height = 180, units = "mm", dpi = 400)
+gg_fake_exposure_article
+ggsave(gg_fake_exposure_article, filename = paste0(outpath, "fake_news_exposure_by_article.pdf"), width = 180, height = 180, units = "mm", dpi = 400)

@@ -106,7 +106,7 @@ if (grouping == "article_fc_rating") {
 
 # Clean up some labels
 belief_timeseries <- belief_timeseries %>% 
-  mutate(article_fc_rating = ifelse(article_fc_rating == "T", "True news", ifelse(article_fc_rating == "FM", "Fake news", 
+  mutate(article_fc_rating = ifelse(article_fc_rating == "T", "True news", ifelse(article_fc_rating == "FM", "False/Misleading news", 
                                                                                   ifelse(article_fc_rating == "CND", "Borderline", 
                                                                                          ifelse(article_fc_rating == "No Mode!", "No mode", article_fc_rating)))),
          source_type = ifelse(source_type == "mainstream", "Mainstream", ifelse(source_type == "fringe", "Fringe", source_type)),
@@ -161,8 +161,11 @@ gg_ideol_total <- belief_ideol %>%
   # Plot
   ggplot(., aes(x = ideology_bin, y = count, fill = ideology_bin)) +
   geom_bar(stat = "identity") +
-  scale_x_continuous(limits = c(-6, 6), expand = c(0, 0), breaks = seq(-6, 6, 2)) +
-  scale_y_continuous(labels = comma) +
+  scale_x_continuous(limits = c(-6, 6), 
+                     expand = c(0, 0), 
+                     breaks = seq(-6, 6, 1)) +
+  scale_y_continuous(labels = comma,
+                     expand = c(0, 0)) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish) +
   xlab("User ideology") +
   ylab("Total users believing news") +
@@ -171,10 +174,10 @@ gg_ideol_total <- belief_ideol %>%
         aspect.ratio = NULL) +
   facet_wrap(as.formula(paste("~", grouping)), 
              ncol = 1,
-             strip.position = "top",
+             strip.position = "right",
              scales = "free")
 gg_ideol_total
-ggsave(gg_ideol_total, filename = paste0(outpath, "ideol_total_belief.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideol_total, filename = paste0(outpath, "ideol_total_belief.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
 
 
 ####################
@@ -187,8 +190,11 @@ gg_ideol_avg <- belief_ideol %>%
   # Plot
   ggplot(., aes(x = ideology_bin, y = avg_count, fill = ideology_bin)) +
   geom_bar(stat = "identity") +
-  scale_x_continuous(limits = c(-6, 6), expand = c(0, 0), breaks = seq(-6, 6, 2)) +
-  scale_y_continuous(labels = comma) +
+  scale_x_continuous(limits = c(-6, 6), 
+                     expand = c(0, 0), 
+                     breaks = seq(-6, 6, 1)) +
+  scale_y_continuous(labels = comma,
+                     expand = c(0, 0)) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish) +
   xlab("User ideology") +
   ylab("Avg. users believing article") +
@@ -197,10 +203,10 @@ gg_ideol_avg <- belief_ideol %>%
         aspect.ratio = NULL) +
   facet_wrap(as.formula(paste("~", grouping)), 
              ncol = 1,
-             strip.position = "top",
+             strip.position = "right",
              scales = "free")
 gg_ideol_avg
-ggsave(gg_ideol_avg, filename = paste0(outpath, "ideol_avg_belief.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideol_avg, filename = paste0(outpath, "ideol_avg_belief.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
 
 
 ####################
@@ -219,8 +225,12 @@ gg_ideol_dist <- belief_ideol %>%
   # Plot
   ggplot(., aes(x = ideology_bin, y = avg_belief_prop, fill = ideology_bin)) +
   geom_bar(stat = "identity") +
-  scale_x_continuous(limits = c(-6, 6), expand = c(0, 0), breaks = seq(-6, 6, 2)) +
-  scale_y_continuous(breaks = seq(0, 1, 0.05), limits = c(0, 0.25)) +
+  scale_x_continuous(limits = c(-6, 6), 
+                     expand = c(0, 0), 
+                     breaks = seq(-6, 6, 2)) +
+  scale_y_continuous(breaks = seq(0, 1, 0.05), 
+                     limits = c(0, 0.25),
+                     expand = c(0, 0)) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish) +
   xlab("User ideology") +
   ylab("Avg. proportion of article beliefs") +
@@ -229,7 +239,7 @@ gg_ideol_dist <- belief_ideol %>%
         aspect.ratio = NULL) +
   facet_wrap(as.formula(paste("~", grouping)), 
              ncol = 1,
-             strip.position = "top",
+             strip.position = "right",
              scales = "free_x")
 gg_ideol_dist
 
@@ -248,12 +258,16 @@ gg_ideoltime <- belief_ideol %>%
                        name = "User\nideology",
                        limits = c(-2, 2), 
                        oob = squish) +
-  scale_x_continuous(breaks = seq(0, 48, 6)) +
+  scale_x_continuous(breaks = seq(0, 48, 6),
+                     expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
   xlab("Time since first article share (hrs)") +
   ylab("New users believing") +
   theme_ctokita() +
   theme(aspect.ratio = NULL, 
-        legend.box.margin = unit(c(0, 0, 0, 0), "mm")) +
+        legend.box.margin = unit(c(0, 0, 0, 0), "mm"),
+        panel.border = element_rect(size = 0.6, fill = NA),
+        axis.line = element_blank()) +
   facet_wrap(as.formula(paste("~", grouping)), 
              ncol = 1,
              strip.position = "right",
