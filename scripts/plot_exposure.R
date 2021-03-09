@@ -37,6 +37,7 @@ ideol_pal <- rev(brewer.pal(5, "RdBu"))
 ideol_pal[3] <- "#e0e0e0"
 ideol_dist_pal <- rev(brewer.pal(5, "PuOr"))
 ideol_dist_pal[3] <- "#e0e0e0"
+ideol_limit <- 3 #limit beyond which we squish the color palette
 
 
 ####################
@@ -222,14 +223,15 @@ gg_ideol_total <- exposure_ideol %>%
   group_by(!!sym(grouping), ideology_bin) %>% 
   summarise(count = sum(count, na.rm = TRUE),
             avg_count = sum(count, na.rm = TRUE) / length(unique(total_article_number))) %>% 
-  ggplot(., aes(x = ideology_bin, y = count, fill = ideology_bin)) +
+  ggplot(., aes(x = ideology_bin, y = count, fill = ideology_bin, color = ideology_bin)) +
   geom_bar(stat = "identity") +
   scale_x_continuous(limits = c(-6, 6), 
                      expand = c(0, 0), 
                      breaks = seq(-6, 6, 1)) +
   scale_y_continuous(expand = c(0, 0), 
                      labels = comma) +
-  scale_fill_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish) +
+  scale_color_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
+  scale_fill_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   xlab("User ideology") +
   ylab("Total users exposed to articles") +
   theme_ctokita() +
@@ -249,14 +251,15 @@ ggsave(gg_ideol_total, filename = paste0(outpath, "ideol_total_exposed.pdf"), wi
 gg_ideol_avg <- exposure_ideol %>% 
   group_by(!!sym(grouping), ideology_bin) %>% 
   summarise(avg_count = sum(count, na.rm = TRUE) / length(unique(total_article_number))) %>% 
-  ggplot(., aes(x = ideology_bin, y = avg_count, fill = ideology_bin)) +
+  ggplot(., aes(x = ideology_bin, y = avg_count, fill = ideology_bin, color = ideology_bin)) +
   geom_bar(stat = "identity") +
   scale_x_continuous(limits = c(-6, 6), 
                      expand = c(0, 0), 
                      breaks = seq(-6, 6, 1)) +
   scale_y_continuous(expand = c(0, 0), 
                      labels = comma) +
-  scale_fill_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish) +
+  scale_color_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
+  scale_fill_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   xlab("User ideology") +
   ylab("Avg. users exposed to article") +
   theme_ctokita() +
@@ -286,15 +289,17 @@ gg_ideol_dist <- exposure_ideol %>%
   group_by(!!sym(grouping), ideology_bin, n_articles_in_grouping) %>% 
   summarise(avg_exposed_prop = sum(exposed_prop) / unique(n_articles_in_grouping)) %>% 
   # Plot
-  ggplot(., aes(x = ideology_bin, y = avg_exposed_prop, fill = ideology_bin)) +
+  ggplot(., aes(x = ideology_bin, y = avg_exposed_prop, fill = ideology_bin, color = ideology_bin)) +
   geom_bar(stat = "identity") +
   scale_x_continuous(limits = c(-6, 6), 
                      expand = c(0, 0), 
                      breaks = seq(-6, 6, 2)) +
   scale_y_continuous(breaks = seq(0, 1, 0.05),
                      expand = c(0, 0)) +
+  scale_color_gradientn(colours = ideol_pal, 
+                        limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   scale_fill_gradientn(colours = ideol_pal, 
-                       limit = c(-2, 2), oob = scales::squish) +
+                       limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   xlab("User ideology") +
   ylab("Avg. proportion of article exposure") +
   theme_ctokita() +
@@ -316,17 +321,20 @@ gg_ideoltime <- exposure_ideol %>%
   filter(hour_bin >= 0) %>% 
   group_by(!!sym(grouping), hour_bin, ideology_bin) %>% 
   summarise(count = sum(count)) %>%
-  ggplot(., aes(x = hour_bin, y = count, fill = ideology_bin)) +
+  ggplot(., aes(x = hour_bin, y = count, fill = ideology_bin, color = ideology_bin)) +
   geom_bar(position = "fill", stat = "identity", width = 1) +
   scale_fill_gradientn(colours = ideol_pal, 
                        name = "User\nideology",
                        limits = c(-2, 2), 
                        oob = squish) +
-  scale_x_continuous(breaks = seq(0, 48, 6),
+  scale_color_gradientn(colours = ideol_pal, 
+                       name = "User\nideology",
+                       limits = c(-2, 2), 
+                       oob = squish) +  scale_x_continuous(breaks = seq(0, 48, 6),
                      expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0)) +
   xlab("Time since first article share (hrs)") +
-  ylab("New users exposed") +
+  ylab("Proportion of newly exposed users") +
   theme_ctokita() +
   theme(aspect.ratio = NULL, 
         legend.box.margin = unit(c(0, 0, 0, 0), "mm"),
@@ -340,7 +348,6 @@ gg_ideoltime
 ggsave(gg_ideoltime, filename = paste0(outpath, "ideol_exposed_hourbin.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
 
 
-
 ####################
 # Find exposure to fake news
 ####################
@@ -348,12 +355,13 @@ gg_fake_exposure_article <- exposure_ideol %>%
   filter(article_fc_rating == "False/Misleading news") %>% 
   group_by(total_article_number, ideology_bin) %>% 
   summarise(count = sum(count, na.rm = TRUE)) %>% 
-  ggplot(., aes(x = ideology_bin, y = count, fill = ideology_bin)) +
+  ggplot(., aes(x = ideology_bin, y = count, fill = ideology_bin, color = ideology_bin)) +
   geom_bar(stat = "identity") +
   scale_x_continuous(breaks = seq(-3, 6, 3),
                      limits = c(-3, 6)) +
   scale_y_continuous(labels = comma) +
-  scale_fill_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish) +
+  scale_color_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
+  scale_fill_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   xlab("User ideology") +
   ylab("Avg. users exposed to article") +
   theme_ctokita() +

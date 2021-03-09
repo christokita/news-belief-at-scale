@@ -37,6 +37,7 @@ ideol_pal <- rev(brewer.pal(5, "RdBu"))
 ideol_pal[3] <- "#e0e0e0"
 ideol_dist_pal <- rev(brewer.pal(5, "PuOr"))
 ideol_dist_pal[3] <- "#e0e0e0"
+ideol_limit <- 3 #limit beyond which we squish the color palette
 
 
 ####################
@@ -134,21 +135,6 @@ belief_ideol <- belief_timeseries %>%
   group_by(!!sym(grouping)) %>% 
   mutate(n_articles_in_grouping = length(unique(total_article_number)))
 
-####################
-# Single story exposure heatmap
-####################
-# Grab example story for now
-story <- 28
-example_story <- belief_ideol %>% 
-  filter(total_article_number == story) %>% 
-  group_by(hour_bin, ideology_bin) %>% 
-  summarise(count = sum(count))
-
-# 
-ggplot(data = example_story, aes(x = ideology_bin, y = hour_bin, fill = count)) +
-  geom_tile() +
-  scale_fill_gradientn(name = "count", trans = "log", colors = c("white", "red"), na.value = "white") +
-  theme_ctokita()
 
 ####################
 # Total ideologies believing articles (by type)
@@ -159,14 +145,15 @@ gg_ideol_total <- belief_ideol %>%
   summarise(count = sum(count, na.rm = TRUE),
             avg_count = sum(count, na.rm = TRUE) / unique(n_articles_in_grouping)) %>% 
   # Plot
-  ggplot(., aes(x = ideology_bin, y = count, fill = ideology_bin)) +
+  ggplot(., aes(x = ideology_bin, y = count, fill = ideology_bin, color = ideology_bin)) +
   geom_bar(stat = "identity") +
   scale_x_continuous(limits = c(-6, 6), 
                      expand = c(0, 0), 
                      breaks = seq(-6, 6, 1)) +
   scale_y_continuous(labels = comma,
                      expand = c(0, 0)) +
-  scale_fill_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish) +
+  scale_color_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
+  scale_fill_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   xlab("User ideology") +
   ylab("Total users believing news") +
   theme_ctokita() +
@@ -188,15 +175,15 @@ gg_ideol_avg <- belief_ideol %>%
   group_by(!!sym(grouping), ideology_bin) %>% 
   summarise(avg_count = sum(count, na.rm = TRUE) / unique(n_articles_in_grouping)) %>% 
   # Plot
-  ggplot(., aes(x = ideology_bin, y = avg_count, fill = ideology_bin)) +
+  ggplot(., aes(x = ideology_bin, y = avg_count, fill = ideology_bin, color = ideology_bin)) +
   geom_bar(stat = "identity") +
   scale_x_continuous(limits = c(-6, 6), 
                      expand = c(0, 0), 
                      breaks = seq(-6, 6, 1)) +
   scale_y_continuous(labels = comma,
                      expand = c(0, 0)) +
-  scale_fill_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish) +
-  xlab("User ideology") +
+  scale_color_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
+  scale_fill_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +  xlab("User ideology") +
   ylab("Avg. users believing article") +
   theme_ctokita() +
   theme(legend.position = "none",
@@ -223,7 +210,7 @@ gg_ideol_dist <- belief_ideol %>%
   group_by(!!sym(grouping), ideology_bin) %>% 
   summarise(avg_belief_prop = sum(belief_prop) / unique(n_articles_in_grouping)) %>% 
   # Plot
-  ggplot(., aes(x = ideology_bin, y = avg_belief_prop, fill = ideology_bin)) +
+  ggplot(., aes(x = ideology_bin, y = avg_belief_prop, fill = ideology_bin, color = ideology_bin)) +
   geom_bar(stat = "identity") +
   scale_x_continuous(limits = c(-6, 6), 
                      expand = c(0, 0), 
@@ -231,7 +218,8 @@ gg_ideol_dist <- belief_ideol %>%
   scale_y_continuous(breaks = seq(0, 1, 0.05), 
                      limits = c(0, 0.25),
                      expand = c(0, 0)) +
-  scale_fill_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish) +
+  scale_color_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
+  scale_fill_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   xlab("User ideology") +
   ylab("Avg. proportion of article beliefs") +
   theme_ctokita() +
@@ -252,9 +240,13 @@ ggsave(gg_ideol_dist, filename = paste0(outpath, "ideol_avg_belief_distribution.
 gg_ideoltime <- belief_ideol %>% 
   group_by(!!sym(grouping), hour_bin, ideology_bin) %>% 
   summarise(count = sum(count)) %>%
-  ggplot(., aes(x = hour_bin, y = count, fill = ideology_bin)) +
+  ggplot(., aes(x = hour_bin, y = count, fill = ideology_bin, color = ideology_bin)) +
   geom_bar(position = "fill", stat = "identity", width = 1) +
   scale_fill_gradientn(colours = ideol_pal, 
+                       name = "User\nideology",
+                       limits = c(-2, 2), 
+                       oob = squish) +
+  scale_color_gradientn(colours = ideol_pal, 
                        name = "User\nideology",
                        limits = c(-2, 2), 
                        oob = squish) +
