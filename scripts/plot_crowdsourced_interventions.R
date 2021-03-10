@@ -71,6 +71,7 @@ max_time_of_expsoure <-  max(intervention_exposure$time[intervention_exposure$ne
 intervention_exposure <- intervention_exposure %>% 
   group_by(total_article_number) %>% 
   mutate(relative_cumulative_exposed = cumulative_exposed / max(cumulative_exposed), 
+         change_in_cumlative_exposed = (cumulative_exposed - max(cumulative_exposed)) / max(cumulative_exposed),
          simulation_number = paste0(total_article_number, "-", replicate, "-", intervention_time, "-visibility", visibility_reduction, "-sharing", sharing_reduction),
          simulation_type = factor(simulation_type, levels = c("baseline", "no intervention", "intervention"))) %>% 
   filter(time <= max_time_of_expsoure) 
@@ -81,12 +82,13 @@ article_info <- read.csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/twe
   distinct()
 
 intervention_exposure <- merge(intervention_exposure, article_info, by = "total_article_number") %>% 
-  mutate(article_fc_rating = gsub("No Mode!|CND", "Borderline", article_fc_rating), #group the non-T/F ratings
-         article_fc_rating = factor(article_fc_rating, levels = c("FM", "Borderline", "T")))
+  mutate(article_fc_rating = gsub("No Mode!|CND", "Unclear", article_fc_rating), #group the non-T/F ratings
+         article_fc_rating = factor(article_fc_rating, levels = c("FM", "Unclear", "T")))
 
 ####################
 # Plot rate of being labeled false by crowd, broken out by crowd rule
 ####################
+# All articles
 gg_labelingrate <- intervention_exposure %>% 
   # Prep data
   filter(replicate != -1) %>% 
@@ -113,6 +115,34 @@ gg_labelingrate <- intervention_exposure %>%
 gg_labelingrate
 ggsave(gg_labelingrate, filename = paste0(outpath, "crowd_false_rating_rate.pdf"), width = 90, height = 45, units = "mm")
 
+# Broken out by source type
+gg_labelingrate_sourcetype <- intervention_exposure %>% 
+  # Prep data
+  filter(replicate != -1) %>% 
+  distinct(total_article_number, simulation_type, replicate, fc_rule, article_fc_rating, source_type) %>% 
+  mutate(fc_rule = factor(fc_rule, levels = c("mean", "mode", "median", "majority", "unanimity"))) %>% 
+  group_by(article_fc_rating, fc_rule, source_type) %>% 
+  summarise(labeled_false_rate = sum(simulation_type == "intervention") / length(simulation_type)) %>% 
+  # Plot
+  ggplot(., aes(x = article_fc_rating, y = labeled_false_rate, color = article_fc_rating)) +
+  geom_segment(aes(xend = article_fc_rating, yend = 0), size = 0.6) +
+  geom_point(size = 2.5, stroke = 0) +
+  scale_x_discrete(labels = c("F", "Unc", "T")) +
+  scale_y_continuous(breaks = seq(0, 1, 0.1), 
+                     limits = c(0, 0.701),
+                     expand = c(0, 0)) +
+  scale_color_manual(values = veracity_pal) +
+  xlab("Article rating by fact checkers") +
+  ylab("Rate flagged \"false\" by crowd") +
+  theme_ctokita() +
+  theme(aspect.ratio = NULL,
+        legend.position = "none") +
+  facet_grid(source_type~fc_rule, scales = "free_x")
+
+gg_labelingrate_sourcetype
+ggsave(gg_labelingrate_sourcetype, filename = paste0(outpath, "crowd_false_rating_rate_bysourcetype.pdf"), width = 90, height = 90, units = "mm")
+
+
 ####################
 # Plot relative exposure for true and fake news
 ####################
@@ -132,18 +162,18 @@ ggplot(exposure_decrease, aes(x = article_fc_rating, y = relative_cumulative_exp
   facet_grid(~fc_rule)
 
 # Estimate mean reduction in exposure by intervention
-# prior <- set_prior("Beta(1,1)", class = "b")
-# prior <- get_prior(relative_cumulative_exposed ~ 0 + article_fc_rating + fc_rule, data = exposure_decrease, family = gaussian())
-# blm_exposure <- brm(relative_cumulative_exposed ~ 0 + article_fc_rating + fc_rule, 
-#                     data = exposure_decrease, 
-#                     prior = prior,
-#                     family = gaussian(), 
-#                     warmup = 500, 
-#                     iter = 1500, 
-#                     chains = 1)
-# 
-# exposure_posterior <- posterior_samples(blm_exposure)
-# posterior_summary(blm_exposure)
+prior <- set_prior("Beta(1,1)", class = "b")
+prior <- get_prior(relative_cumulative_exposed ~ 0 + article_fc_rating + fc_rule, data = exposure_decrease, family = zero_inflated_beta())
+blm_exposure <- brm(decrease_in_exposure ~ 0 + article_fc_rating + fc_rule,
+                    data = exposure_decrease,
+                    prior = prior,
+                    family = zero_inflated_beta(),
+                    warmup = 500,
+                    iter = 1500,
+                    chains = 1)
+
+exposure_posterior <- posterior_samples(blm_exposure)
+posterior_summary(blm_exposure)
 
 # Plot mean reduction
 gg_relative_exposure <- exposure_decrease %>% 

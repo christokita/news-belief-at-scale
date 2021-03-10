@@ -137,7 +137,7 @@ belief_ideol <- belief_timeseries %>%
 
 
 ####################
-# Total ideologies believing articles (by type)
+# Total ideologies believing articles (by veracity)
 ####################
 gg_ideol_total <- belief_ideol %>% 
   # Calculate totals
@@ -149,13 +149,13 @@ gg_ideol_total <- belief_ideol %>%
   geom_bar(stat = "identity") +
   scale_x_continuous(limits = c(-6, 6), 
                      expand = c(0, 0), 
-                     breaks = seq(-6, 6, 1)) +
+                     breaks = seq(-6, 6, 2)) +
   scale_y_continuous(labels = comma,
                      expand = c(0, 0)) +
   scale_color_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
-  xlab("User ideology") +
-  ylab("Total users believing news") +
+  xlab("Believing user ideology") +
+  ylab("Total users") +
   theme_ctokita() +
   theme(legend.position = "none",
         aspect.ratio = NULL) +
@@ -164,7 +164,7 @@ gg_ideol_total <- belief_ideol %>%
              strip.position = "right",
              scales = "free")
 gg_ideol_total
-ggsave(gg_ideol_total, filename = paste0(outpath, "ideol_total_belief.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideol_total, filename = paste0(outpath, "ideol_total_belief.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
 
 
 ####################
@@ -183,8 +183,9 @@ gg_ideol_avg <- belief_ideol %>%
   scale_y_continuous(labels = comma,
                      expand = c(0, 0)) +
   scale_color_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
-  scale_fill_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +  xlab("User ideology") +
-  ylab("Avg. users believing article") +
+  scale_fill_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +  
+  xlab("Believing user ideology") +
+  ylab("Avg. number of users") +
   theme_ctokita() +
   theme(legend.position = "none",
         aspect.ratio = NULL) +
@@ -220,7 +221,7 @@ gg_ideol_dist <- belief_ideol %>%
                      expand = c(0, 0)) +
   scale_color_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
-  xlab("User ideology") +
+  xlab("Believing user ideology") +
   ylab("Avg. proportion of article beliefs") +
   theme_ctokita() +
   theme(legend.position = "none",

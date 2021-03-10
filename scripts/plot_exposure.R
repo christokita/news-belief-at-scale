@@ -168,11 +168,10 @@ gg_exposuretweet <- exposure_timeseries %>%
   ylab("Total users exposed") +
   theme_ctokita() +
   theme(aspect.ratio = NULL) +
-  facet_wrap(as.formula(paste("~", grouping)), 
-             ncol = 1,
-             strip.position = "right")
+  facet_wrap(as.formula(paste(grouping, "~")), 
+             ncol = 2)
 gg_exposuretweet
-ggsave(gg_exposuretweet, filename = paste0(outpath, "total_exposed_tweetnumber.pdf"), width = 90, height = 45, units = "mm", dpi = 400)
+ggsave(gg_exposuretweet, filename = paste0(outpath, "total_exposed_tweetnumber.pdf"), width = 45, height = 45, units = "mm", dpi = 400)
 
 
 ####################
@@ -227,13 +226,13 @@ gg_ideol_total <- exposure_ideol %>%
   geom_bar(stat = "identity") +
   scale_x_continuous(limits = c(-6, 6), 
                      expand = c(0, 0), 
-                     breaks = seq(-6, 6, 1)) +
+                     breaks = seq(-6, 6, 2)) +
   scale_y_continuous(expand = c(0, 0), 
                      labels = comma) +
   scale_color_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
-  xlab("User ideology") +
-  ylab("Total users exposed to articles") +
+  xlab("Exposed user ideology") +
+  ylab("Total number of users") +
   theme_ctokita() +
   theme(legend.position = "none",
         aspect.ratio = NULL) +
@@ -242,7 +241,7 @@ gg_ideol_total <- exposure_ideol %>%
              strip.position = "right",
              scales = "free")
 gg_ideol_total
-ggsave(gg_ideol_total, filename = paste0(outpath, "ideol_total_exposed.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideol_total, filename = paste0(outpath, "ideol_total_exposed.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
 
 
 ####################
@@ -255,13 +254,13 @@ gg_ideol_avg <- exposure_ideol %>%
   geom_bar(stat = "identity") +
   scale_x_continuous(limits = c(-6, 6), 
                      expand = c(0, 0), 
-                     breaks = seq(-6, 6, 1)) +
+                     breaks = seq(-6, 6, 2)) +
   scale_y_continuous(expand = c(0, 0), 
                      labels = comma) +
   scale_color_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
-  xlab("User ideology") +
-  ylab("Avg. users exposed to article") +
+  xlab("Exposed user ideology") +
+  ylab("Avg. number of users") +
   theme_ctokita() +
   theme(legend.position = "none",
         aspect.ratio = NULL) +
@@ -270,7 +269,7 @@ gg_ideol_avg <- exposure_ideol %>%
              strip.position = "right",
              scales = "free")
 gg_ideol_avg
-ggsave(gg_ideol_avg, filename = paste0(outpath, "ideol_avg_exposed.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideol_avg, filename = paste0(outpath, "ideol_avg_exposed.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
 
 
 ####################
@@ -300,7 +299,7 @@ gg_ideol_dist <- exposure_ideol %>%
                         limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   scale_fill_gradientn(colours = ideol_pal, 
                        limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
-  xlab("User ideology") +
+  xlab("Exposed user ideology") +
   ylab("Avg. proportion of article exposure") +
   theme_ctokita() +
   theme(legend.position = "none",
