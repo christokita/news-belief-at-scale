@@ -14,10 +14,7 @@ Analyze the rewteet network of fake news articles
 ####################
 import pandas as pd
 import numpy as np
-import re
-import os
 import networkx as nx
-import igraph
 import scipy.stats as stats
 
     

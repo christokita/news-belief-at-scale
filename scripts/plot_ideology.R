@@ -111,6 +111,7 @@ gg_ideoltweets <- tweets %>%
              strip.position = "right")
 gg_ideoltweets
 ggsave(gg_ideoltweets, file = paste0(outpath, "total_tweets_by_ideology.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideoltweets + theme(strip.text = element_blank()), file = paste0(outpath, "total_tweets_by_ideology_FIG.pdf"), width = 45, height = 45, units = "mm", dpi = 400)
 
 
 ####################
@@ -199,14 +200,16 @@ gg_dist_shapes <- shapes %>%
   select(user_id, mu, sigma, user_ideology) %>% 
   distinct() %>% 
   ggplot(., aes(x = mu, y = sigma, color = user_ideology)) +
-  geom_point(alpha = 0.15, size = 0.3, stroke = 0) +
+  geom_point(alpha = 0.1, size = 0.6, stroke = 0) +
   scale_color_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish, name = "User\nideology") +
   xlab("Est. mean follower ideology") +
   ylab("Est. s.d. follower ideology") +
-  theme_ctokita()
+  theme_ctokita() +
+  theme(plot.background = element_blank(),
+        legend.position = "none")
 gg_dist_shapes
 
-ggsave(gg_dist_shapes, filename = paste0(outpath, "follower_dist_shapes.pdf"), width = 60, height = 45, units = "mm", dpi = 400)
+ggsave(gg_dist_shapes, filename = paste0(outpath, "follower_dist_shapes.png"), width = 45, height = 45, units = "mm", dpi = 400, bg = "transparent")
 
 
 ####################
@@ -217,7 +220,7 @@ gg_ideology_comp <- shapes %>%
   distinct() %>% 
   filter(!is.na(user_ideology)) %>% 
   ggplot(., aes(x = user_ideology, y = mu, color = user_ideology)) +
-  geom_point(alpha = 0.2, size = 0.3, stroke = 0) +
+  geom_point(alpha = 0.1, size = 0.6, stroke = 0) +
   scale_y_continuous(breaks = seq(-3, 5, 1)) +
   scale_x_continuous(breaks = seq(-3, 5, 1)) +
   scale_color_gradientn(name = "User\nideology",
@@ -227,14 +230,15 @@ gg_ideology_comp <- shapes %>%
   xlab("User ideology") +
   ylab("Est. mean follower ideology") +
   theme_ctokita() +
-  theme(legend.position = "none")
+  theme(legend.position = "none", 
+        plot.background = element_blank())
 
-gg_ideology_comp <- ggMarginal(gg_ideology_comp, type = "histogram", fill = plot_color, alpha = 0.6, size = 3, colour = NA,
-                               xparams = list( bins = 30 ),
-                               yparams = list( bins = 30 ))
+# gg_ideology_comp <- ggMarginal(gg_ideology_comp, type = "histogram", fill = plot_color, alpha = 0.6, size = 3, colour = NA,
+#                                xparams = list( bins = 30 ),
+#                                yparams = list( bins = 30 ))
 gg_ideology_comp
 
-ggsave(gg_ideology_comp, filename = paste0(outpath, "ideology_comparison_user-follower.pdf"), width = 60, height = 60, units = "mm", dpi = 400)
+ggsave(gg_ideology_comp, filename = paste0(outpath, "ideology_comparison_user-follower.png"), width = 45, height = 45, units = "mm", dpi = 400, bg = "transparent")
 
 
 

@@ -40,7 +40,7 @@ if (grouping == "article_fc_rating") {
 
 # Color palette
 plot_color <- "#495867"
-
+grouping_pal <- c("#F18805", plot_color)
 
 ####################
 # Load data 
@@ -52,8 +52,17 @@ network_metrics <- read.csv(network_metric_path, header = TRUE)
 rt_edges <- read.csv(paste0(retweet_network_path, 'rtnetwork_edges.csv'), colClasses = c("Source"="character", "Target"="character"))
 
 # Load tweets for article metadata
-article_data <- read.csv(tweet_path, header = TRUE, colClasses = c("user_id"="character", "tweet_id"="character")) %>% 
-  filter(total_article_number > 10) %>% #discard first 10 articles from analysis
+tweets <- read.csv(tweet_path, header = TRUE, colClasses = c("user_id"="character", "tweet_id"="character")) %>% 
+  filter(total_article_number > 10) %>%  #discard first 10 articles from analysis
+  # clean up metadata
+  mutate(article_fc_rating = ifelse(article_fc_rating == "T", "True news", ifelse(article_fc_rating == "FM", "False/Misleading news", 
+                                                                                  ifelse(article_fc_rating == "CND", "Borderline", 
+                                                                                         ifelse(article_fc_rating == "No Mode!", "No mode", article_fc_rating)))),
+         source_type = ifelse(source_type == "mainstream", "Mainstream", ifelse(source_type == "fringe", "Fringe", source_type)),
+         article_lean = ifelse(article_lean == "C", "Conservative", ifelse(article_lean == "L", "Liberal",
+                                                                           ifelse(article_lean == "N", "Neutral", 
+                                                                                  ifelse(article_lean == "U", "Unclear", source_type)))) )
+article_data <- tweets %>% 
   select(user_id, tweet_id, total_article_number, source_type, source_lean, article_fc_rating, article_lean, user_ideology) 
 
 # Read in exposure data
@@ -65,7 +74,7 @@ exposure_data <- read.csv(exposure_path,
   arrange(total_article_number, tweet_number) %>% 
   merge(article_data, by = c("user_id", "tweet_id")) %>% 
   # clean up metadata
-  mutate(article_fc_rating = ifelse(article_fc_rating == "T", "True news", ifelse(article_fc_rating == "FM", "Fake news", 
+  mutate(article_fc_rating = ifelse(article_fc_rating == "T", "True news", ifelse(article_fc_rating == "FM", "False/Misleading news", 
                                                                                   ifelse(article_fc_rating == "CND", "Borderline", 
                                                                                          ifelse(article_fc_rating == "No Mode!", "No mode", article_fc_rating)))),
          source_type = ifelse(source_type == "mainstream", "Mainstream", ifelse(source_type == "fringe", "Fringe", source_type)),
@@ -75,12 +84,62 @@ exposure_data <- read.csv(exposure_path,
 # If analyzing by veracity, drop out non-True/False articles
 if (grouping == "article_fc_rating") {
   exposure_data <- exposure_data %>% 
-    filter(article_fc_rating %in% c("True news", "Fake news"))
+    filter(article_fc_rating %in% c("True news", "False/Misleading news"))
 }
 
 
 
 ############################## Basics ##############################
+
+####################
+# Plot: Tweet types
+####################
+# All tweets
+gg_tweettypes <- 
+  # Prep data
+  tweets %>% 
+  mutate(is_retweet = as.logical(is_retweet),
+         is_quote = as.logical(is_quote),
+         tweet_type = ifelse(is_retweet|is_quote, "Retweet", "Original Share"),
+         tweet_type = factor(tweet_type, levels = c("Original Share", "Retweet"))) %>% 
+  # Plot
+  ggplot(., aes(x = tweet_type, fill = tweet_type)) +
+  geom_bar(stat = "count") +
+  scale_y_continuous(breaks = seq(0, 160000, 20000), 
+                     limits = c(0, 120000),
+                     expand = c(0, 0),
+                     labels = scales::comma) +
+  scale_fill_manual(values =  c("#081d58", "#225ea8")) +
+  xlab("News article tweet type") +
+  ylab("Count") +
+  theme_ctokita() +
+  theme(legend.position = "none")
+gg_tweettypes
+ggsave(gg_tweettypes, filename = paste0(outpath, "tweet_type.pdf"), width = 45, heigh = 45, units = "mm", dpi = 400)
+  
+
+# Retweets
+gg_RTtypes <- 
+  # Prep data
+  rt_edges %>% 
+  mutate(RT_type = ifelse(grepl("Phantom RT", RT_type), "Direct RT", RT_type),
+         RT_type = gsub(" RT", "", RT_type),
+         RT_type = factor(RT_type, levels = c("Direct", "Indirect", "Self", "Quote"))) %>% 
+  # Plot
+  ggplot(., aes(x = RT_type, fill = RT_type)) +
+  geom_bar(stat = "count") +
+  scale_fill_manual(values = c("#1d91c0", "#41b6c4", "#c7e9b4", "#edf8b1")) +
+  scale_y_continuous(breaks = seq(0, 80000, 20000), 
+                     limits = c(0, 80000),
+                     expand = c(0, 0),
+                     labels = scales::comma) +
+  xlab("Retweet type") +
+  ylab("Count") +
+  theme_ctokita() +
+  theme(legend.position = "none")
+gg_RTtypes
+ggsave(gg_RTtypes, filename = paste0(outpath, "RT_type.pdf"), width = 45, heigh = 45, units = "mm", dpi = 400)
+
 
 ####################
 # Plot: Degree distribution, RAW
@@ -98,12 +157,12 @@ degree_data <- exposure_data %>%
   arrange(!!sym(grouping), degree)
 
 # igraph
-igraph_data <-  exposure_data %>% 
-  select(user_id, !!sym(grouping), follower_count) %>% 
-  distinct() %>%
-  rename(degree = follower_count) %>% 
-  filter(degree > 0)
-power.law.fit(igraph_data$degree[igraph_data$article_fc_rating == "True news"])
+# igraph_data <-  exposure_data %>% 
+#   select(user_id, !!sym(grouping), follower_count) %>% 
+#   distinct() %>%
+#   rename(degree = follower_count) %>% 
+#   filter(degree > 0)
+# power.law.fit(igraph_data$degree[igraph_data$article_fc_rating == "True news"])
 
 # Plot
 gg_degree_dist <- degree_data %>% 
@@ -115,12 +174,12 @@ gg_degree_dist <- degree_data %>%
   scale_y_log10(breaks = c(10^(-1:-8)),
                 labels = scales::trans_format("log10", scales::math_format(10^.x)),
                 limits = c(10^-5, 10^-2)) +
-  scale_color_manual(values = c("#F18805", plot_color)) +
+  scale_color_manual(values = grouping_pal) +
   ylab("P(N. followers)") +
   xlab("Number of followers") +
   theme_ctokita() +
   theme(legend.title = element_blank(),
-        legend.position = c(0.75, 0.9),
+        legend.position = c(0.6, 0.95),
         legend.key.size = unit(2.5, "mm"),
         legend.key.height = unit(0, 'mm'),
         legend.background = element_blank()) +
@@ -132,116 +191,145 @@ ggsave(gg_degree_dist, filename = paste0(outpath, subdir_out, "degreedistributio
 ####################
 # Plot: Degree distribution, BINNED
 ####################
-# Bin degree frequency
-binned_degree_data <- degree_data %>% 
-  mutate(bin = cut(degree, breaks = seq(0, 10^8, 100))) %>% 
-  group_by(!!sym(grouping), bin) %>% 
-  summarise(count = sum(count)) %>% 
-  mutate(bin_char = as.character(bin)) %>% 
-  mutate(bin_low = as.numeric(gsub("^[^0-9]([.0-9+e]+).*", "\\1", bin_char, perl = T)),
-         bin_high = as.numeric(gsub(".*,([.0-9+e]+)[^0-9]$", "\\1", bin_char, perl = T))) %>% 
-  mutate(degree = (bin_low + bin_high) / 2) %>% 
-  arrange(desc(degree)) %>% 
+# # Bin degree frequency
+# binned_degree_data <- degree_data %>% 
+#   mutate(bin = cut(degree, breaks = seq(0, 10^8, 500))) %>% 
+#   group_by(!!sym(grouping), bin) %>% 
+#   summarise(count = sum(count)) %>% 
+#   mutate(bin_char = as.character(bin)) %>% 
+#   mutate(bin_low = as.numeric(gsub("^[^0-9]([.0-9+e]+).*", "\\1", bin_char, perl = T)),
+#          bin_high = as.numeric(gsub(".*,([.0-9+e]+)[^0-9]$", "\\1", bin_char, perl = T))) %>% 
+#   mutate(degree = (bin_low + bin_high) / 2) %>% 
+#   arrange(desc(degree)) %>% 
+#   mutate(prob = count / sum(count),
+#          cdf = cumsum(count) / sum(count))
+# 
+# # powerRlaw fit
+# bin_data <- exposure_data %>% 
+#   select(user_id, !!sym(grouping), follower_count) %>% 
+#   distinct() %>%
+#   mutate(bin = cut(follower_count, breaks = seq(0, 10^8, 100))) %>% 
+#   mutate(bin_char = as.character(bin)) %>% 
+#   mutate(bin_low = as.numeric(gsub("^[^0-9]([.0-9+e]+).*", "\\1", bin_char, perl = T)),
+#          bin_high = as.numeric(gsub(".*,([.0-9+e]+)[^0-9]$", "\\1", bin_char, perl = T))) %>% 
+#   mutate(degree = (bin_low + bin_high) / 2) %>% 
+#   filter(!is.na(degree)) #removes zero-follower account
+# d_pl = conlnorm$new(bin_data$degree[bin_data$article_fc_rating == "Fake news"])
+# est = estimate_xmin(d_pl, xmax = 10^8)
+# d_pl$setXmin(est)
+# plot(d_pl)
+# lines(d_pl, col = 2, lwd = 2)
+# 
+# # igraph
+# power.law.fit(bin_data$degree[bin_data$article_fc_rating == "Fake news"])
+# 
+# # Prep data for bayesian regression
+# grouping_levels <- binned_degree_data %>% 
+#   select(!!sym(grouping)) %>% 
+#   unique() %>% 
+#   unlist()
+# power_data <- binned_degree_data %>% 
+#   filter(!is.na(prob),
+#          degree > 500) %>% 
+#   group_by(!!sym(grouping)) %>% 
+#   select(!!sym(grouping), degree, prob) %>% 
+#   group_split(.keep = FALSE) %>% 
+#   as.list()
+# 
+# # Fit regression (power law)
+# prior_degree <- c(prior(normal(0, 5), class = "b"))
+# regression_degree <- brm_multiple(data = power_data,
+#                                   formula = log10(prob) ~ log10(degree),
+#                                   prior = prior_degree,
+#                                   iter = 3000,
+#                                   warmup = 1000,
+#                                   chains = 4,
+#                                   seed = 323,
+#                                   combine = FALSE)
+# 
+# # Get predicted value from regression
+# x_values <- data.frame(degree = c(10^(2:6)))
+# fit_degree <- lapply(seq(1:length(grouping_levels)), function(i) {
+#   fit_line <- fitted(regression_degree[[i]], newdata = x_values) %>% 
+#     as.data.frame() %>% 
+#     mutate(grouping_val = grouping_levels[[i]],
+#            degree = x_values$degree,
+#            prob = 10^Estimate)
+# })
+# fit_degree <- do.call("rbind", fit_degree)
+# 
+# # Plot
+# gg_bin_deg_dist <- ggplot() +
+#   geom_point(data = binned_degree_data,
+#              aes(x = degree, y = cdf, color = !!sym(grouping)),
+#              size = 1, alpha = 0.2, stroke = 0) +
+#   # geom_line(data = fit_degree,
+#   #           aes(x = degree, y = prob, color = grouping_val),
+#   #           size = 0.5) +
+#   scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
+#                 labels = scales::trans_format("log10", scales::math_format(10^.x)),
+#                 limits = c(10^1, 10^8)) +
+#   scale_y_log10(breaks = c(10^(0:-6)),
+#                 labels = scales::trans_format("log10", scales::math_format(10^.x)),
+#                 limits = c(10^-6, 10^0)) +
+#   scale_color_manual(values = c("#F18805", plot_color)) +
+#   ylab("P(N. followers)") +
+#   xlab("Number of followers") +
+#   theme_ctokita() +
+#   theme(legend.title = element_blank(),
+#         legend.position = c(0.75, 0.9),
+#         legend.key.size = unit(2.5, "mm"),
+#         legend.key.height = unit(0, 'mm'),
+#         legend.background = element_blank()) +
+#   guides(color = guide_legend(override.aes = list(size = 1.25)))
+# gg_bin_deg_dist
+# ggsave(gg_bin_deg_dist, filename = paste0(outpath, subdir_out, "degreedistribution_binned.pdf"), width = 45, height = 45, units = "mm")
+
+
+####################
+# Plot:Retweet distribution, RAW
+####################
+# Retweet frequency data
+if (grouping == "article_fc_rating") {
+  filtered_tweets <- tweets %>% 
+    filter(article_fc_rating %in% c("True news", "False/Misleading news"))
+}
+
+RT_freq_data <- filtered_tweets %>% 
+  select(total_article_number, !!sym(grouping)) %>% 
+  distinct() %>% 
+  merge(rt_edges, by = "total_article_number") %>% 
+  group_by(!!sym(grouping), total_article_number, Source) %>% 
+  summarise(n_retweets = n()) %>%  #count number of retweets each user has
+  ungroup() %>% 
+  group_by(!!sym(grouping), n_retweets) %>% 
+  summarise(count = n()) %>% 
+  arrange(desc(n_retweets)) %>% 
   mutate(prob = count / sum(count),
-         cdf = cumsum(count) / sum(count))
-
-# powerRlaw fit
-bin_data <- exposure_data %>% 
-  select(user_id, !!sym(grouping), follower_count) %>% 
-  distinct() %>%
-  mutate(bin = cut(follower_count, breaks = seq(0, 10^8, 100))) %>% 
-  mutate(bin_char = as.character(bin)) %>% 
-  mutate(bin_low = as.numeric(gsub("^[^0-9]([.0-9+e]+).*", "\\1", bin_char, perl = T)),
-         bin_high = as.numeric(gsub(".*,([.0-9+e]+)[^0-9]$", "\\1", bin_char, perl = T))) %>% 
-  mutate(degree = (bin_low + bin_high) / 2) %>% 
-  filter(!is.na(degree)) #removes zero-follower account
-d_pl = conlnorm$new(bin_data$degree[bin_data$article_fc_rating == "Fake news"])
-est = estimate_xmin(d_pl, xmax = 10^8)
-d_pl$setXmin(est)
-plot(d_pl)
-lines(d_pl, col = 2, lwd = 2)
-
-# igraph
-power.law.fit(bin_data$degree[bin_data$article_fc_rating == "Fake news"])
-
-# Prep data for bayesian regression
-grouping_levels <- binned_degree_data %>% 
-  select(!!sym(grouping)) %>% 
-  unique() %>% 
-  unlist()
-power_data <- binned_degree_data %>% 
-  filter(!is.na(prob),
-         degree > 500) %>% 
-  group_by(!!sym(grouping)) %>% 
-  select(!!sym(grouping), degree, prob) %>% 
-  group_split(.keep = FALSE) %>% 
-  as.list()
-
-# Fit regression (power law)
-prior_degree <- c(prior(normal(0, 5), class = "b"))
-regression_degree <- brm_multiple(data = power_data,
-                                  formula = log10(prob) ~ log10(degree),
-                                  prior = prior_degree,
-                                  iter = 3000,
-                                  warmup = 1000,
-                                  chains = 4,
-                                  seed = 323,
-                                  combine = FALSE)
-
-# Get predicted value from regression
-x_values <- data.frame(degree = c(10^(2:6)))
-fit_degree <- lapply(seq(1:length(grouping_levels)), function(i) {
-  fit_line <- fitted(regression_degree[[i]], newdata = x_values) %>% 
-    as.data.frame() %>% 
-    mutate(grouping_val = grouping_levels[[i]],
-           degree = x_values$degree,
-           prob = 10^Estimate)
-})
-fit_degree <- do.call("rbind", fit_degree)
+         cdf = cumsum(count) / sum(count)) %>%
+  arrange(!!sym(grouping), n_retweets)
 
 # Plot
-gg_bin_deg_dist <- ggplot() +
-  geom_point(data = binned_degree_data,
-             aes(x = degree, y = cdf, color = !!sym(grouping)),
-             size = 1, alpha = 0.2, stroke = 0) +
-  # geom_line(data = fit_degree,
-  #           aes(x = degree, y = prob, color = grouping_val),
-  #           size = 0.5) +
+gg_retweetfreq_dist <- RT_freq_data %>% 
+  ggplot(aes(x = n_retweets, y = prob, color = !!sym(grouping))) +
+  geom_point(size = 0.8, alpha = 0.5, stroke = 0) +
   scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
+                labels = scales::trans_format("log10", scales::math_format(10^.x))) +
+  scale_y_log10(breaks = c(10^(-1:-8)),
                 labels = scales::trans_format("log10", scales::math_format(10^.x)),
-                limits = c(10^1, 10^8)) +
-  scale_y_log10(breaks = c(10^(0:-6)),
-                labels = scales::trans_format("log10", scales::math_format(10^.x)),
-                limits = c(10^-6, 10^0)) +
+                limits = c(10^-4.1, 10^-0)) +
   scale_color_manual(values = c("#F18805", plot_color)) +
-  ylab("P(N. followers)") +
-  xlab("Number of followers") +
+  ylab("P(N. rewteets)") +
+  xlab("Number of retweets") +
   theme_ctokita() +
   theme(legend.title = element_blank(),
-        legend.position = c(0.75, 0.9),
+        legend.position = c(0.6, 0.95),
         legend.key.size = unit(2.5, "mm"),
         legend.key.height = unit(0, 'mm'),
         legend.background = element_blank()) +
   guides(color = guide_legend(override.aes = list(size = 1.25)))
-gg_bin_deg_dist
-ggsave(gg_bin_deg_dist, filename = paste0(outpath, subdir_out, "degreedistribution_binned.pdf"), width = 45, height = 45, units = "mm")
-
-
-####################
-# Plot: Tweet types
-####################
-gg_tweettypes <- rt_edges %>% 
-  mutate(RT_type = ifelse(RT_type == "Presumed Phantom RT", "Phantom RT", RT_type)) %>% 
-  mutate(RT_type = gsub(" RT", "", RT_type)) %>% 
-  ggplot(., aes(x = RT_type, fill = RT_type)) +
-  geom_histogram(stat = "count") +
-  scale_fill_manual(values = c("#1B264F", "#274690", "#576CA8", "#302B27", "Green")) +
-  xlab("Retweet type") +
-  ylab("Count") +
-  theme_ctokita() +
-  theme(legend.position = "none")
-gg_tweettypes
-ggsave(gg_tweettypes, filename = paste0(outpath, "RT_type.pdf"), width = 60, heigh = 60, units = "mm", dpi = 400)
+gg_retweetfreq_dist
+ggsave(gg_retweetfreq_dist, filename = paste0(outpath, subdir_out, "retweetdistribution.pdf"), width = 45, height = 45, units = "mm")
 
 
 ############################## Ideology in networks ##############################
@@ -249,18 +337,59 @@ ggsave(gg_tweettypes, filename = paste0(outpath, "RT_type.pdf"), width = 60, hei
 ####################
 # Plot: Ideological diversity by article veracity
 ####################
+# Bayesian point estimate
+# Note: we assume equal variances. Both an eye check and running this with unequal variances confirm they cannot be distinguished.
+blm_ideoldiversity <- brm(bf(ideology_sd ~ 0 + article_fc_rating), 
+                          data = network_metrics %>% filter(article_fc_rating %in% c("T", "FM")),
+                          family = gaussian(), 
+                          chains = 4, 
+                          warmup = 1000, 
+                          iter = 3500)
+
+ideoldiversity_estimates <- as.data.frame( posterior_summary(blm_ideoldiversity, 
+                                                           pars = c("article_fc_ratingFM", "article_fc_ratingT")) ) %>% 
+  tibble::rownames_to_column() %>% 
+  rename(article_fc_rating = rowname) %>%
+  mutate(article_fc_rating = gsub("b_article_fc_rating", "", article_fc_rating)) %>% 
+  select(-Q2.5, -Q97.5)
+
+# Merge in HDI-based CI
+ideoldiversity_estimates <- posterior_samples(blm_ideoldiversity) %>% 
+  select(b_article_fc_ratingFM, b_article_fc_ratingT) %>% 
+  bayestestR::hdi(., ci = 0.99) %>% 
+  as.data.frame() %>% 
+  rename(article_fc_rating = Parameter) %>% 
+  mutate(article_fc_rating = gsub("b_article_fc_rating", "", article_fc_rating)) %>% 
+  merge(ideoldiversity_estimates, ., by = "article_fc_rating")
+
+# Hypothesis test that they aren't the same
+hypothesis_ideoldiversity <- hypothesis(blm_ideoldiversity, "article_fc_ratingFM = article_fc_ratingT", alpha = 0.05)
+hypothesis_ideoldiversity #BF >> 100, P = 1
+
+t.test(ideology_sd ~ article_fc_rating, data = network_metrics %>% filter(article_fc_rating %in% c("T", "FM"))) #p = 0.0269
+
+# Plot
 gg_ideodiversity <- network_metrics %>% 
   filter(article_fc_rating %in% c("T", "FM")) %>% 
-           ggplot(., aes(x = article_fc_rating, y = ideology_sd)) +
-  geom_point(size = 1, stroke = 0, alpha = 0.5,
-             position = position_jitter(width = 0.03)) +
-  scale_x_discrete(labels = c("Fake news", "Real news")) +
-  ylab("Ideol. diversity of article tweeters") +
-  xlab("") +
-  theme_ctokita()
+           ggplot(., aes(x = article_fc_rating, color = article_fc_rating)) +
+  geom_point(aes(y = ideology_sd),
+             size = 1.2, stroke = 0, alpha = 0.2,
+             position = position_jitter(width = 0.05)) +
+  geom_errorbar(data = ideoldiversity_estimates, aes(ymin = CI_low, ymax = CI_high), 
+                size = 0.6, width = 0) +
+  geom_point(data = ideoldiversity_estimates, aes(y = Estimate),
+             size = 2.5, stroke = 0) +
+  scale_x_discrete(labels = c("False/Misleading", "True")) +
+  scale_y_continuous(breaks = seq(0, 2, 0.5),
+                     limits = c(0, 2),
+                     expand = c(0, 0)) +
+  scale_color_manual(values = grouping_pal) +
+  ylab("Ideol. diversity of tweeters") +
+  xlab("Article veracity") +
+  theme_ctokita() +
+  theme(legend.position = "none")
 gg_ideodiversity
 ggsave(gg_ideodiversity, filename = paste0(outpath, "ideodiversity_byveracity.pdf"), width = 45, height = 45, units = "mm")
-
 
 
 ############################## Network structure ##############################
@@ -274,9 +403,9 @@ gg_veracitydensity <- network_metrics %>%
   ggplot(., aes(x = article_fc_rating, y = network_density)) +
   geom_point(size = 1, stroke = 0, alpha = 0.5,
              position = position_jitter(width = 0.03)) +
-  scale_x_discrete(labels = c("Fake news", "Real news")) +
+  scale_x_discrete(labels = c("False/Misleading", "True")) +
   ylab("Network density") +
-  xlab("") +
+  xlab("Article veracity") +
   theme_ctokita()
 gg_veracitydensity
 ggsave(gg_veracitydensity, filename = paste0(outpath, "networkdensity_byveracity.pdf"), width = 45, height = 45, units = "mm", dpi = 400)

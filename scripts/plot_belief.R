@@ -165,6 +165,7 @@ gg_ideol_total <- belief_ideol %>%
              scales = "free")
 gg_ideol_total
 ggsave(gg_ideol_total, filename = paste0(outpath, "ideol_total_belief.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideol_total + theme(strip.text = element_blank()), filename = paste0(outpath, "ideol_total_belief_FIG.pdf"), width = 45, height = 45, units = "mm", dpi = 400)
 
 
 ####################
@@ -233,6 +234,7 @@ gg_ideol_dist <- belief_ideol %>%
 gg_ideol_dist
 
 ggsave(gg_ideol_dist, filename = paste0(outpath, "ideol_avg_belief_distribution.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideol_dist + theme(strip.text = element_blank()), filename = paste0(outpath, "ideol_avg_belief_distribution_FIG.pdf"), width = 45, height = 45, units = "mm", dpi = 400)
 
 
 ####################
