@@ -161,12 +161,10 @@ gg_ideol_total <- belief_ideol %>%
         aspect.ratio = NULL) +
   facet_wrap(as.formula(paste("~", grouping)), 
              ncol = 1,
-             strip.position = "right",
+             strip.position = "top",
              scales = "free")
 gg_ideol_total
 ggsave(gg_ideol_total, filename = paste0(outpath, "ideol_total_belief.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
-ggsave(gg_ideol_total + theme(strip.text = element_blank()), filename = paste0(outpath, "ideol_total_belief_FIG.pdf"), width = 45, height = 45, units = "mm", dpi = 400)
-
 
 ####################
 # Avg number of believing article across ideologies (by type)
@@ -192,7 +190,7 @@ gg_ideol_avg <- belief_ideol %>%
         aspect.ratio = NULL) +
   facet_wrap(as.formula(paste("~", grouping)), 
              ncol = 1,
-             strip.position = "right",
+             strip.position = "top",
              scales = "free")
 gg_ideol_avg
 ggsave(gg_ideol_avg, filename = paste0(outpath, "ideol_avg_belief.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
@@ -229,12 +227,11 @@ gg_ideol_dist <- belief_ideol %>%
         aspect.ratio = NULL) +
   facet_wrap(as.formula(paste("~", grouping)), 
              ncol = 1,
-             strip.position = "right",
+             strip.position = "top",
              scales = "free_x")
 gg_ideol_dist
 
 ggsave(gg_ideol_dist, filename = paste0(outpath, "ideol_avg_belief_distribution.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
-ggsave(gg_ideol_dist + theme(strip.text = element_blank()), filename = paste0(outpath, "ideol_avg_belief_distribution_FIG.pdf"), width = 45, height = 45, units = "mm", dpi = 400)
 
 
 ####################
@@ -265,7 +262,7 @@ gg_ideoltime <- belief_ideol %>%
         axis.line = element_blank()) +
   facet_wrap(as.formula(paste("~", grouping)), 
              ncol = 1,
-             strip.position = "right",
+             strip.position = "top",
              scales = "free")
 gg_ideoltime
 ggsave(gg_ideoltime, filename = paste0(outpath, "ideol_belief_hourbin.pdf"), width = 90, height = 90, units = "mm", dpi = 400)

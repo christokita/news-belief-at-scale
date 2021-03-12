@@ -130,7 +130,7 @@ gg_exposuretime <- exposure_timeseries %>%
   theme(aspect.ratio = NULL) +
   facet_wrap(as.formula(paste("~", grouping)), 
              ncol = 1,
-             strip.position = "right")
+             strip.position = "top")
 gg_exposuretime
 ggsave(gg_exposuretime, filename = paste0(outpath, "total_exposed_time.pdf"), width = 90, height = 45, units = "mm", dpi = 400)
 
@@ -150,7 +150,7 @@ gg_relexpostime <- exposure_timeseries %>%
   theme(aspect.ratio = NULL) +
   facet_wrap(as.formula(paste("~", grouping)), 
              ncol = 1,
-             strip.position = "right")
+             strip.position = "top")
 gg_relexpostime
 ggsave(gg_relexpostime, filename = paste0(outpath, "percentage_exposed_time.pdf"), width = 90, height = 45, units = "mm", dpi = 400)
 
@@ -168,7 +168,7 @@ gg_exposuretweet <- exposure_timeseries %>%
   ylab("Total users exposed") +
   theme_ctokita() +
   theme(aspect.ratio = NULL) +
-  facet_wrap(as.formula(paste(grouping, "~")), 
+  facet_wrap(as.formula(paste(grouping, "~.")), 
              ncol = 2)
 gg_exposuretweet
 ggsave(gg_exposuretweet, filename = paste0(outpath, "total_exposed_tweetnumber.pdf"), width = 45, height = 45, units = "mm", dpi = 400)
@@ -189,7 +189,7 @@ gg_expVnum <- exposure_timeseries %>%
   theme_ctokita() +
   facet_wrap(as.formula(paste("~", grouping)), 
              ncol = 1,
-             strip.position = "right",
+             strip.position = "top",
              scales = "free_x")
 gg_expVnum
 ggsave(gg_expVnum, filename = paste0(outpath, "relative_tweet_vs_exposure.pdf"), width = 50, height = 90, units = "mm", dpi = 400)
@@ -238,12 +238,10 @@ gg_ideol_total <- exposure_ideol %>%
         aspect.ratio = NULL) +
   facet_wrap(as.formula(paste("~", grouping)), 
              ncol = 1,
-             strip.position = "right",
+             strip.position = "top",
              scales = "free")
 gg_ideol_total
 ggsave(gg_ideol_total, filename = paste0(outpath, "ideol_total_exposed.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
-ggsave(gg_ideol_total + theme(strip.text = element_blank()), filename = paste0(outpath, "ideol_total_exposed_FIG.pdf"), width = 45, height = 45, units = "mm", dpi = 400)
-
 
 ####################
 # Avg ideologies exposed per article (by type)
@@ -267,7 +265,7 @@ gg_ideol_avg <- exposure_ideol %>%
         aspect.ratio = NULL) +
   facet_wrap(as.formula(paste("~", grouping)), 
              ncol = 1,
-             strip.position = "right",
+             strip.position = "top",
              scales = "free")
 gg_ideol_avg
 ggsave(gg_ideol_avg, filename = paste0(outpath, "ideol_avg_exposed.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
@@ -295,6 +293,7 @@ gg_ideol_dist <- exposure_ideol %>%
                      expand = c(0, 0), 
                      breaks = seq(-6, 6, 2)) +
   scale_y_continuous(breaks = seq(0, 1, 0.05),
+                     limits = c(0, 0.25),
                      expand = c(0, 0)) +
   scale_color_gradientn(colours = ideol_pal, 
                         limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
@@ -307,12 +306,11 @@ gg_ideol_dist <- exposure_ideol %>%
         aspect.ratio = NULL) +
   facet_wrap(as.formula(paste("~", grouping)), 
              ncol = 1,
-             strip.position = "right",
+             strip.position = "top",
              scales = "free_x")
 gg_ideol_dist  
   
 ggsave(gg_ideol_dist, filename = paste0(outpath, "ideol_avg_exposure_distribution.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
-ggsave(gg_ideol_dist + theme(strip.text = element_blank()), filename = paste0(outpath, "ideol_avg_exposure_distribution_FIG.pdf"), width = 45, height = 45, units = "mm", dpi = 400)
 
 
 ####################
@@ -343,7 +341,7 @@ gg_ideoltime <- exposure_ideol %>%
         axis.line = element_blank()) +
   facet_wrap(as.formula(paste("~", grouping)), 
              ncol = 1,
-             strip.position = "right",
+             strip.position = "top",
              scales = "free")
 gg_ideoltime
 ggsave(gg_ideoltime, filename = paste0(outpath, "ideol_exposed_hourbin.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
