@@ -134,20 +134,30 @@ exposure_belief_data <- merge(exposure_ideol, belief_ideol, by = c("article_fc_r
 
 # Plot
 gg_exposebelief_total <- ggplot(exposure_belief_data, aes(x = ideology_bin, fill = ideology_bin)) +
+  # Data
+  geom_step(aes(x = ideology_bin - 0.25, y = exposure_count,  color = ideology_bin - 0.25),
+           size = 0.3,
+           alpha = 0.8) +
   geom_bar(aes(y = exposure_count),
            stat = "identity",
-           alpha = 0.45,
+           alpha = 0.5,
            width = 0.5) +
+  geom_step(aes(x = ideology_bin - 0.25, y = belief_count),
+            size = 0.6,
+            color = "white",
+            alpha = 0.7) +
   geom_bar(aes(y = belief_count),
            stat = "identity",
            alpha = 1,
            width = 0.5) +
+  #Plot params
   scale_x_continuous(limits = c(-6, 6), 
                      expand = c(0, 0), 
                      breaks = seq(-6, 6, 2)) +
   scale_y_continuous(expand = c(0, 0), 
                      labels = comma) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
+  scale_color_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   xlab("User ideology") +
   ylab("Total number of users") +
   theme_ctokita() +

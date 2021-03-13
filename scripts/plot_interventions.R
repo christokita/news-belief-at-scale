@@ -93,6 +93,65 @@ gg_exposed_raw
 
 
 ####################
+# Plot exposure decrease by intervention
+####################
+# Filter to final exposure values (55 hours out from first share is enough)
+exposure_decrease <- intervention_exposure %>% 
+  filter(time == 55,
+         replicate != -1) %>% 
+  mutate(decrease_in_exposure = relative_cumulative_exposed - 1,
+         intervention_amount = paste0("visibility", visibility_reduction, "-", "sharing", sharing_reduction)) %>% 
+  group_by(intervention_amount, intervention_time) %>% 
+  summarise(mean_exposure_decrease = mean(decrease_in_exposure))
+
+plot_labels <- data.frame(intervention_amount = unique(exposure_decrease$intervention_amount),
+                          intervention_label = c("Sharing friction (light)", "Sharing friction (heavy)", "Visibility reduction (light)", "Visibility reduction (heavy)")) %>% 
+  mutate(intervention_label = gsub(" \\(", "\n\\(", intervention_label)) %>% 
+  merge(exposure_decrease %>%  
+          filter(intervention_time == 8) %>% 
+          group_by(intervention_amount) %>% 
+          select(intervention_amount, mean_exposure_decrease) %>% 
+          rename(y_pos = mean_exposure_decrease), by = "intervention_amount")
+
+# Plot
+gg_exposure_decrease <- ggplot(exposure_decrease, aes(x = intervention_time, y = mean_exposure_decrease, color = intervention_amount)) +
+  geom_segment(aes(xend = intervention_time, yend = 0), size = 0.6) +
+  # geom_hline(aes(yintercept = 0), size = 0.5) +
+  geom_point(size = 2.5,
+             stroke = 0) +
+  geom_text(data = plot_labels, aes(x = 12.5, y = y_pos, label = intervention_label), 
+            fontface = "bold", 
+            size = 2.5, 
+            lineheight = 0.8,
+            color = "black", 
+            hjust = 1, 
+            nudge_y = -0.2) +
+  scale_x_continuous(breaks = seq(1, 12, 1),
+                     limits = c(0, 13),
+                     expand = c(0, 0)) +
+  scale_y_continuous(breaks = seq(-1, 0, 0.2), 
+                     limits = c(-0.8, 0), 
+                     expand = c(0,0)) +
+  scale_colour_manual(values = c("#74c476", "#238b45", "#6baed6", "#2171b5"),
+                      name = "Intervention",
+                      labels = c("Sharing friction (light)",
+                                 "Sharing friction (heavy)",
+                                 "Visibility reduction (light)",
+                                 "Visibility reduction (heavy)")) +
+  xlab("Intervention time (hrs)") + 
+  ylab("Mean reduction in user exposure to misinformation") +
+  theme_ctokita() +
+  theme(axis.line = element_blank(),
+        panel.border = element_rect(size = 0.5, fill = NA),
+        legend.position = "none",
+        strip.text = element_blank()) +
+  facet_wrap(~intervention_amount,
+             ncol = 2)
+gg_exposure_decrease
+
+ggsave(gg_exposure_decrease, filename = paste0(outpath, "interventions_exposurereduction.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
+
+####################
 # Plot relative exposure by intervention
 ####################
 # Filter to final exposure values (55 hours out from first share is enough)
