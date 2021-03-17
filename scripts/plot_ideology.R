@@ -200,16 +200,16 @@ gg_dist_shapes <- shapes %>%
   select(user_id, mu, sigma, user_ideology) %>% 
   distinct() %>% 
   ggplot(., aes(x = mu, y = sigma, color = user_ideology)) +
-  geom_point(alpha = 0.1, size = 0.6, stroke = 0) +
+  geom_point(alpha = 0.1, size = 1, stroke = 0) +
   scale_color_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish, name = "User\nideology") +
-  xlab("Est. mean follower ideology") +
-  ylab("Est. s.d. follower ideology") +
+  xlab("Estimated mean ideology of user's followers") +
+  ylab("Estimated s.d. ideology of user's followers") +
   theme_ctokita() +
   theme(plot.background = element_blank(),
-        legend.position = "none")
+        legend.position = "right")
 gg_dist_shapes
 
-ggsave(gg_dist_shapes, filename = paste0(outpath, "follower_dist_shapes.png"), width = 45, height = 45, units = "mm", dpi = 400, bg = "transparent")
+ggsave(gg_dist_shapes, filename = paste0(outpath, "follower_dist_shapes.png"), width = 90, height = 90, units = "mm", dpi = 400, bg = "transparent")
 
 
 ####################

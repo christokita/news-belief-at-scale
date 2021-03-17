@@ -372,9 +372,12 @@ t.test(ideology_sd ~ article_fc_rating, data = network_metrics %>% filter(articl
 gg_ideodiversity <- network_metrics %>% 
   filter(article_fc_rating %in% c("T", "FM")) %>% 
            ggplot(., aes(x = article_fc_rating, color = article_fc_rating)) +
-  geom_point(aes(y = ideology_sd),
-             size = 1.2, stroke = 0, alpha = 0.2,
-             position = position_jitter(width = 0.05)) +
+  # geom_point(aes(y = ideology_sd),
+  #            size = 1.2, stroke = 0, alpha = 0.2,
+  #            position = position_jitter(width = 0.05)) +
+  ggbeeswarm::geom_quasirandom(aes(y = ideology_sd),
+                               size = 1.2, stroke = 0, alpha = 0.3,
+                               width = 0.2) +
   geom_errorbar(data = ideoldiversity_estimates, aes(ymin = CI_low, ymax = CI_high), 
                 size = 0.6, width = 0) +
   geom_point(data = ideoldiversity_estimates, aes(y = Estimate),

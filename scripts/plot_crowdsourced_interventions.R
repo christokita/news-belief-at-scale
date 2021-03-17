@@ -25,33 +25,11 @@ crowd_intervention_dirs <- crowd_intervention_dirs[grepl('crowdsourced_reduce', 
 outpath <- 'output/interventions/'
 
 # Palette
-veracity_pal <- c("#F1A208",  "#858585", "#000004")
+veracity_pal <- c("#F18805",  "#8BAAAD", "#495867")
 
 ####################
 # Load data
 ####################
-
-#################### Exposure data ####################
-
-# Function to pre-first share dummy rows of pre-first share for plotting purposes
-add_dummy_time_points <- function(exposure_data) {
-  # (1) Create dummy rows that make two "non tweets" in at two time points leading up to the first real tweet
-  n_articles <- length(unique(exposure_data$total_article_number)) #number of unique articles
-  dummy_rows <- exposure_data %>% 
-    distinct(total_article_number, intervention_time, visibility_reduction, sharing_reduction, replicate, simulation_type, fc_rule)
-  dummy_row_time <- data.frame(total_article_number = rep(unique(exposure_data$total_article_number), each = 2),
-                               time = rep(c(-2, 0), n_articles), 
-                               new_exposed_users = rep(c(0, 0), n_articles),
-                               cumulative_exposed = rep(c(0, 0), n_articles))
-  dummy_rows <- merge(dummy_rows, dummy_row_time, by = "total_article_number")
-  # (2) Join together
-  exposure_data <- exposure_data %>% 
-    rbind(dummy_rows) %>% 
-    arrange(total_article_number, replicate, time)
-  rm(dummy_rows, dummy_row_time)
-  return(exposure_data)
-}
-
 # Load intervention data
 intervention_exposure <- data.frame()
 for (dir in crowd_intervention_dirs) {
@@ -59,7 +37,6 @@ for (dir in crowd_intervention_dirs) {
   exposure_file <- intervention_files[grepl("_exposetime.csv", intervention_files)]
   for (file in exposure_file) {
     exposure <- read.csv(file)
-    exposure <- add_dummy_time_points(exposure_data = exposure)
     intervention_exposure <- rbind(intervention_exposure, exposure)
     rm(exposure)
   }
@@ -70,11 +47,12 @@ for (dir in crowd_intervention_dirs) {
 max_time_of_expsoure <-  max(intervention_exposure$time[intervention_exposure$new_exposed_users > 0]) # find where new users are no longer being exposed. 55hrs
 intervention_exposure <- intervention_exposure %>% 
   group_by(total_article_number) %>% 
-  mutate(relative_cumulative_exposed = cumulative_exposed / max(cumulative_exposed), 
-         change_in_cumlative_exposed = (cumulative_exposed - max(cumulative_exposed)) / max(cumulative_exposed),
+  mutate(max_article_exposure = max(cumulative_exposed),
+         relative_cumulative_exposed = cumulative_exposed / max_article_exposure, 
+         change_in_cumlative_exposed = (cumulative_exposed - max_article_exposure) / max_article_exposure,
          simulation_number = paste0(total_article_number, "-", replicate, "-", intervention_time, "-visibility", visibility_reduction, "-sharing", sharing_reduction),
          simulation_type = factor(simulation_type, levels = c("baseline", "no intervention", "intervention"))) %>% 
-  filter(time <= max_time_of_expsoure) 
+  filter(time == max_time_of_expsoure) 
 
 # Add article fc rating (professional fact checkers)
 article_info <- read.csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv') %>% 
@@ -88,8 +66,36 @@ intervention_exposure <- merge(intervention_exposure, article_info, by = "total_
 ####################
 # Plot rate of being labeled false by crowd, broken out by crowd rule
 ####################
-# All articles
+# FM and T articles only
 gg_labelingrate <- intervention_exposure %>% 
+  # Prep data
+  filter(replicate != -1,
+         article_fc_rating %in% c("FM", "T")) %>% 
+  distinct(total_article_number, simulation_type, replicate, fc_rule, article_fc_rating) %>% 
+  mutate(fc_rule = factor(fc_rule, levels = c("mean", "mode", "median", "majority", "unanimity"))) %>% 
+  group_by(article_fc_rating, fc_rule) %>% 
+  summarise(labeled_false_rate = sum(simulation_type == "intervention") / length(simulation_type)) %>% 
+  # Plot
+  ggplot(., aes(x = article_fc_rating, y = labeled_false_rate, color = article_fc_rating)) +
+  geom_segment(aes(xend = article_fc_rating, yend = 0), size = 0.6) +
+  geom_point(size = 2.5, stroke = 0) +
+  scale_x_discrete(labels = c("F", "T")) +
+  scale_y_continuous(breaks = seq(0, 1, 0.1), 
+                     limits = c(0, 0.701),
+                     expand = c(0, 0)) +
+  scale_color_manual(values = veracity_pal[c(1, 3)]) +
+  xlab("Article rating by professional fact-checkers") +
+  ylab("Rate labeled \"false\" by crowd") +
+  theme_ctokita() +
+  theme(aspect.ratio = NULL,
+        legend.position = "none") +
+  facet_grid(~fc_rule)
+  
+gg_labelingrate
+ggsave(gg_labelingrate, filename = paste0(outpath, "crowd_false_rating_rate.pdf"), width = 60, height = 45, units = "mm")
+
+# All articles
+gg_labelingrate_all <- intervention_exposure %>% 
   # Prep data
   filter(replicate != -1) %>% 
   distinct(total_article_number, simulation_type, replicate, fc_rule, article_fc_rating) %>% 
@@ -105,22 +111,23 @@ gg_labelingrate <- intervention_exposure %>%
                      limits = c(0, 0.701),
                      expand = c(0, 0)) +
   scale_color_manual(values = veracity_pal) +
-  xlab("Article rating by fact checkers") +
-  ylab("Rate flagged \"false\" by crowd") +
+  xlab("Article rating by professional fact-checkers") +
+  ylab("Rate labeled \"false\" by crowd") +
   theme_ctokita() +
   theme(aspect.ratio = NULL,
         legend.position = "none") +
   facet_grid(~fc_rule)
-  
-gg_labelingrate
-ggsave(gg_labelingrate, filename = paste0(outpath, "crowd_false_rating_rate.pdf"), width = 90, height = 45, units = "mm")
+
+gg_labelingrate_all
+ggsave(gg_labelingrate_all, filename = paste0(outpath, "crowd_false_rating_rate_alltypes.pdf"), width = 90, height = 45, units = "mm")
 
 # Broken out by source type
 gg_labelingrate_sourcetype <- intervention_exposure %>% 
   # Prep data
   filter(replicate != -1) %>% 
   distinct(total_article_number, simulation_type, replicate, fc_rule, article_fc_rating, source_type) %>% 
-  mutate(fc_rule = factor(fc_rule, levels = c("mean", "mode", "median", "majority", "unanimity"))) %>% 
+  mutate(fc_rule = factor(fc_rule, levels = c("mean", "mode", "median", "majority", "unanimity")),
+         source_type = gsub("$", " source", source_type)) %>% 
   group_by(article_fc_rating, fc_rule, source_type) %>% 
   summarise(labeled_false_rate = sum(simulation_type == "intervention") / length(simulation_type)) %>% 
   # Plot
@@ -132,7 +139,7 @@ gg_labelingrate_sourcetype <- intervention_exposure %>%
                      limits = c(0, 0.701),
                      expand = c(0, 0)) +
   scale_color_manual(values = veracity_pal) +
-  xlab("Article rating by fact checkers") +
+  xlab("Article rating by professional fact-checkers") +
   ylab("Rate flagged \"false\" by crowd") +
   theme_ctokita() +
   theme(aspect.ratio = NULL,
@@ -150,10 +157,7 @@ ggsave(gg_labelingrate_sourcetype, filename = paste0(outpath, "crowd_false_ratin
 exposure_decrease <- intervention_exposure %>% 
   filter(replicate != -1,
          time == max_time_of_expsoure,
-         article_fc_rating %in% c("FM", "T")) %>% 
-  mutate(decrease_in_exposure = 1-relative_cumulative_exposed) 
-
-# exposure_decrease$relative_cumulative_exposed[exposure_decrease$relative_cumulative_exposed == 1] <- 0.5
+         article_fc_rating %in% c("FM", "T"))
 
 # Plot raw
 ggplot(exposure_decrease, aes(x = article_fc_rating, y = relative_cumulative_exposed)) +
@@ -161,42 +165,79 @@ ggplot(exposure_decrease, aes(x = article_fc_rating, y = relative_cumulative_exp
   theme_ctokita() +
   facet_grid(~fc_rule)
 
-# Estimate mean reduction in exposure by intervention
-prior <- set_prior("Beta(1,1)", class = "b")
-prior <- get_prior(relative_cumulative_exposed ~ 0 + article_fc_rating + fc_rule, data = exposure_decrease, family = zero_inflated_beta())
-blm_exposure <- brm(decrease_in_exposure ~ 0 + article_fc_rating + fc_rule,
-                    data = exposure_decrease,
-                    prior = prior,
-                    family = zero_inflated_beta(),
-                    warmup = 500,
-                    iter = 1500,
-                    chains = 1)
-
-exposure_posterior <- posterior_samples(blm_exposure)
-posterior_summary(blm_exposure)
-
 # Plot mean reduction
 gg_relative_exposure <- exposure_decrease %>% 
   group_by(fc_rule, article_fc_rating) %>% 
   mutate(fc_rule = factor(fc_rule, levels = c("mean", "mode", "median", "majority", "unanimity"))) %>% 
-  summarise(decrease_in_exposure = mean(decrease_in_exposure)) %>% 
+  summarise(decrease_in_exposure = mean(change_in_cumlative_exposed)) %>% 
   # Plot
   ggplot(., aes(x = article_fc_rating, y = decrease_in_exposure, color = article_fc_rating)) +
   geom_segment(aes(xend = article_fc_rating, yend = 0), size = 0.6) +
   geom_point(size = 2.5,
              stroke = 0) +
   scale_x_discrete(labels = c("F", "T")) +
-  scale_y_continuous(breaks = seq(0, 1, 0.1), 
-                     limits = c(0, 0.4001),
+  scale_y_continuous(breaks = seq(-1, 1, 0.1), 
+                     limits = c(-0.4001, 0),
                      expand = c(0, 0)) +
   scale_color_manual(values = veracity_pal[c(1, 3)]) +
-  xlab("Article rating by fact checkers") +
-  ylab("Mean reduction in user expsoure") +
+  xlab("Article rating by professional fact-checkers") +
+  ylab("Mean reduction in user exposure") +
   theme_ctokita() +
-  theme(aspect.ratio = NULL,
-        legend.position = "none") +
+  theme(axis.line = element_blank(),
+        panel.border = element_rect(size = 0.5, fill = NA),
+        legend.position = "none",
+        # strip.text = element_blank(),
+        aspect.ratio = NULL) +
   facet_grid(~fc_rule)
 gg_relative_exposure
 
 ggsave(gg_relative_exposure, filename = paste0(outpath, "crowd_exposure_reduction_byrule.pdf"), width = 90, height = 45, units = "mm")
 
+
+
+#################### Compare interventions based on crowd-sourced and professional fact-checking ####################
+
+####################
+# Load data
+####################
+professional_intervention_exposure <- read.csv(paste0(path_to_interventions, "interventions_mean_exposure_reduction.csv")) %>% 
+  filter(intervention_amount == "visibility0.75-sharing0") #only focus on same intervention type
+
+
+####################
+# Prep crowd sourced data
+####################
+crowd_intervention_exposure <- exposure_decrease %>% 
+  group_by(fc_rule, article_fc_rating) %>% 
+  summarise(decrease_in_exposure = mean(change_in_cumlative_exposed)) %>% 
+  filter(fc_rule == "mean",
+         article_fc_rating == "FM")
+
+
+####################
+# Plot comparison
+####################
+# Calcualte relative performance
+comparison_exposure <- professional_intervention_exposure %>% 
+  mutate(relative_speed = intervention_time - 1, #crowd_sourced fact-checking is implemented at t_int = 1
+         crowd_sourced_exposure = crowd_intervention_exposure$decrease_in_exposure,
+         relative_performance_professional = (crowd_sourced_exposure - mean_exposure_decrease) / mean_exposure_decrease)
+
+# Plot
+gg_comparison <- ggplot(comparison_exposure, aes(x = intervention_time, y = relative_performance_professional)) +
+  geom_hline(aes(yintercept = 0), size = 0.3, linetype = "dotted") +
+  geom_point(size = 2, stroke = 0) +
+  coord_cartesian(clip = 'off') +
+  scale_x_continuous(breaks = seq(0, 12, 4),
+                     limits = c(0, 12),
+                     expand = c(0, 0)) +
+  scale_y_continuous(breaks = seq(-0.6, 1.2, 0.3),
+                     limits = c(-0.6, 1.2),
+                     expand = c(0, 0)) +
+  xlab("Prof. fact-checker\nturnaround time (hr)") +
+  ylab("Relative performance of\ncrowd-sourced interventions") +
+  theme_ctokita() +
+  theme(aspect.ratio = NULL)
+gg_comparison
+
+ggsave(gg_comparison, filename = paste0(outpath, "comparison_crowd_professional_interventions.pdf"), width = 30, height = 45, units = "mm")

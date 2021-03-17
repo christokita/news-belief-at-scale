@@ -66,30 +66,13 @@ for (dir in intervention_dirs) {
 max_time_of_expsoure <-  max(intervention_exposure$time[intervention_exposure$new_exposed_users > 0]) # find where new users are no longer being exposed. 55hrs
 intervention_exposure <- intervention_exposure %>% 
   group_by(total_article_number) %>% 
-  mutate(relative_cumulative_exposed = cumulative_exposed / max(cumulative_exposed), 
+  mutate(max_article_exposure = max(cumulative_exposed),
+         relative_cumulative_exposed = cumulative_exposed / max_article_exposure, 
+         change_in_cumlative_exposed = (cumulative_exposed - max_article_exposure) / max_article_exposure,
          simulation_number = paste0(total_article_number, "-", replicate, "-", intervention_time, "-visibility", visibility_reduction, "-sharing", sharing_reduction),
          simulation_type = factor(simulation_type, levels = c("no intervention", "intervention")),
          intervention = paste0("t", intervention_time, "-visibility", visibility_reduction, "-sharing", sharing_reduction)) %>% 
   filter(time <= max_time_of_expsoure) 
-
-  
-####################
-# Plot raw counts of cumulative exposure
-####################
-gg_exposed_raw <- ggplot(intervention_exposure) +
-  geom_rect(xmin = 6, xmax = 55, ymin = 0, ymax = 1, color = NA, fill = "#f1eef6", alpha = 0.3) +
-  geom_line(aes(x = time, y = cumulative_exposed, 
-                group = simulation_number,
-                color = simulation_type, 
-                alpha = simulation_type)) +
-  scale_color_manual(values = c("black", "#f03b20")) +
-  scale_alpha_manual(values = c(1, 0.2)) +
-  # scale_y_continuous(breaks = seq(0, 1, 0.5)) +
-  ylab("Relative number of users exposed") +
-  xlab("Time since first article share (hrs)") +
-  theme_ctokita() +
-  facet_wrap(~total_article_number, scales = "free_y")
-gg_exposed_raw
 
 
 ####################
@@ -99,13 +82,15 @@ gg_exposed_raw
 exposure_decrease <- intervention_exposure %>% 
   filter(time == 55,
          replicate != -1) %>% 
-  mutate(decrease_in_exposure = relative_cumulative_exposed - 1,
-         intervention_amount = paste0("visibility", visibility_reduction, "-", "sharing", sharing_reduction)) %>% 
+  mutate(intervention_amount = paste0("visibility", visibility_reduction, "-", "sharing", sharing_reduction)) %>% 
   group_by(intervention_amount, intervention_time) %>% 
-  summarise(mean_exposure_decrease = mean(decrease_in_exposure))
+  summarise(mean_exposure_decrease = mean(change_in_cumlative_exposed))
 
+write.csv(exposure_decrease, file = paste0(path_to_interventions, "interventions_mean_exposure_reduction.csv"), row.names = FALSE) #write to file for use in crowd-sourced intervention analysis
+
+# Prep plot labeling
 plot_labels <- data.frame(intervention_amount = unique(exposure_decrease$intervention_amount),
-                          intervention_label = c("Sharing friction (light)", "Sharing friction (heavy)", "Visibility reduction (light)", "Visibility reduction (heavy)")) %>% 
+                          intervention_label = c("Fact-check labeling", "Sharing friction", "Visibility reduction (light)", "Visibility reduction (heavy)")) %>% 
   mutate(intervention_label = gsub(" \\(", "\n\\(", intervention_label)) %>% 
   merge(exposure_decrease %>%  
           filter(intervention_time == 8) %>% 
@@ -134,11 +119,11 @@ gg_exposure_decrease <- ggplot(exposure_decrease, aes(x = intervention_time, y =
                      expand = c(0,0)) +
   scale_colour_manual(values = c("#74c476", "#238b45", "#6baed6", "#2171b5"),
                       name = "Intervention",
-                      labels = c("Sharing friction (light)",
-                                 "Sharing friction (heavy)",
+                      labels = c("Fact-check labeling",
+                                 "Sharing friction",
                                  "Visibility reduction (light)",
                                  "Visibility reduction (heavy)")) +
-  xlab("Intervention time (hrs)") + 
+  xlab(expression( paste("Intervention delay ", italic(t[int]), " (hr)") )) + 
   ylab("Mean reduction in user exposure to misinformation") +
   theme_ctokita() +
   theme(axis.line = element_blank(),
@@ -150,57 +135,6 @@ gg_exposure_decrease <- ggplot(exposure_decrease, aes(x = intervention_time, y =
 gg_exposure_decrease
 
 ggsave(gg_exposure_decrease, filename = paste0(outpath, "interventions_exposurereduction.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
-
-####################
-# Plot relative exposure by intervention
-####################
-# Filter to final exposure values (55 hours out from first share is enough)
-exposure_decrease <- intervention_exposure %>% 
-  filter(time == 55,
-         replicate != -1) %>% 
-  mutate(decrease_in_exposure = 1-relative_cumulative_exposed)
-
-# Estimate mean reduction in exposure by intervention
-treatments <- unique(exposure_decrease$intervention)
-exposure_reduction_estimate <- data.frame()
-for (treatment in treatments) {
-  data <- exposure_decrease %>% 
-    filter(intervention == treatment)
-  est <- Bolstad::normnp(x = data$relative_cumulative_exposed, m.x = 0.5, s.x = 5, quiet = TRUE, plot = FALSE)
-  df_est <- data.frame(intervention = unique(data$intervention),
-                       intervention_time = unique(data$intervention_time),
-                       visibility_reduction = unique(data$visibility_reduction),
-                       sharing_reduction = unique(data$sharing_reduction),
-                       est_mean = est$mean,
-                       ci_95_low = est$quantileFun(0.005),
-                       ci_95_high = est$quantileFun(0.995)) %>% 
-    mutate(intervention_amount = paste0("visibility", visibility_reduction, "-", "sharing", sharing_reduction))
-  exposure_reduction_estimate <- rbind(exposure_reduction_estimate, df_est)
-  rm(df_est, est)
-}
-
-# Plot
-gg_relative_exposure <- ggplot(exposure_reduction_estimate, aes(x = intervention_time, color = intervention_amount)) +
-  # geom_point(data = exposure_decrease,
-  #            aes(x = intervention_time, y = decrease_in_exposure),
-  #            size = 0.8, stroke = 0, alpha = 0.3, position = position_jitter(width = 0.1)) +
-  geom_errorbar(aes(ymin = ci_95_low, ymax = ci_95_high),
-                width = 0, size = 0.5) +
-  geom_point(aes(y = est_mean),
-             size = 1) +
-  scale_x_continuous(breaks = seq(1, 12, 1)) +
-  scale_y_continuous(breaks = seq(0, 1, 0.1), limits = c(0.3, 1.0), expand = c(0,0)) +
-  scale_colour_manual(values = c("#74c476", "#238b45", "#6baed6", "#2171b5"),
-                      name = "Intervention",
-                      labels = c("Sharing friction (light)",
-                                 "Sharing friction (heavy)",
-                                 "Visibility reduction (light)",
-                                 "Visibility reduction (heavy)")) +
-  xlab("Intervention time (hrs)") + 
-  ylab("Relative users exposed") +
-  theme_ctokita()
-gg_relative_exposure
-ggsave(gg_relative_exposure, filename = paste0(outpath, "relexposure_by_intervention.pdf"), width = 90, height = 45, units = "mm", dpi = 400)
 
 
 ####################
