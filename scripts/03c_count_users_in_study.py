@@ -33,7 +33,7 @@ outpath = data_directory + "data_derived/"
 tweets = pd.read_csv(data_directory + "data_derived/tweets/tweets_labeled.csv",
                      dtype = {'quoted_urls': object, 'quoted_urls_expanded': object, #these two columns cause memory issues if not pre-specified dtype
                               'user_id': 'int64', 'tweet_id': 'int64'})
-tweets = tweets[tweets.total_article_number > 10]
+tweets = tweets[tweets.total_article_number > 10].copy()
 
 # Count up tweets and unique tweeters
 n_tweets = tweets.shape[0]
@@ -53,7 +53,7 @@ followers = np.array([], dtype = 'int64')
 fm_followers = np.array([], dtype = 'int64')
 
 # Loop through user IDs and add to list followers
-for user_id in tweets['user_id']:
+for user_id in tweets['user_id'].unique():
     regex = re.compile(r"[0-9].*_%s.csv" % user_id)
     file = list(filter(regex.match, follower_files))
     if len(file) > 1:
@@ -75,6 +75,40 @@ fm_followers = np.unique(fm_followers)
 # Count up unique followers
 n_followers = len(followers)
 n_fm_followers = len(fm_followers)
+del followers, fm_followers
+
+####################
+# Count up friends
+#################### 
+friend_files = os.listdir(data_directory + "data/friends/")
+friend_files = [file for file in friend_files if re.match('^[0-9]', file)] #filter out hidden copies of same files
+friends = np.array([], dtype = 'int64')
+fm_friends = np.array([], dtype = 'int64')
+
+# Loop through user IDs and add to list followers
+for user_id in tweets['user_id'].unique():
+    regex = re.compile(r"[0-9].*_%s.csv" % user_id)
+    file = list(filter(regex.match, friend_files))
+    if len(file) > 1:
+        print("WARNING: user_id = %d matches multiple follower list files." % user_id)
+    try:
+        friend_list = np.genfromtxt(data_directory + "data/friends/" + file[0], dtype = 'int64')
+        friend_list = friend_list[1:len(friend_list)] #remove header, will raise error if empty
+        friends = np.append(friends, friend_list)
+        if user_id in fm_tweeters: #if a FM tweeter, add their followers to the separate list as well
+            fm_friends = np.append(fm_friends, friend_list)
+        del friend_list
+    except:
+        continue
+        
+# Get unique of lists
+friends = np.unique(friends)        
+fm_friends = np.unique(fm_friends)
+
+# Count up unique followers
+n_friends = len(friends)
+n_fm_friends = len(fm_friends)
+del friends, fm_friends
 
 
 ####################
@@ -82,8 +116,10 @@ n_fm_followers = len(fm_followers)
 #################### 
 unique_users = pd.DataFrame({'study_object': ["Tweets", "FM tweets", 
                                            "Tweeters", "FM tweeters", 
-                                           "Followers", "FM Followers"], 
+                                           "Followers", "FM followers",
+                                           "Friends", "FM friends"], 
                              'unique_count': [n_tweets, n_fm_tweets,
                                               n_tweeters, n_fm_tweeters, 
-                                              n_followers, n_fm_followers]})
+                                              n_followers, n_fm_followers,
+                                              n_friends, n_fm_friends]})
 unique_users.to_csv(outpath + "summary_users_in_study.csv", index = False)

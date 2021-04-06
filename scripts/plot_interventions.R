@@ -76,65 +76,58 @@ intervention_exposure <- intervention_exposure %>%
 
 
 ####################
-# Plot exposure decrease by intervention
+# Plot relative exposure by intervention
 ####################
 # Filter to final exposure values (55 hours out from first share is enough)
-exposure_decrease <- intervention_exposure %>% 
+relative_exposure <- intervention_exposure %>% 
   filter(time == 55,
          replicate != -1) %>% 
   mutate(intervention_amount = paste0("visibility", visibility_reduction, "-", "sharing", sharing_reduction)) %>% 
   group_by(intervention_amount, intervention_time) %>% 
-  summarise(mean_exposure_decrease = mean(change_in_cumlative_exposed))
+  summarise(mean_exposure = mean(relative_cumulative_exposed))
 
-write.csv(exposure_decrease, file = paste0(path_to_interventions, "interventions_mean_exposure_reduction.csv"), row.names = FALSE) #write to file for use in crowd-sourced intervention analysis
+write.csv(relative_exposure, file = paste0(path_to_interventions, "interventions_mean_exposure.csv"), row.names = FALSE) #write to file for use in crowd-sourced intervention analysis
 
 # Prep plot labeling
-plot_labels <- data.frame(intervention_amount = unique(exposure_decrease$intervention_amount),
-                          intervention_label = c("Fact-check labeling", "Sharing friction", "Visibility reduction (light)", "Visibility reduction (heavy)")) %>% 
-  mutate(intervention_label = gsub(" \\(", "\n\\(", intervention_label)) %>% 
-  merge(exposure_decrease %>%  
-          filter(intervention_time == 8) %>% 
-          group_by(intervention_amount) %>% 
-          select(intervention_amount, mean_exposure_decrease) %>% 
-          rename(y_pos = mean_exposure_decrease), by = "intervention_amount")
+relative_exposure <- relative_exposure %>% 
+  mutate(intervention_type = ifelse(intervention_amount == "visibility0-sharing0.25", "Fact-check labeling",
+                                    ifelse(intervention_amount == "visibility0-sharing0.75", "Sharing friction",
+                                           ifelse(intervention_amount == "visibility0.25-sharing0", "Visibility reduction (light)",
+                                                  ifelse(intervention_amount == "visibility0.75-sharing0", "Visibility reduction (heavy)", ""))))) %>% 
+  mutate(intervention_type = factor(intervention_type, levels = c("Fact-check labeling",
+                                                                  "Sharing friction",
+                                                                  "Visibility reduction (light)",
+                                                                  "Visibility reduction (heavy)")))
 
 # Plot
-gg_exposure_decrease <- ggplot(exposure_decrease, aes(x = intervention_time, y = mean_exposure_decrease, color = intervention_amount)) +
-  geom_segment(aes(xend = intervention_time, yend = 0), size = 0.6) +
-  # geom_hline(aes(yintercept = 0), size = 0.5) +
-  geom_point(size = 2.5,
-             stroke = 0) +
-  geom_text(data = plot_labels, aes(x = 12.5, y = y_pos, label = intervention_label), 
-            fontface = "bold", 
-            size = 2.5, 
-            lineheight = 0.8,
-            color = "black", 
-            hjust = 1, 
-            nudge_y = -0.2) +
+gg_exposure_decrease <- ggplot(relative_exposure, aes(x = intervention_time, y = mean_exposure, fill = intervention_type)) +
+  geom_bar(stat = "identity", 
+           color = NA,
+           width = 0.8) +
   scale_x_continuous(breaks = seq(1, 12, 1),
                      limits = c(0, 13),
                      expand = c(0, 0)) +
-  scale_y_continuous(breaks = seq(-1, 0, 0.2), 
-                     limits = c(-0.8, 0), 
+  scale_y_continuous(breaks = seq(0, 1, 0.2), 
+                     limits = c(0, 1), 
                      expand = c(0,0)) +
-  scale_colour_manual(values = c("#74c476", "#238b45", "#6baed6", "#2171b5"),
+  scale_fill_manual(values = c("#74c476", "#238b45", "#6baed6", "#2171b5"),
                       name = "Intervention",
                       labels = c("Fact-check labeling",
                                  "Sharing friction",
                                  "Visibility reduction (light)",
                                  "Visibility reduction (heavy)")) +
   xlab(expression( paste("Intervention delay ", italic(t[int]), " (hr)") )) + 
-  ylab("Mean reduction in user exposure to misinformation") +
+  ylab("Relative user exposure to misinformation") +
   theme_ctokita() +
   theme(axis.line = element_blank(),
         panel.border = element_rect(size = 0.5, fill = NA),
         legend.position = "none",
-        strip.text = element_blank()) +
-  facet_wrap(~intervention_amount,
+        strip.text = element_text(vjust = -0.5)) +
+  facet_wrap(~intervention_type,
              ncol = 2)
 gg_exposure_decrease
 
-ggsave(gg_exposure_decrease, filename = paste0(outpath, "interventions_exposurereduction.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
+ggsave(gg_exposure_decrease, filename = paste0(outpath, "interventions_relativeexposure.pdf"), width = 85, height = 100, units = "mm", dpi = 400)
 
 
 ####################

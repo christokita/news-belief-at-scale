@@ -76,14 +76,15 @@ gg_labelingrate <- intervention_exposure %>%
   group_by(article_fc_rating, fc_rule) %>% 
   summarise(labeled_false_rate = sum(simulation_type == "intervention") / length(simulation_type)) %>% 
   # Plot
-  ggplot(., aes(x = article_fc_rating, y = labeled_false_rate, color = article_fc_rating)) +
-  geom_segment(aes(xend = article_fc_rating, yend = 0), size = 0.6) +
-  geom_point(size = 2.5, stroke = 0) +
+  ggplot(., aes(x = article_fc_rating, y = labeled_false_rate, fill = article_fc_rating)) +
+  geom_bar(stat = "identity",
+           color = NA,
+           width = 0.8) +
   scale_x_discrete(labels = c("F", "T")) +
   scale_y_continuous(breaks = seq(0, 1, 0.1), 
                      limits = c(0, 0.701),
                      expand = c(0, 0)) +
-  scale_color_manual(values = veracity_pal[c(1, 3)]) +
+  scale_fill_manual(values = veracity_pal[c(1, 3)]) +
   xlab("Article rating by professional fact-checkers") +
   ylab("Rate labeled \"false\" by crowd") +
   theme_ctokita() +
@@ -103,14 +104,15 @@ gg_labelingrate_all <- intervention_exposure %>%
   group_by(article_fc_rating, fc_rule) %>% 
   summarise(labeled_false_rate = sum(simulation_type == "intervention") / length(simulation_type)) %>% 
   # Plot
-  ggplot(., aes(x = article_fc_rating, y = labeled_false_rate, color = article_fc_rating)) +
-  geom_segment(aes(xend = article_fc_rating, yend = 0), size = 0.6) +
-  geom_point(size = 2.5, stroke = 0) +
+  ggplot(., aes(x = article_fc_rating, y = labeled_false_rate, fill = article_fc_rating)) +
+  geom_bar(stat = "identity",
+           color = NA,
+           width = 0.8) +
   scale_x_discrete(labels = c("F", "Unc", "T")) +
   scale_y_continuous(breaks = seq(0, 1, 0.1), 
                      limits = c(0, 0.701),
                      expand = c(0, 0)) +
-  scale_color_manual(values = veracity_pal) +
+  scale_fill_manual(values = veracity_pal) +
   xlab("Article rating by professional fact-checkers") +
   ylab("Rate labeled \"false\" by crowd") +
   theme_ctokita() +
@@ -131,14 +133,15 @@ gg_labelingrate_sourcetype <- intervention_exposure %>%
   group_by(article_fc_rating, fc_rule, source_type) %>% 
   summarise(labeled_false_rate = sum(simulation_type == "intervention") / length(simulation_type)) %>% 
   # Plot
-  ggplot(., aes(x = article_fc_rating, y = labeled_false_rate, color = article_fc_rating)) +
-  geom_segment(aes(xend = article_fc_rating, yend = 0), size = 0.6) +
-  geom_point(size = 2.5, stroke = 0) +
+  ggplot(., aes(x = article_fc_rating, y = labeled_false_rate, fill = article_fc_rating)) +
+  geom_bar(stat = "identity",
+           color = NA,
+           width = 0.8) +
   scale_x_discrete(labels = c("F", "Unc", "T")) +
   scale_y_continuous(breaks = seq(0, 1, 0.1), 
                      limits = c(0, 0.701),
                      expand = c(0, 0)) +
-  scale_color_manual(values = veracity_pal) +
+  scale_fill_manual(values = veracity_pal) +
   xlab("Article rating by professional fact-checkers") +
   ylab("Rate flagged \"false\" by crowd") +
   theme_ctokita() +
@@ -154,34 +157,35 @@ ggsave(gg_labelingrate_sourcetype, filename = paste0(outpath, "crowd_false_ratin
 # Plot relative exposure for true and fake news
 ####################
 # Filter to final exposure values (55 hours out from first share is enough)
-exposure_decrease <- intervention_exposure %>% 
+relative_exposure <- intervention_exposure %>% 
   filter(replicate != -1,
          time == max_time_of_expsoure,
          article_fc_rating %in% c("FM", "T"))
 
 # Plot raw
-ggplot(exposure_decrease, aes(x = article_fc_rating, y = relative_cumulative_exposed)) +
+ggplot(relative_exposure, aes(x = article_fc_rating, y = relative_cumulative_exposed)) +
   geom_point(stroke = 0, alpha = 0.4, position = position_jitter(width = 0.1, height = 0.01)) +
+  scale_y_continuous(limits = c(0, 1)) +
   theme_ctokita() +
   facet_grid(~fc_rule)
 
 # Plot mean reduction
-gg_relative_exposure <- exposure_decrease %>% 
+gg_relative_exposure <- relative_exposure %>% 
   group_by(fc_rule, article_fc_rating) %>% 
   mutate(fc_rule = factor(fc_rule, levels = c("mean", "mode", "median", "majority", "unanimity"))) %>% 
-  summarise(decrease_in_exposure = mean(change_in_cumlative_exposed)) %>% 
+  summarise(mean_exposure = mean(relative_cumulative_exposed)) %>% 
   # Plot
-  ggplot(., aes(x = article_fc_rating, y = decrease_in_exposure, color = article_fc_rating)) +
-  geom_segment(aes(xend = article_fc_rating, yend = 0), size = 0.6) +
-  geom_point(size = 2.5,
-             stroke = 0) +
+  ggplot(., aes(x = article_fc_rating, y = mean_exposure, fill = article_fc_rating)) +
+  geom_bar(stat = "identity",
+           color = NA,
+           width = 0.6) +
   scale_x_discrete(labels = c("F", "T")) +
-  scale_y_continuous(breaks = seq(-1, 1, 0.1), 
-                     limits = c(-0.4001, 0),
+  scale_y_continuous(breaks = seq(-1, 1, 0.2), 
+                     limits = c(0, 1),
                      expand = c(0, 0)) +
-  scale_color_manual(values = veracity_pal[c(1, 3)]) +
+  scale_fill_manual(values = veracity_pal[c(1, 3)]) +
   xlab("Article rating by professional fact-checkers") +
-  ylab("Mean reduction in user exposure") +
+  ylab("Relative user exposure") +
   theme_ctokita() +
   theme(axis.line = element_blank(),
         panel.border = element_rect(size = 0.5, fill = NA),
