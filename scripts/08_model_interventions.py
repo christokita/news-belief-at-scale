@@ -18,13 +18,14 @@ import scipy.stats as stats
 import os
 import re
 import sys
+import pickle
 
 
 ####################
 # Functions for modeling interventions
 ####################
 # Simualte the proposed intervention in which users are x% less likely to see a tweet after time point t
-def simulate_intervention(tweets, paired_tweets_followers, RT_network, sharing_reduction, visibility_reduction, intervention_time, replicate_number, mean_time_to_exposure, sd_time_to_exposure):
+def simulate_intervention(tweets, paired_tweets_followers, ideologies, follower_ideol_distributions, RT_network, article_belief_data, sharing_reduction, visibility_reduction, intervention_time, replicate_number, mean_time_to_exposure, sd_time_to_exposure):
     """
     Function that will simulate an intervention in which users are 
     ::sharing_reduction::% less likely to share and 
@@ -32,7 +33,8 @@ def simulate_intervention(tweets, paired_tweets_followers, RT_network, sharing_r
     a tweet after time point ::intervention_time::.
         
     OUTPUT:
-        - 
+        - intervention_tweets (dataframe):   list of tweets that occured under this simulation. 
+        - exposure_over_time (dataframe):    binned count of newly and cumulatively exposed users over time.
     """
     # Run intervention on dataset
     # We assume people are ::odds_reduction:: less likely to see tweet sharing fake news, 
@@ -69,16 +71,26 @@ def simulate_intervention(tweets, paired_tweets_followers, RT_network, sharing_r
     exposed_per_tweet = exposed_followers['tweet_id'].value_counts()
     exposed_per_tweet = pd.DataFrame({'tweet_id': exposed_per_tweet.index, 'new_exposed_users': exposed_per_tweet.values})
     
-    # Bin exposure by time
-    bin_counts, bin_edges = np.histogram(exposed_followers.relative_exposure_time, bins = 72*4, range = (0, 72))
+    # Estimate belief for a tweet under intervention
+    believing_followers = estimate_belief(belief_users = exposed_followers, 
+                                          ideologies = ideologies, 
+                                          follower_ideol_distributions = follower_ideol_distributions, 
+                                          article_id = tweets['total_article_number'].unique(), 
+                                          article_belief_data = article_belief_data)
+    
+    # Bin exposure and belief by time
+    exposure_bin_counts, bin_edges = np.histogram(exposed_followers.relative_exposure_time, bins = 72*4, range = (0, 72))
+    belief_bin_counts, _ = np.histogram(believing_followers.relative_exposure_time, bins = 72*4, range = (0, 72))
     exposure_over_time = pd.DataFrame({'intervention_time': intervention_time,
                                        'visibility_reduction': visibility_reduction,
                                        'sharing_reduction': sharing_reduction,
                                        'total_article_number': intervention_tweets.total_article_number.unique().item(), 
                                        'replicate': replicate_number,
                                        'time': bin_edges[1:], 
-                                       'new_exposed_users': bin_counts})
+                                       'new_exposed_users': exposure_bin_counts,
+                                       'new_believing_users': belief_bin_counts})
     exposure_over_time['cumulative_exposed'] = exposure_over_time['new_exposed_users'].cumsum()
+    exposure_over_time['cumulative_believing'] = exposure_over_time['new_believing_users'].cumsum()
     
     # Merge tweets and exposure count, and return
     intervention_tweets = intervention_tweets.merge(exposed_per_tweet, on = 'tweet_id', how = 'left')
@@ -87,6 +99,50 @@ def simulate_intervention(tweets, paired_tweets_followers, RT_network, sharing_r
     intervention_tweets['cumulative_exposed'] = intervention_tweets['new_exposed_users'].cumsum()
     return intervention_tweets, exposure_over_time
 
+# Estimate exposure of unique users to the story, assuming the story, assuming users are x% less likely to see a tweet after time point t
+def estimate_belief(belief_users, ideologies, follower_ideol_distributions, article_id, article_belief_data):
+    """
+    Function that calculates the estimated belief among users exposued to tweets
+    
+    PARAMTERS:
+    - exposed_users (dataframe):   dataframe of all paired tweeters and exposed users
+    - ideologies (dataframe):      dataframe 
+    
+    OUTPUT:
+    - 
+    """
+    # Add in ideology scores
+    belief_users = belief_users.merge(ideologies, on = 'follower_id', how = 'left')
+    
+    # Loop through users and draw missing ideologies from user's follower ideology distribution
+    unique_tweeters = belief_users['user_id'].unique()
+    for tweeter in unique_tweeters:
+        # Get user's follower ideology distribution shape
+        follower_mu = follower_ideol_distributions.mu[follower_ideol_distributions.user_id == tweeter].iloc[0]
+        follower_sigma = follower_ideol_distributions.sigma[follower_ideol_distributions.user_id == tweeter].iloc[0]
+        
+        # Draw ideology samples for missing users
+        n_samples = belief_users.loc[(belief_users.user_id == tweeter) & pd.isna(belief_users.pablo_score)].shape[0] #number of unknown follower ideologies for this user
+        ideol_samples = np.random.normal(follower_mu, follower_sigma, n_samples)
+        belief_users.loc[(belief_users.user_id == tweeter) & pd.isna(belief_users.pablo_score), 'pablo_score'] = ideol_samples #fill in scores
+        
+    # Bin user ideologies
+    belief_users['ideology_bin'] = pd.cut(belief_users['pablo_score'],
+                                          bins = [-50, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 50],
+                                          labels = [-3, -2, -1, 0, 1, 2, 3])
+    
+    # Calculate belief of each individual probablistically 
+    article_belief_data = article_belief_data[article_belief_data.belief == "True"] #only focus on true belief
+    article_belief_data = article_belief_data[['belief_freq', 'belief', 'ideology_score']]
+    article_belief_data = article_belief_data.rename(columns = {'ideology_score': 'ideology_bin'})
+    belief_users = belief_users.merge(article_belief_data, on = 'ideology_bin')
+    belief_users['follower_belief'] = belief_users['belief_freq'].apply(lambda x: np.random.binomial(1, x)) #draw belief from binomial distribution
+    
+    # Filter to just believeing users and return
+    belief_users = belief_users[belief_users.follower_belief == 1].copy()
+    belief_users = belief_users.drop(columns = ['pablo_score', 'ideology_bin', 'belief_freq',])
+    return belief_users
+    
 
 # Estimate exposure of unique users to the story, assuming the story, assuming users are x% less likely to see a tweet after time point t
 def estimate_exposure_under_intervention(tweets, paired_tweets_followers, visibility_reduction, intervention_time, mean_exposure_time, sd_exposure_time):
@@ -237,7 +293,56 @@ if __name__ == "__main__":
     fm_tweets = labeled_tweets[labeled_tweets.article_fc_rating == "FM"].copy()
     fm_stories = fm_tweets['total_article_number'].unique()
     story = int(fm_stories[which_story])
-    del labeled_tweets
+    
+    
+    ####################
+    # Load user ideologies
+    ####################
+    # Load ideology scores--of both followers and tweeters (since tweeters can also be followers)
+    follower_ideologies = pd.read_csv(data_directory + "data_derived/ideological_scores/cleaned_followers_ideology_scores.csv",
+                                      dtype = {'user_id': 'int64', 'pablo_score': float})
+    follower_ideologies = follower_ideologies.rename(columns = {'user_id': 'follower_id'})
+    follower_ideologies = follower_ideologies.drop(columns = ['accounts_followed']) 
+    tweeter_ideologies = labeled_tweets[['user_id', 'user_ideology']]
+    tweeter_ideologies = tweeter_ideologies.rename(columns = {'user_id': 'follower_id', 'user_ideology': 'pablo_score'})
+    tweeter_ideologies = tweeter_ideologies[~pd.isna(tweeter_ideologies['pablo_score'])]
+    follower_ideologies = follower_ideologies.append(tweeter_ideologies, ignore_index = True)
+    follower_ideologies = follower_ideologies.drop_duplicates()
+    del tweeter_ideologies, labeled_tweets
+    
+    # Load inferred follower distribution shape for each tweeter
+    follower_distributions = pd.read_csv(data_directory + "data_derived/ideological_scores/estimated_ideol_distributions/follower_ideology_distribution_shapes.csv", dtype = {'user_id': 'int64'})
+    
+    ####################
+    # Load and shape belief data
+    ####################
+    # Load belief data, turn into dataframe
+    belief_file = data_directory + '/data/article_belief/response_distribution.p'
+    belief_data = pickle.load( open(belief_file, "rb") )
+    belief_data = pd.DataFrame.from_dict(belief_data, orient = 'index')
+    belief_data['total_article_number'] = belief_data.index
+    
+    # Drop unneccessary columns 
+    belief_data = belief_data.drop(columns = ['date', 'art_type'])
+    belief_data = belief_data.loc[:, ~belief_data.columns.str.match('.*response_count')] #drop response count columns
+    
+    # Melt and form new columns for ideology and belief
+    belief_data = pd.melt(belief_data, id_vars = ['total_article_number', 'fc_rating', 'mean_fc_likert', 'total_responses'])
+    belief_data['belief'] = belief_data['variable'].str.extract(r'_([a-z])$')
+    belief_data['ideology'] = belief_data['variable'].str.extract(r'^(.*)_[a-z]$')
+    belief_data['ideology'] = belief_data['ideology'].str.replace(': Middle of the road', '') #remove extra text from moderates
+    belief_data = belief_data[belief_data.ideology != "Haven't thought much about it"]
+    belief_data['ideology_score'] = belief_data['ideology'].map({'Extremely Liberal': -3, 'Liberal': -2, 'Slightly Liberal': -1,
+                                                                 'Moderate':0, 
+                                                                 'Slightly Conservative': 1, 'Conservative': 2, 'Extremely Conservative': 3})
+    
+    # Clean up dataframe
+    belief_data = belief_data.drop(columns = ['variable'])
+    belief_data = belief_data.rename(columns = {'value': 'belief_freq'})
+    belief_data['belief'] = belief_data['belief'].map({'t': 'True', 'f': 'False', 'c': 'Unsure'})
+    
+    # Grab only belief for this article
+    story_belief_data = belief_data[belief_data.total_article_number == story].copy()
     
     
     ####################
@@ -269,7 +374,7 @@ if __name__ == "__main__":
     RT_network = pd.read_csv(data_directory + "data_derived/networks/specific_article_networks/article" + str(story)+ "_edges.csv",
                               dtype = {'Source': 'int64', 'Target': 'int64', 'source_tweet_id': 'int64', 'target_tweet_id': 'int64'})
     
-    
+        
     ####################
     # Loop through replicate simulations
     ####################
@@ -284,7 +389,10 @@ if __name__ == "__main__":
     # First, no intervention
     noint_tweets, noint_exposure_time = simulate_intervention(tweets = story_tweets, 
                                                               paired_tweets_followers = tweets_with_followers, 
+                                                              ideologies = follower_ideologies,
+                                                              follower_ideol_distributions = follower_distributions,
                                                               RT_network = RT_network,
+                                                              article_belief_data = story_belief_data,
                                                               sharing_reduction = 0, #NO INTERVENTION
                                                               visibility_reduction = 0, #NO INTERVENTION
                                                               intervention_time = 0, 
@@ -304,7 +412,10 @@ if __name__ == "__main__":
         for i in np.arange(n_replicates):
             replicate_tweets, replicate_exposure_time = simulate_intervention(tweets = story_tweets, 
                                                                               paired_tweets_followers = tweets_with_followers, 
+                                                                              ideologies = follower_ideologies,
+                                                                              follower_ideol_distributions = follower_distributions,
                                                                               RT_network = RT_network,
+                                                                              article_belief_data = story_belief_data,
                                                                               sharing_reduction = sharing_reduction,
                                                                               visibility_reduction = visibility_reduction, 
                                                                               intervention_time = intervention_time, 
