@@ -38,7 +38,9 @@ add_dummy_time_points <- function(exposure_data) {
   dummy_row_time <- data.frame(total_article_number = rep(unique(exposure_data$total_article_number), each = 2),
                                time = rep(c(-2, 0), n_articles), 
                                new_exposed_users = rep(c(0, 0), n_articles),
-                               cumulative_exposed = rep(c(0, 0), n_articles))
+                               new_believing_users = rep(c(0, 0), n_articles),
+                               cumulative_exposed = rep(c(0, 0), n_articles),
+                               cumulative_believing = rep(c(0, 0), n_articles))
   dummy_rows <- merge(dummy_rows, dummy_row_time, by = "total_article_number")
   # (2) Join together
   exposure_data <- exposure_data %>% 
@@ -67,29 +69,35 @@ max_time_of_expsoure <-  max(intervention_exposure$time[intervention_exposure$ne
 intervention_exposure <- intervention_exposure %>% 
   group_by(total_article_number) %>% 
   mutate(max_article_exposure = max(cumulative_exposed),
+         max_article_believing = max(cumulative_believing),
          relative_cumulative_exposed = cumulative_exposed / max_article_exposure, 
+         relative_cumulative_believing = cumulative_believing / max_article_believing, 
          change_in_cumlative_exposed = (cumulative_exposed - max_article_exposure) / max_article_exposure,
+         change_in_cumlative_believing = (cumulative_believing - max_article_believing) / max_article_believing,
          simulation_number = paste0(total_article_number, "-", replicate, "-", intervention_time, "-visibility", visibility_reduction, "-sharing", sharing_reduction),
          simulation_type = factor(simulation_type, levels = c("no intervention", "intervention")),
          intervention = paste0("t", intervention_time, "-visibility", visibility_reduction, "-sharing", sharing_reduction)) %>% 
-  filter(time <= max_time_of_expsoure) 
+  filter(time <= max_time_of_expsoure) %>% 
+  filter(total_article_number > 10) #we don't use first 10 articles in analysis
 
 
 ####################
-# Plot relative exposure by intervention
+# Prep data on relative effect of interventions
 ####################
-# Filter to final exposure values (55 hours out from first share is enough)
-relative_exposure <- intervention_exposure %>% 
-  filter(time == 55,
+# Filter to final exposure/belief values for total impact
+relative_effect <- intervention_exposure %>% 
+  filter(time == max_time_of_expsoure,
          replicate != -1) %>% 
   mutate(intervention_amount = paste0("visibility", visibility_reduction, "-", "sharing", sharing_reduction)) %>% 
   group_by(intervention_amount, intervention_time) %>% 
-  summarise(mean_exposure = mean(relative_cumulative_exposed))
+  summarise(mean_exposure = mean(relative_cumulative_exposed),
+            mean_belief = mean(relative_cumulative_believing))
 
-write.csv(relative_exposure, file = paste0(path_to_interventions, "interventions_mean_exposure.csv"), row.names = FALSE) #write to file for use in crowd-sourced intervention analysis
+write.csv(relative_exposure, file = paste0(path_to_interventions, "interventions_mean_effect.csv"), row.names = FALSE) #write to file for use in crowd-sourced intervention analysis
+
 
 # Prep plot labeling
-relative_exposure <- relative_exposure %>% 
+relative_effect <- relative_effect %>% 
   mutate(intervention_type = ifelse(intervention_amount == "visibility0-sharing0.25", "Fact-check labeling",
                                     ifelse(intervention_amount == "visibility0-sharing0.75", "Sharing friction",
                                            ifelse(intervention_amount == "visibility0.25-sharing0", "Visibility reduction (light)",
@@ -99,7 +107,9 @@ relative_exposure <- relative_exposure %>%
                                                                   "Visibility reduction (light)",
                                                                   "Visibility reduction (heavy)")))
 
-# Plot
+####################
+# Plot relative exposure by intervention
+####################
 gg_exposure_decrease <- ggplot(relative_exposure, aes(x = intervention_time, y = mean_exposure, fill = intervention_type)) +
   geom_bar(stat = "identity", 
            color = NA,
@@ -131,7 +141,40 @@ ggsave(gg_exposure_decrease, filename = paste0(outpath, "interventions_relativee
 
 
 ####################
-# Plot example intervention time series
+# Plot relative belief by intervention
+####################
+gg_belief_decrease <- ggplot(relative_exposure, aes(x = intervention_time, y = mean_belief, fill = intervention_type)) +
+  geom_bar(stat = "identity", 
+           color = NA,
+           width = 0.8) +
+  scale_x_continuous(breaks = seq(1, 12, 1),
+                     limits = c(0, 13),
+                     expand = c(0, 0)) +
+  scale_y_continuous(breaks = seq(0, 1, 0.2), 
+                     limits = c(0, 1), 
+                     expand = c(0,0)) +
+  scale_fill_manual(values = c("#74c476", "#238b45", "#6baed6", "#2171b5"),
+                    name = "Intervention",
+                    labels = c("Fact-check labeling",
+                               "Sharing friction",
+                               "Visibility reduction (light)",
+                               "Visibility reduction (heavy)")) +
+  xlab(expression( paste("Intervention delay ", italic(t[int]), " (hr)") )) + 
+  ylab("Relative user belief of misinformation") +
+  theme_ctokita() +
+  theme(axis.line = element_blank(),
+        panel.border = element_rect(size = 0.5, fill = NA),
+        legend.position = "none",
+        strip.text = element_text(vjust = -0.5)) +
+  facet_wrap(~intervention_type,
+             ncol = 2)
+gg_belief_decrease
+
+ggsave(gg_belief_decrease, filename = paste0(outpath, "interventions_relativebelief.pdf"), width = 85, height = 100, units = "mm", dpi = 400)
+
+
+####################
+# Plot example exposure intervention time series
 ####################
 intervention_pal <- scales::viridis_pal(begin = 0, end = 0.9, direction = -1, option = "plasma")
 intervention_pal <- intervention_pal(6)
