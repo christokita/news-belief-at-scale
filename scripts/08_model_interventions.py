@@ -25,7 +25,7 @@ import pickle
 # Functions for modeling interventions
 ####################
 # Simualte the proposed intervention in which users are x% less likely to see a tweet after time point t
-def simulate_intervention(tweets, paired_tweets_followers, ideologies, follower_ideol_distributions, RT_network, article_belief_data, sharing_reduction, visibility_reduction, intervention_time, replicate_number, mean_time_to_exposure, sd_time_to_exposure):
+def simulate_intervention(tweets, paired_tweets_followers, ideologies, follower_ideol_distributions, RT_network, article_belief_data, sharing_reduction, visibility_reduction, belief_reduction, intervention_time, replicate_number, mean_time_to_exposure, sd_time_to_exposure):
     """
     Function that will simulate an intervention in which users are 
     ::sharing_reduction::% less likely to share and 
@@ -76,7 +76,8 @@ def simulate_intervention(tweets, paired_tweets_followers, ideologies, follower_
                                           ideologies = ideologies, 
                                           follower_ideol_distributions = follower_ideol_distributions, 
                                           article_id = tweets['total_article_number'].unique(), 
-                                          article_belief_data = article_belief_data)
+                                          article_belief_data = article_belief_data,
+                                          beleif_reduction = belief_reduction)
     
     # Bin exposure and belief by time
     exposure_bin_counts, bin_edges = np.histogram(exposed_followers.relative_exposure_time, bins = 72*4, range = (0, 72))
@@ -100,13 +101,17 @@ def simulate_intervention(tweets, paired_tweets_followers, ideologies, follower_
     return intervention_tweets, exposure_over_time
 
 # Estimate exposure of unique users to the story, assuming the story, assuming users are x% less likely to see a tweet after time point t
-def estimate_belief(belief_users, ideologies, follower_ideol_distributions, article_id, article_belief_data):
+def estimate_belief(belief_users, ideologies, follower_ideol_distributions, article_id, article_belief_data, belief_reduction = 0.0):
     """
     Function that calculates the estimated belief among users exposued to tweets
     
     PARAMTERS:
-    - exposed_users (dataframe):   dataframe of all paired tweeters and exposed users
-    - ideologies (dataframe):      dataframe 
+    - exposed_users (dataframe):                 dataframe of all paired tweeters and exposed users
+    - ideologies (dataframe):                    dataframe of all known user ideologies
+    - follower_ideol_distributions(dataframe):   dataframe of the estimated distribution of ideology each tweeter's followers
+    - article_id (int):                          article number
+    - article_belief_data (dataframe):           survey data of frequency of individual belief by demographics (e.g., ideology)
+    - belief_reduction (float):                  reduction in belief, accounting for intervention. Must be between 0.0 and 1.0, with 0.0 = 0% reduction and 1.0 = 100% reduction.
     
     OUTPUT:
     - 
@@ -136,6 +141,7 @@ def estimate_belief(belief_users, ideologies, follower_ideol_distributions, arti
     article_belief_data = article_belief_data[['belief_freq', 'belief', 'ideology_score']]
     article_belief_data = article_belief_data.rename(columns = {'ideology_score': 'ideology_bin'})
     belief_users = belief_users.merge(article_belief_data, on = 'ideology_bin')
+    belief_users['belief_freq'] = ['belief_freq'] * (1 - belief_reduction)
     belief_users['follower_belief'] = belief_users['belief_freq'].apply(lambda x: np.random.binomial(1, x)) #draw belief from binomial distribution
     
     # Filter to just believeing users and return
@@ -271,9 +277,10 @@ if __name__ == "__main__":
     outpath = data_directory + "data_derived/interventions/"
     
     # Parameters for simulation
-    n_replicates = 20
+    n_replicates = 10
     visibility_reduction = 0
     sharing_reduction = 0.25
+    belief_reduction = 0.17
     which_story = int(sys.argv[1]) #get from command line
     
     
@@ -292,6 +299,7 @@ if __name__ == "__main__":
     # Filter to fake news tweets
     fm_tweets = labeled_tweets[labeled_tweets.article_fc_rating == "FM"].copy()
     fm_stories = fm_tweets['total_article_number'].unique()
+    fm_stories = fm_stories[fm_stories > 10] #we don't use articles 1-10 in our study
     story = int(fm_stories[which_story])
     
     
@@ -379,7 +387,7 @@ if __name__ == "__main__":
     # Loop through replicate simulations
     ####################
     # Prep directory for output
-    sub_dir = "{}reduce_sharing{}_visibility{}/".format(outpath, str(sharing_reduction), str(visibility_reduction))
+    sub_dir = "{}reduce_sharing{}_visibility{}_belief{}/".format(outpath, str(sharing_reduction), str(visibility_reduction), str(belief_reduction))
     os.makedirs(sub_dir, exist_ok = True)
     
     # Loop through replicate simulations
@@ -395,6 +403,7 @@ if __name__ == "__main__":
                                                               article_belief_data = story_belief_data,
                                                               sharing_reduction = 0, #NO INTERVENTION
                                                               visibility_reduction = 0, #NO INTERVENTION
+                                                              belief_reduction = 0, #NO INTERVENTION
                                                               intervention_time = 0, 
                                                               replicate_number = -1,
                                                               mean_time_to_exposure = 1,
@@ -418,6 +427,7 @@ if __name__ == "__main__":
                                                                               article_belief_data = story_belief_data,
                                                                               sharing_reduction = sharing_reduction,
                                                                               visibility_reduction = visibility_reduction, 
+                                                                              belief_reduction = belief_reduction,
                                                                               intervention_time = intervention_time, 
                                                                               replicate_number = i,
                                                                               mean_time_to_exposure = 1,

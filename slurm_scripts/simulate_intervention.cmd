@@ -2,7 +2,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem-per-cpu=60gb
-#SBATCH --array=0-28
+#SBATCH --array=0-27 #we have 28 fake news articles
 #SBATCH --time=71:00:00
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=ctokita@princeton.edu
