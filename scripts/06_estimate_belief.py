@@ -88,6 +88,7 @@ def estimate_belief(estimated_exposure_df):
     
     # Loop through tweeters in exposure dataset
     estimated_belief_df = copy.deepcopy(estimated_exposure_df)
+    estimated_belief_df['new_believing_users'] = np.nan #add column for count of new believing users
     for i in np.arange(estimated_exposure_df.shape[0]):
         
         # Format belief data
@@ -100,6 +101,7 @@ def estimate_belief(estimated_exposure_df):
         # NOTE: For now just doing true
         est_belief = belief_rates['True'].values * estimated_exposure_df.loc[estimated_exposure_df.index[i], ideol_bins['bin_label']].values
         estimated_belief_df.loc[estimated_belief_df.index[i], ideol_bins['bin_label']] = np.round(est_belief).astype(int)
+        estimated_belief_df.loc[estimated_belief_df.index[i], 'new_believing_users'] = sum( np.round(est_belief).astype(int) )
         
     return estimated_belief_df
 
@@ -153,9 +155,20 @@ if __name__ == '__main__':
     pool.close()
     pool.join()
 
-    # Write to csv
+    # Calculate cumulative belief
     estimated_belief_data = pd.concat(result_list)
     estimated_belief_data = estimated_belief_data.sort_values(by = ['total_article_number', 'tweet_number'])
+    estimated_belief_data['cumulative_believing'] = estimated_belief_data.groupby('total_article_number')['new_believing_users'].cumsum()
+    
+    # Write to csv
+    estimated_belief_data = estimated_belief_data[['relative_time', 'tweet_number', 'tweet_id', 'user_id',
+                                                   'follower_count', 'new_exposed_users', 'cumulative_exposed',
+                                                   'new_believing_users', 'cumulative_believing',
+                                                   'ideol_-3.0_-2.5', 'ideol_-2.5_-2.0', 'ideol_-2.0_-1.5',
+                                                   'ideol_-1.5_-1.0', 'ideol_-1.0_-0.5', 'ideol_-0.5_0.0', 'ideol_0.0_0.5',
+                                                   'ideol_0.5_1.0', 'ideol_1.0_1.5', 'ideol_1.5_2.0', 'ideol_2.0_2.5',
+                                                   'ideol_2.5_3.0', 'ideol_3.0_3.5', 'ideol_3.5_4.0', 'ideol_4.0_4.5',
+                                                   'ideol_4.5_5.0', 'ideol_5.0_5.5', 'total_article_number']] #rearrange columns
     estimated_belief_data.to_csv(outpath + "estimated_belief_over_time.csv", index = False)
     
     
