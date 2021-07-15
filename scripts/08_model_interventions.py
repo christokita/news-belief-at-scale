@@ -77,7 +77,7 @@ def simulate_intervention(tweets, paired_tweets_followers, ideologies, follower_
                                           follower_ideol_distributions = follower_ideol_distributions, 
                                           article_id = tweets['total_article_number'].unique(), 
                                           article_belief_data = article_belief_data,
-                                          beleif_reduction = belief_reduction)
+                                          belief_reduction = belief_reduction)
     
     # Bin exposure and belief by time
     exposure_bin_counts, bin_edges = np.histogram(exposed_followers.relative_exposure_time, bins = 72*4, range = (0, 72))
@@ -85,6 +85,7 @@ def simulate_intervention(tweets, paired_tweets_followers, ideologies, follower_
     exposure_over_time = pd.DataFrame({'intervention_time': intervention_time,
                                        'visibility_reduction': visibility_reduction,
                                        'sharing_reduction': sharing_reduction,
+                                       'belief_reduction': belief_reduction,
                                        'total_article_number': intervention_tweets.total_article_number.unique().item(), 
                                        'replicate': replicate_number,
                                        'time': bin_edges[1:], 
@@ -141,7 +142,7 @@ def estimate_belief(belief_users, ideologies, follower_ideol_distributions, arti
     article_belief_data = article_belief_data[['belief_freq', 'belief', 'ideology_score']]
     article_belief_data = article_belief_data.rename(columns = {'ideology_score': 'ideology_bin'})
     belief_users = belief_users.merge(article_belief_data, on = 'ideology_bin')
-    belief_users['belief_freq'] = ['belief_freq'] * (1 - belief_reduction)
+    belief_users['belief_freq'] = belief_users['belief_freq'] * (1 - belief_reduction)
     belief_users['follower_belief'] = belief_users['belief_freq'].apply(lambda x: np.random.binomial(1, x)) #draw belief from binomial distribution
     
     # Filter to just believeing users and return
