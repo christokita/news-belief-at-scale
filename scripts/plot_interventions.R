@@ -64,6 +64,22 @@ for (dir in intervention_dirs) {
   
 }
 
+# Add belief reduction column akin to scripts (USE THIS ONCE THEN DELETE this after all data is updated)
+# intervention_exposure <- data.frame()
+# for (dir in intervention_dirs) {
+#   intervention_files <- list.files(dir, full.names = TRUE)
+#   exposure_file <- intervention_files[grepl("_exposetime.csv", intervention_files)]
+#   belief_impact <- as.numeric (gsub(".*belief([.0-9]+).*", "\\1", dir, perl = T))
+#   for (file in exposure_file) {
+#     exposure <- read.csv(file)
+#     exposure <- exposure %>% 
+#       mutate(belief_reduction = belief_impact) %>% 
+#       relocate(belief_reduction, .after = sharing_reduction)
+#     write.csv(exposure, file = file, row.names = FALSE)
+#   }
+#   
+# }
+
 # Create measure of relative exposure (relative to actual tweet data)
 max_time_of_expsoure <-  max(intervention_exposure$time[intervention_exposure$new_exposed_users > 0]) # find where new users are no longer being exposed. 55hrs
 intervention_exposure <- intervention_exposure %>% 
@@ -110,7 +126,7 @@ relative_effect <- relative_effect %>%
 ####################
 # Plot relative exposure by intervention
 ####################
-gg_exposure_decrease <- ggplot(relative_exposure, aes(x = intervention_time, y = mean_exposure, fill = intervention_type)) +
+gg_exposure_decrease <- ggplot(relative_effect, aes(x = intervention_time, y = mean_exposure, fill = intervention_type)) +
   geom_bar(stat = "identity", 
            color = NA,
            width = 0.8) +
@@ -143,7 +159,7 @@ ggsave(gg_exposure_decrease, filename = paste0(outpath, "interventions_relativee
 ####################
 # Plot relative belief by intervention
 ####################
-gg_belief_decrease <- ggplot(relative_exposure, aes(x = intervention_time, y = mean_belief, fill = intervention_type)) +
+gg_belief_decrease <- ggplot(relative_effect, aes(x = intervention_time, y = mean_belief, fill = intervention_type)) +
   geom_bar(stat = "identity", 
            color = NA,
            width = 0.8) +
