@@ -61,9 +61,9 @@ belief_timeseries <- merge(belief_data, article_data, by = c("tweet_id", "total_
 
 # Add ideological data
 belief_ideol <- belief_timeseries %>% 
-  select(-source_lean, -follower_count) %>% 
+  select(-follower_count) %>% 
   gather(key = "ideology_bin", value = "count", 
-         -time, -tweet_number, -tweet_id, -user_id, -user_ideology, -new_exposed_users, -cumulative_exposed, -total_article_number, -source_type, -article_fc_rating, -article_lean) %>% 
+         -time, -tweet_number, -tweet_id, -user_id, -user_ideology, -new_exposed_users, -new_believing_users, -cumulative_exposed, -cumulative_believing, -total_article_number, -source_type, -source_lean, -article_fc_rating, -article_lean) %>% 
   mutate(ideology_bin = gsub("ideol_", "", ideology_bin)) %>% 
   mutate(ideology_bin = gsub("^\\.", "-", ideology_bin)) %>% 
   mutate(ideology_bin = gsub("_\\.", "_-", ideology_bin)) %>% 
@@ -102,9 +102,8 @@ exposure_timeseries <- merge(exposure_data, article_data, by = c("tweet_id", "to
 
 # Add ideology data
 exposure_ideol <- exposure_timeseries %>% 
-  select(-source_lean) %>% 
   gather(key = "ideology_bin", value = "count", 
-         -time, -tweet_number, -tweet_id, -user_id, -user_ideology, -follower_count, -new_exposed_users, -cumulative_exposed, -total_article_number, -source_type, -article_fc_rating, -article_lean) %>% 
+         -time, -tweet_number, -tweet_id, -user_id, -user_ideology, -follower_count, -new_exposed_users, -cumulative_exposed, -total_article_number, -source_type, -source_lean, -article_fc_rating, -article_lean) %>% 
   mutate(ideology_bin = gsub("ideol_", "", ideology_bin)) %>% 
   mutate(ideology_bin = gsub("^\\.", "-", ideology_bin)) %>% 
   mutate(ideology_bin = gsub("_\\.", "_-", ideology_bin)) %>% 
@@ -121,15 +120,15 @@ rm(exposure_data, exposure_timeseries, tweets, article_data)
 # PLOT: Total exposure and belief
 ####################
 # Prep data
-exposure_ideol <- exposure_ideol %>% 
+exposure_ideol_sum <- exposure_ideol %>% 
   group_by(article_fc_rating, ideology_bin) %>% 
   summarise(exposure_count = sum(count, na.rm = TRUE))
 
-belief_ideol <- belief_ideol %>% 
+belief_ideol_sum <- belief_ideol %>% 
   group_by(article_fc_rating, ideology_bin) %>% 
   summarise(belief_count = sum(count, na.rm = TRUE))
 
-exposure_belief_data <- merge(exposure_ideol, belief_ideol, by = c("article_fc_rating", "ideology_bin")) %>% 
+exposure_belief_data <- merge(exposure_ideol_sum, belief_ideol_sum, by = c("article_fc_rating", "ideology_bin")) %>% 
   filter(article_fc_rating %in% c("False/Misleading news", "True news"))
 
 # Plot
@@ -170,3 +169,115 @@ gg_exposebelief_total <- ggplot(exposure_belief_data, aes(x = ideology_bin, fill
 gg_exposebelief_total
 
 ggsave(gg_exposebelief_total, filename = "output/belief/veracity/combined_total_beliefANDexposure.pdf", width = 45, height = 90, units = "mm", dpi = 400)
+
+
+####################
+# PLOT: Total exposure and belief, broken out by source lean
+####################
+# Prep data
+exposure_ideol_sum <- exposure_ideol %>% 
+  group_by(article_fc_rating, source_lean, ideology_bin) %>% 
+  summarise(exposure_count = sum(count, na.rm = TRUE))
+
+belief_ideol_sum <- belief_ideol %>% 
+  group_by(article_fc_rating, source_lean, ideology_bin) %>% 
+  summarise(belief_count = sum(count, na.rm = TRUE))
+
+exposure_belief_data <- merge(exposure_ideol_sum, belief_ideol_sum, by = c("article_fc_rating", "source_lean", "ideology_bin")) %>% 
+  filter(article_fc_rating %in% c("False/Misleading news", "True news")) %>% 
+  mutate(source_lean = ifelse(source_lean == "C", "Conservative", 
+                              ifelse(source_lean == "L", "Liberal", 
+                                     ifelse(source_lean == "U", "Unclear", "")))) %>% 
+  mutate(source_lean = factor(source_lean, levels = c("Liberal", "Unclear", "Conservative")))
+
+# Plot: True news
+gg_exposebelief_total_source <- ggplot(exposure_belief_data, aes(x = ideology_bin, fill = ideology_bin)) +
+  # Data
+  geom_step(aes(x = ideology_bin - 0.25, y = exposure_count,  color = ideology_bin - 0.25),
+            size = 0.3,
+            alpha = 0.8) +
+  geom_bar(aes(y = exposure_count),
+           stat = "identity",
+           alpha = 0.5,
+           width = 0.5) +
+  geom_step(aes(x = ideology_bin - 0.25, y = belief_count),
+            size = 0.6,
+            color = "white",
+            alpha = 0.7) +
+  geom_bar(aes(y = belief_count),
+           stat = "identity",
+           alpha = 1,
+           width = 0.5) +
+  #Plot params
+  scale_x_continuous(limits = c(-6, 6), 
+                     expand = c(0, 0), 
+                     breaks = seq(-6, 6, 2)) +
+  scale_y_continuous(expand = c(0, 0), 
+                     labels = comma) +
+  scale_fill_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
+  scale_color_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
+  xlab("User ideology") +
+  ylab("Total number of users") +
+  theme_ctokita() +
+  theme(legend.position = "none",
+        aspect.ratio = NULL) +
+  facet_grid(article_fc_rating~source_lean, scale = 'free_y')
+gg_exposebelief_total_source
+
+ggsave(gg_exposebelief_total_source, filename = "output/belief/veracity/combined_total_beliefANDexposure_bysourcelean.pdf", width = 135, height = 90, units = "mm", dpi = 400)
+
+
+####################
+# PLOT: Total exposure and belief, broken out by article lean
+####################
+# Prep data
+exposure_ideol_sum <- exposure_ideol %>% 
+  mutate(article_lean = gsub("Neutral|Unclear", "Neutral/Unclear", article_lean)) %>% 
+  mutate(article_lean = factor(article_lean, levels = c("Liberal", "Neutral/Unclear", "Conservative"))) %>% 
+  group_by(article_fc_rating, article_lean, ideology_bin) %>% 
+  summarise(exposure_count = sum(count, na.rm = TRUE))
+
+belief_ideol_sum <- belief_ideol %>% 
+  mutate(article_lean = gsub("Neutral|Unclear", "Neutral/Unclear", article_lean)) %>% 
+  mutate(article_lean = factor(article_lean, levels = c("Liberal", "Neutral/Unclear", "Conservative"))) %>% 
+  group_by(article_fc_rating, article_lean, ideology_bin) %>% 
+  summarise(belief_count = sum(count, na.rm = TRUE))
+
+exposure_belief_data <- merge(exposure_ideol_sum, belief_ideol_sum, by = c("article_fc_rating", "article_lean", "ideology_bin")) %>% 
+  filter(article_fc_rating %in% c("False/Misleading news", "True news"))
+
+# Plot: True news
+gg_exposebelief_total_article <- ggplot(exposure_belief_data, aes(x = ideology_bin, fill = ideology_bin)) +
+  # Data
+  geom_step(aes(x = ideology_bin - 0.25, y = exposure_count,  color = ideology_bin - 0.25),
+            size = 0.3,
+            alpha = 0.8) +
+  geom_bar(aes(y = exposure_count),
+           stat = "identity",
+           alpha = 0.5,
+           width = 0.5) +
+  geom_step(aes(x = ideology_bin - 0.25, y = belief_count),
+            size = 0.6,
+            color = "white",
+            alpha = 0.7) +
+  geom_bar(aes(y = belief_count),
+           stat = "identity",
+           alpha = 1,
+           width = 0.5) +
+  #Plot params
+  scale_x_continuous(limits = c(-6, 6), 
+                     expand = c(0, 0), 
+                     breaks = seq(-6, 6, 2)) +
+  scale_y_continuous(expand = c(0, 0), 
+                     labels = comma) +
+  scale_fill_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
+  scale_color_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
+  xlab("User ideology") +
+  ylab("Total number of users") +
+  theme_ctokita() +
+  theme(legend.position = "none",
+        aspect.ratio = NULL) +
+  facet_grid(article_fc_rating~article_lean, scale = 'free_y')
+gg_exposebelief_total_article
+
+ggsave(gg_exposebelief_total_article, filename = "output/belief/veracity/combined_total_beliefANDexposure_byarticlelean.pdf", width = 135, height = 90, units = "mm", dpi = 400)
