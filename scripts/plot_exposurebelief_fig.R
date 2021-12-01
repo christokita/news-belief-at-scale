@@ -246,7 +246,7 @@ belief_ideol_sum <- belief_ideol %>%
 exposure_belief_data <- merge(exposure_ideol_sum, belief_ideol_sum, by = c("article_fc_rating", "article_lean", "ideology_bin")) %>% 
   filter(article_fc_rating %in% c("False/Misleading news", "True news"))
 
-# Plot: True news
+# Plot
 gg_exposebelief_total_article <- ggplot(exposure_belief_data, aes(x = ideology_bin, fill = ideology_bin)) +
   # Data
   geom_step(aes(x = ideology_bin - 0.25, y = exposure_count,  color = ideology_bin - 0.25),
@@ -281,3 +281,70 @@ gg_exposebelief_total_article <- ggplot(exposure_belief_data, aes(x = ideology_b
 gg_exposebelief_total_article
 
 ggsave(gg_exposebelief_total_article, filename = "output/belief/veracity/combined_total_beliefANDexposure_byarticlelean.pdf", width = 135, height = 90, units = "mm", dpi = 400)
+
+
+####################
+# PLOT: Total exposure and belief, broken out by hours 0-6 vs. hours 18-24
+####################
+# Prep data
+exposure_ideol_sum <- exposure_ideol %>% 
+  filter( time < 24) %>% #grab first 24 hours
+  mutate(time_hr_6 = floor(time / 6)) %>% 
+  mutate(time_window = ifelse(time_hr_6 == 0, "First 6 hrs.", 
+                              ifelse(time_hr_6 == 1, "Hr. 6 to 12", 
+                                     ifelse(time_hr_6 == 2, "Hr. 12 to 18", 
+                                            ifelse(time_hr_6 == 3, "Hr. 18 to 24", NA))))) %>% 
+  group_by(article_fc_rating, time_window, ideology_bin) %>% 
+  summarise(exposure_count = sum(count, na.rm = TRUE))
+
+belief_ideol_sum <- belief_ideol %>% 
+  filter( time < 24) %>% #grab first 24 hours
+  mutate(time_hr_6 = floor(time / 6)) %>% 
+  mutate(time_window = ifelse(time_hr_6 == 0, "First 6 hrs.", 
+                              ifelse(time_hr_6 == 1, "Hr. 6 to 12", 
+                                     ifelse(time_hr_6 == 2, "Hr. 12 to 18", 
+                                            ifelse(time_hr_6 == 3, "Hr. 18 to 24", NA))))) %>% 
+  group_by(article_fc_rating, time_window, ideology_bin) %>% 
+  summarise(belief_count = sum(count, na.rm = TRUE))
+
+exposure_belief_data <- merge(exposure_ideol_sum, belief_ideol_sum, by = c("article_fc_rating", "ideology_bin", "time_window")) %>% 
+  filter(article_fc_rating %in% c("False/Misleading news", "True news")) %>% 
+  mutate(time_window = factor(time_window, levels = c("First 6 hrs.", "Hr. 6 to 12", "Hr. 12 to 18", "Hr. 18 to 24")))
+
+# Plot
+gg_exposebelief_total_timewindow <- ggplot(exposure_belief_data, aes(x = ideology_bin, fill = ideology_bin)) +
+  # Data
+  geom_step(aes(x = ideology_bin - 0.25, y = exposure_count,  color = ideology_bin - 0.25),
+            size = 0.3,
+            alpha = 0.8) +
+  geom_bar(aes(y = exposure_count),
+           stat = "identity",
+           alpha = 0.5,
+           width = 0.5) +
+  geom_step(aes(x = ideology_bin - 0.25, y = belief_count),
+            size = 0.6,
+            color = "white",
+            alpha = 0.7) +
+  geom_bar(aes(y = belief_count),
+           stat = "identity",
+           alpha = 1,
+           width = 0.5) +
+  #Plot params
+  scale_x_continuous(limits = c(-6, 6), 
+                     expand = c(0, 0), 
+                     breaks = seq(-6, 6, 2),
+                     labels = c("-6", "", "", "0", "", "", "6")) +
+  scale_y_continuous(expand = c(0, 0), 
+                     labels = comma) +
+  scale_fill_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
+  scale_color_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
+  xlab("User ideology") +
+  ylab("Total number of users") +
+  theme_ctokita() +
+  theme(legend.position = "none",
+        aspect.ratio = NULL,
+        panel.spacing.x = unit(0.7, "lines")) +
+  facet_grid(article_fc_rating~time_window, scale = 'free')
+gg_exposebelief_total_timewindow
+
+ggsave(gg_exposebelief_total_timewindow, filename = "output/belief/veracity/combined_total_beliefANDexposure_timewindow.pdf", width = 90, height = 90, units = "mm", dpi = 400)

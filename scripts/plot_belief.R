@@ -309,11 +309,17 @@ regression_belief <- brm_multiple(data = belief_split,
                                  prior = c(prior(uniform(-100, 100), class = Intercept),
                                            prior(uniform(-100, 100), class = b),
                                            prior(uniform(-100, 100), class = sigma)),
-                                 iter = 3000,
+                                 iter = 3500,
                                  warmup = 1000,
                                  chains = 4,
                                  seed = 323,
                                  combine = FALSE)
+
+# Get stats on slope
+slope_fm <- posterior_samples(regression_belief[[1]], pars = "time", as.array = TRUE)
+slope_t <- posterior_samples(regression_belief[[2]], pars = "time", as.array = TRUE)
+hypothesis_t_less_fm <- sum(slope_fm > slope_t) / length(slope_fm) #what set of posterior samples. P = 1
+bayes_factor <- hypothesis_t_less_fm / (1 - hypothesis_t_less_fm) #Inf
 
 # Get fitted values from model to data range/space
 x_values <- data.frame(time = seq(0, 24, 0.1))
@@ -415,4 +421,39 @@ gg_24hr_belief
 ggsave(gg_24hr_belief, filename = paste0(outpath, "relative_cumulative_belief.pdf"), width = 45, height = 45, units = "mm", dpi = 400)
 
 
+# Just raw article data
+gg_24hr_belief <- belief_timeseries %>% 
+  ggplot(., aes(x = time, y = relative_cumulative_belief, color = !!sym(grouping), group = total_article_number)) +
+  geom_line(size = 0.6, alpha = 0.15) +
+  xlab("Hours since first article share") +
+  ylab("Relative cumulative belief over first 24 hrs.") +
+  scale_x_continuous(breaks = seq(0, 24, 6),
+                     limits = c(0, 24)) +
+  scale_y_continuous(breaks = seq(0, 1, 0.25), 
+                     labels = c("0.0", "", "0.5", "", "1.0"),
+                     expand = c(0, 0), 
+                     limits = c(0, 1)) +
+  scale_color_manual(values = grouping_pal, name = "Article rating", labels = c("False/Misleading", "True")) +
+  facet_wrap(as.formula(paste("~", grouping)),
+             ncol = 1,
+             strip.position = "top") +
+  theme_ctokita() +
+  theme(legend.position = c(0.75, 0.2))
 
+gg_24hr_belief
+
+
+####################
+# Follower count of users sharing news
+####################
+gg_follower_count <- ggplot(belief_timeseries, aes(x = time, y = new_exposed_users, color = !!sym(grouping))) +
+  geom_point(stroke = 0, size = 2, alpha = 0.5) +
+  # scale_y_continuous(trans = "log10") +
+  scale_x_continuous(limits = c(0, 24)) +
+  scale_color_manual(values = grouping_pal, name = "Article rating", labels = c("False/Misleading", "True")) +
+  theme_ctokita() +
+  facet_wrap(as.formula(paste("~", grouping)),
+             ncol = 1,
+             strip.position = "top",
+             scales = "free_y") 
+gg_follower_count
