@@ -26,6 +26,7 @@ import pandas as pd
 import numpy as np
 import os
 import json
+import re
 
 # Paths
 data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
@@ -90,6 +91,98 @@ tweet_times.to_csv(data_directory + 'data_derived/_data_checks/tweets_firstlast_
 ####################
 # Determine which new tweeters need to be searched for friends/followers
 ####################
+# Read in tweets
 new_tweets_file = data_directory + 'data/tweets/expanded_window_tweets.json'
 f = open(new_tweets_file)
-new_tweets = json.loads(f)
+new_tweets = json.load(f)
+
+# Get list of new tweeters
+new_tweeters = np.array([])
+for new_tweet in new_tweets:
+    new_tweeters = np.append(new_tweeters, new_tweet['author_id'])
+new_tweeters = np.unique(new_tweeters) #drops 2,319 duplicate user IDs
+
+# Compile list of users for which we (nominally) have their list of friend/followers
+follower_lists = os.listdir(data_directory + 'data/followers/')
+follower_lists = [re.sub('[0-9]{4}__[0-9]{2}__[0-9]{2}__', '', x) for x in follower_lists]
+follower_lists = [re.sub('\.csv', '', x) for x in follower_lists]
+follower_lists = np.array(follower_lists)
+follower_lists = np.sort(follower_lists)[1:] #drop .DS_store
+
+friend_lists = os.listdir(data_directory + 'data/friends/')
+friend_lists = [re.sub('[0-9]{4}__[0-9]{2}__[0-9]{2}__', '', x) for x in friend_lists]
+friend_lists = [re.sub('\.csv', '', x) for x in friend_lists]
+friend_lists = np.array(friend_lists)
+friend_lists = np.sort(friend_lists)[1:] #drop .DS_store
+
+have_lists = np.intersect1d(follower_lists, friend_lists) #only count those we have both friend and follower list for
+missing_friend_list = np.setdiff1d(follower_lists, have_lists) #if in follower_lists but not have_list (i.e., both lists present), then missing friend list by logic
+missing_follower_list = np.setdiff1d(friend_lists, have_lists)  #if in friend_lists but not have_list (i.e., both lists present), then missing follower list by logic
+
+
+# Determine which new tweeters aren't in our set that is already accounted for
+new_tweeters_need_to_check = np.setdiff1d(new_tweeters, have_lists)
+new_tweeters_need_to_check = pd.DataFrame(data = new_tweeters_need_to_check, 
+                                          columns = ['user_id'],
+                                          dtype = object)
+new_tweeters_need_to_check['user_id_str'] = "\"" + new_tweeters_need_to_check['user_id'] + "\""
+
+
+
+####################
+# Re-do from above: Compile list of users with no followers and no friends
+####################
+no_followers = pd.DataFrame(columns = ['user_id'],  dtype = object)
+no_friends = pd.DataFrame(columns = ['user_id'],  dtype = object)
+
+# Compile our list of no-friend/no-follower users that we flag during data processing
+for file in os.listdir(data_directory + 'data_derived/followers/tweeters_nofollowers/'):
+    user_list = pd.read_csv(data_directory + 'data_derived/followers/tweeters_nofollowers/' + file, dtype = object)
+    no_followers = no_followers.append(user_list)
+    del user_list
+no_followers['user_id_str'] = "\"" + no_followers['user_id'] + "\""
+no_followers = no_followers.drop_duplicates()
+    
+for file in os.listdir(data_directory + 'data_derived/friends/tweeters_nofriends/'):
+    user_list = pd.read_csv(data_directory + 'data_derived/friends/tweeters_nofriends/' + file, dtype = object)
+    no_friends = no_friends.append(user_list)
+    del user_list
+no_friends['user_id_str'] = "\"" + no_friends['user_id'] + "\""
+no_friends = no_friends.drop_duplicates()
+
+
+# Filter out users we already ran
+already_checked_no_followers = pd.read_csv(data_directory + 'data_derived/_data_checks/users_no_followers_2021-9-13.csv')
+already_checked_no_friends = pd.read_csv(data_directory + 'data_derived/_data_checks/users_no_friends_2021-9-13.csv')
+
+no_followers_filtered = no_followers[~no_followers['user_id_str'].isin(already_checked_no_followers['user_id_str'])]
+no_friends_filtered = no_friends[~no_friends['user_id_str'].isin(already_checked_no_friends['user_id_str'])]
+
+
+# Add in users who appear to be missing one list
+still_missing_follower_list = np.setdiff1d(missing_follower_list, no_followers_filtered['user_id']) #make sure they aren't in our no_followers_filtered list
+still_missing_follower_list = pd.DataFrame(still_missing_follower_list, columns = ['user_id'])
+still_missing_follower_list['user_id_str'] = "\"" + still_missing_follower_list['user_id'] + "\""
+
+still_missing_friend_list = np.setdiff1d(missing_friend_list, no_friends_filtered['user_id']) #make sure they aren't already in our no_friends_filtered list
+still_missing_friend_list = pd.DataFrame(still_missing_friend_list, columns = ['user_id'])
+still_missing_friend_list['user_id_str'] = "\"" + still_missing_friend_list['user_id'] + "\""
+
+
+# Combine
+no_followers_complete = no_followers_filtered.append(still_missing_follower_list, ignore_index = True)
+no_followers_complete = no_followers_complete.drop_duplicates()
+
+no_friends_complete = no_friends_filtered.append(still_missing_friend_list, ignore_index = True)
+no_friends_complete = no_friends_complete.drop_duplicates()
+
+
+####################
+# Write to file
+####################
+today = pd.to_datetime("today")
+today = str(today.year) + "-" + str(today.month) + "-" + str(today.day)
+no_followers_complete.to_csv(data_directory + 'data_derived/_data_checks/allusers_no_followers_{}.csv'.format(today), index = False)
+no_friends_complete.to_csv(data_directory + 'data_derived/_data_checks/allusers_no_friends_{}.csv'.format(today), index = False)
+new_tweeters_need_to_check.to_csv(data_directory + 'data_derived/_data_checks/new_tweeters_needing_friendsfollowers.csv', index = False)
+
