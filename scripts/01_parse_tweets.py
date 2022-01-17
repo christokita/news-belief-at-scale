@@ -183,7 +183,9 @@ source_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external hard drive
 json1 = "data/tweets/crowdsource_factchecking_prem2.json"
 json2 = "data/tweets/crowdsource_factchecking.json"
 json3 = "data/tweets/crowdsource_factchecking_enterprise_trial.json"
-json_files = [json1, json2, json3]
+json4 = "data/tweets/crowdsource_factchecking_missing_article_tweets.json"
+json5 = "data/tweets/expanded_window_tweets.json"
+json_files = [json1, json2, json3, json4, json5]
 json_files = [source_directory + file for file in json_files]
 
 # Parse data
@@ -197,7 +199,7 @@ for file in json_files:
         tweet_data = copy.deepcopy(data)
     del data
 
-# Drop duplicate tweets (~5,800 discovered)
+# Drop duplicate tweets (~5,800 originally discovered)
 tweet_data = tweet_data.drop_duplicates()
 
 # Save
