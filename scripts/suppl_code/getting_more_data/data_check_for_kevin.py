@@ -7,6 +7,10 @@ Created on Mon Sep 13 16:55:00 2021
 
 SCRIPT:
     
+Oct 19, 2020
+Check what new users were found when we searched for tweets sharing URLs of articles that otherwise appeared to not have any associated tweets.
+Note: This part of the script was actually done on Jan 16, 2022 because I realized I hadn't done this data check yet.
+    
 Sept 13, 2021
 Check two parts of the data for Kevin Aslett:
     (1) Confirm users who appear not to have friends and/or followers
@@ -30,6 +34,49 @@ import re
 
 # Paths
 data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
+
+
+
+######################################## October 19, 2020 ########################################
+
+####################
+# Determine which new tweeters need to be searched for friends/followers
+####################
+# Read in tweets
+missing_tweets_file = data_directory + 'data/tweets/test.json'
+f = open(missing_tweets_file)
+new_tweets = json.loads(f)
+
+# Get list of new tweeters
+new_tweeters = np.array([])
+for new_tweet in new_tweets:
+    new_tweeters = np.append(new_tweeters, new_tweet['author_id'])
+new_tweeters = np.unique(new_tweeters) #drops 2,319 duplicate user IDs
+
+# Compile list of users for which we (nominally) have their list of friend/followers
+follower_lists = os.listdir(data_directory + 'data/followers/')
+follower_lists = [re.sub('[0-9]{4}__[0-9]{2}__[0-9]{2}__', '', x) for x in follower_lists]
+follower_lists = [re.sub('\.csv', '', x) for x in follower_lists]
+follower_lists = np.array(follower_lists)
+follower_lists = np.sort(follower_lists)[1:] #drop .DS_store
+
+friend_lists = os.listdir(data_directory + 'data/friends/')
+friend_lists = [re.sub('[0-9]{4}__[0-9]{2}__[0-9]{2}__', '', x) for x in friend_lists]
+friend_lists = [re.sub('\.csv', '', x) for x in friend_lists]
+friend_lists = np.array(friend_lists)
+friend_lists = np.sort(friend_lists)[1:] #drop .DS_store
+
+have_lists = np.intersect1d(follower_lists, friend_lists) #only count those we have both friend and follower list for
+missing_friend_list = np.setdiff1d(follower_lists, have_lists) #if in follower_lists but not have_list (i.e., both lists present), then missing friend list by logic
+missing_follower_list = np.setdiff1d(friend_lists, have_lists)  #if in friend_lists but not have_list (i.e., both lists present), then missing follower list by logic
+
+
+# Determine which new tweeters aren't in our set that is already accounted for
+new_tweeters_need_to_check = np.setdiff1d(new_tweeters, have_lists)
+new_tweeters_need_to_check = pd.DataFrame(data = new_tweeters_need_to_check, 
+                                          columns = ['user_id'],
+                                          dtype = object)
+new_tweeters_need_to_check['user_id_str'] = "\"" + new_tweeters_need_to_check['user_id'] + "\""
 
 
 
@@ -91,15 +138,14 @@ tweet_times.to_csv(data_directory + 'data_derived/_data_checks/tweets_firstlast_
 ####################
 # Determine which new tweeters need to be searched for friends/followers
 ####################
-# Read in tweets
-new_tweets_file = data_directory + 'data/tweets/expanded_window_tweets.json'
-f = open(new_tweets_file)
-new_tweets = json.load(f)
-
-# Get list of new tweeters
+# Read in tweets and get list of new tweeters
 new_tweeters = np.array([])
-for new_tweet in new_tweets:
-    new_tweeters = np.append(new_tweeters, new_tweet['author_id'])
+new_tweets_file = data_directory + 'data/tweets/expanded_window_tweets.json'
+with open(new_tweets_file, 'r') as f:
+    for tweet in f:
+        new_tweet = json.loads(tweet)
+        new_tweeters = np.append(new_tweeters, new_tweet['user']['id_str'])
+
 new_tweeters = np.unique(new_tweeters) #drops 2,319 duplicate user IDs
 
 # Compile list of users for which we (nominally) have their list of friend/followers
@@ -130,7 +176,7 @@ new_tweeters_need_to_check['user_id_str'] = "\"" + new_tweeters_need_to_check['u
 
 
 ####################
-# Re-do from above: Compile list of users with no followers and no friends
+# Re-do from above (Sept 13, 2021): Compile list of users with no followers and no friends
 ####################
 no_followers = pd.DataFrame(columns = ['user_id'],  dtype = object)
 no_friends = pd.DataFrame(columns = ['user_id'],  dtype = object)
@@ -184,5 +230,5 @@ today = pd.to_datetime("today")
 today = str(today.year) + "-" + str(today.month) + "-" + str(today.day)
 no_followers_complete.to_csv(data_directory + 'data_derived/_data_checks/allusers_no_followers_{}.csv'.format(today), index = False)
 no_friends_complete.to_csv(data_directory + 'data_derived/_data_checks/allusers_no_friends_{}.csv'.format(today), index = False)
-new_tweeters_need_to_check.to_csv(data_directory + 'data_derived/_data_checks/new_tweeters_needing_friendsfollowers.csv', index = False)
+new_tweeters_need_to_check.to_csv(data_directory + 'data_derived/_data_checks/new_tweeters_needing_friendsfollowers_{}.csv'.format(today), index = False)
 

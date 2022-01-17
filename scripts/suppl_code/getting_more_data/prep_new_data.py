@@ -47,7 +47,7 @@ with open(data_directory + 'data/tweets/expanded_window_tweets.json', 'w') as ou
     
     for json_obj in expanded_window_tweets:
         json.dump(json_obj,  out_file)
-        out_file.write(',\n')
+        out_file.write('\n')
         
 # Free up memory
 del expanded_window_tweets
