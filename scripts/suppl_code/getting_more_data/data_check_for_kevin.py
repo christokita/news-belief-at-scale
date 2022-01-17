@@ -42,16 +42,15 @@ data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
 ####################
 # Determine which new tweeters need to be searched for friends/followers
 ####################
-# Read in tweets
-missing_tweets_file = data_directory + 'data/tweets/test.json'
-f = open(missing_tweets_file)
-new_tweets = json.loads(f)
+# Read in tweets and get list of new tweeters
+missing_tweeters = np.array([])
+missing_tweets_file = data_directory + 'data/tweets/crowdsource_factchecking_missing_article_tweets.json'
+with open(missing_tweets_file, 'r') as f:
+    for tweet in f:
+        missing_tweet = json.loads(tweet)
+        missing_tweeters = np.append(missing_tweeters, missing_tweet['user']['id_str'])
 
-# Get list of new tweeters
-new_tweeters = np.array([])
-for new_tweet in new_tweets:
-    new_tweeters = np.append(new_tweeters, new_tweet['author_id'])
-new_tweeters = np.unique(new_tweeters) #drops 2,319 duplicate user IDs
+missing_tweeters = np.unique(missing_tweeters) #drops 96 duplicate user IDs
 
 # Compile list of users for which we (nominally) have their list of friend/followers
 follower_lists = os.listdir(data_directory + 'data/followers/')
@@ -67,16 +66,21 @@ friend_lists = np.array(friend_lists)
 friend_lists = np.sort(friend_lists)[1:] #drop .DS_store
 
 have_lists = np.intersect1d(follower_lists, friend_lists) #only count those we have both friend and follower list for
-missing_friend_list = np.setdiff1d(follower_lists, have_lists) #if in follower_lists but not have_list (i.e., both lists present), then missing friend list by logic
-missing_follower_list = np.setdiff1d(friend_lists, have_lists)  #if in friend_lists but not have_list (i.e., both lists present), then missing follower list by logic
 
 
 # Determine which new tweeters aren't in our set that is already accounted for
-new_tweeters_need_to_check = np.setdiff1d(new_tweeters, have_lists)
-new_tweeters_need_to_check = pd.DataFrame(data = new_tweeters_need_to_check, 
+missing_tweeters_need_to_check = np.setdiff1d(missing_tweeters, have_lists)
+missing_tweeters_need_to_check = pd.DataFrame(data = missing_tweeters_need_to_check, 
                                           columns = ['user_id'],
                                           dtype = object)
-new_tweeters_need_to_check['user_id_str'] = "\"" + new_tweeters_need_to_check['user_id'] + "\""
+missing_tweeters_need_to_check['user_id_str'] = "\"" + missing_tweeters_need_to_check['user_id'] + "\""
+
+
+####################
+# Write to file
+####################
+datestamp = '2020-10-19'
+missing_tweeters_need_to_check.to_csv(data_directory + 'data_derived/_data_checks/missing_tweeters_needing_friendsfollowers_{}.csv'.format(datestamp), index = False)
 
 
 
@@ -146,7 +150,7 @@ with open(new_tweets_file, 'r') as f:
         new_tweet = json.loads(tweet)
         new_tweeters = np.append(new_tweeters, new_tweet['user']['id_str'])
 
-new_tweeters = np.unique(new_tweeters) #drops 2,319 duplicate user IDs
+new_tweeters = np.unique(new_tweeters) #drops 2,287 duplicate user IDs
 
 # Compile list of users for which we (nominally) have their list of friend/followers
 follower_lists = os.listdir(data_directory + 'data/followers/')
