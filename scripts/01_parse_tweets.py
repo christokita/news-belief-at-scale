@@ -180,11 +180,11 @@ def parse_urls(url_collection):
 save_file_name = "tweets_parsed"
 source_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external hard drive
 #source_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #storage on HPC cluster
-json1 = "data/tweets/crowdsource_factchecking_prem2.json"
-json2 = "data/tweets/crowdsource_factchecking.json"
-json3 = "data/tweets/crowdsource_factchecking_enterprise_trial.json"
-json4 = "data/tweets/crowdsource_factchecking_missing_article_tweets.json"
-json5 = "data/tweets/expanded_window_tweets.json"
+json1 = "data/tweets/crowdsource_factchecking_prem2.json" #original set of article tweets
+json2 = "data/tweets/crowdsource_factchecking.json" #original set of article tweets
+json3 = "data/tweets/crowdsource_factchecking_enterprise_trial.json" #original set of article tweets
+json4 = "data/tweets/crowdsource_factchecking_missing_article_tweets.json" #found tweets for original articles without any associated tweets
+json5 = "data/tweets/expanded_window_tweets.json" #tweets from expanded time window search
 json_files = [json1, json2, json3, json4, json5]
 json_files = [source_directory + file for file in json_files]
 
