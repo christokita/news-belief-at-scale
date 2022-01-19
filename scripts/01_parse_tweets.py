@@ -178,8 +178,8 @@ def parse_urls(url_collection):
 ####################
 # Speficy files to be read
 save_file_name = "tweets_parsed"
-source_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external hard drive
-#source_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #storage on HPC cluster
+# source_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external hard drive
+source_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #storage on HPC cluster
 json1 = "data/tweets/crowdsource_factchecking_prem2.json" #original set of article tweets
 json2 = "data/tweets/crowdsource_factchecking.json" #original set of article tweets
 json3 = "data/tweets/crowdsource_factchecking_enterprise_trial.json" #original set of article tweets
