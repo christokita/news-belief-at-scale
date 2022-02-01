@@ -40,9 +40,9 @@ expanded_window_tweets = []
 for tweet_json in tweet_list:
     
     with open(data_directory + 'data/tweets/expanded_window_tweets/' + tweet_json) as f:
-        tweet_json_str = json.load(f) #read in json string
-        tweet = json.loads(tweet_json_str) #convert json string to proper json dictionary
-        expanded_window_tweets.append(tweet)
+        for entry in f:
+            tweet = json.loads(entry) #convert json string to proper json dictionary
+            expanded_window_tweets.append(tweet)
     
 
 # Write to file
