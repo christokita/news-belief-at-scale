@@ -57,7 +57,7 @@ for user_id in tweeters:
     regex = re.compile(r"[0-9].*_%s.csv" % user_id)
     file = list(filter(regex.match, follower_files))
     if len(file) > 1:
-        print("WARNING: user_id = %d matches multiple follower list files." % user_id)
+        print("WARNING: user_id = %s matches multiple follower list files." % user_id)
     try:
         follower_list = np.genfromtxt(data_directory + "data/followers/" + file[0], dtype = str)
         follower_list = follower_list[1:len(follower_list)] #remove header, will raise error if empty
