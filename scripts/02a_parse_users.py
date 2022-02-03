@@ -54,7 +54,7 @@ follower_files = [file for file in follower_files if re.match('^[0-9]', file)] #
 followers = np.array([], dtype = object)
 no_follower_list = np.array([], dtype = object)
 for user_id in tweeters:
-    regex = re.compile(r"[0-9].*_%s.csv" % user_id)
+    regex = re.compile(r"^[0-9]{4}__[0-9]{2}__[0-9]{2}__%s\.csv" % user_id)
     file = list(filter(regex.match, follower_files))
     if len(file) > 1:
         print("WARNING: user_id = %s matches multiple follower list files." % user_id)
@@ -84,10 +84,10 @@ friend_files = [file for file in friend_files if re.match('^[0-9]', file)] #filt
 friends = np.array([], dtype = object)
 no_friends_list = np.array([], dtype = object)
 for user_id in tweeters:
-    regex = re.compile(r"[0-9].*_%s.csv" % user_id)
+    regex = re.compile(r"[0-9]{4}__[0-9]{2}__[0-9]{2}__%s\.csv" % user_id)
     file = list(filter(regex.match, friend_files))
     if len(file) > 1:
-        print("WARNING: user_id = %d matches multiple follower list files." % user_id)
+        print("WARNING: user_id = %s matches multiple friend list files." % user_id)
     try:
         friend_list = np.genfromtxt(data_directory + "data/friends/" + file[0], dtype = str)
         friend_list = friend_list[1:len(friend_list)] #remove header, will raise error if empty
