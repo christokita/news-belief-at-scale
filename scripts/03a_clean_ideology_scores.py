@@ -24,7 +24,8 @@ def clean_ideology_scores(scores):
     # (3) Drop rows that have NA values for the score, as to shrink the size of the data
     
     scores = scores.drop(columns = ['Unnamed: 0'], errors = 'ignore')
-    scores = scores.rename(columns = {'0_norm': 'pablo_score'})
+    scores = scores.rename(columns = {'0_norm': 'pablo_score',
+                                      'id_str': 'user_id'})
     scores = scores.dropna(subset = ['pablo_score'])
     return scores
     
@@ -33,7 +34,7 @@ def clean_ideology_scores(scores):
 ####################
 # Original list
 followers_original = pd.read_csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ideological_scores/unique_followers_excl_tweeters--with_scores.csv',
-                        dtype = {'user_id': object})
+                        dtype = {'user_id': object, 'id_str': object})
 followers_original_cleaned = clean_ideology_scores(followers_original)
 del followers_original
 
@@ -45,7 +46,7 @@ del followers_zerohedge
 
 # Bind together make unique, write to file
 followers_cleaned = followers_original_cleaned.append(followers_zerohedge_cleaned)
-followers_original_cleaned.shape[0] + followers_zerohedge_cleaned.shape[0] == followers_cleaned.shape[0] #sanity check
+followers_cleaned.shape[0] - followers_original_cleaned.shape[0] #check how many extra followers we got
 del followers_original_cleaned, followers_zerohedge_cleaned
 
 followers_cleaned = followers_cleaned.drop_duplicates(subset = ['user_id']) 
@@ -53,12 +54,11 @@ followers_cleaned.to_csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ide
 del followers_cleaned
 
 
-
 ####################
 # Load and clean friend lists
 ####################
 friends = pd.read_csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ideological_scores/unique_friends_excl_tweeters--with_scores.csv',
-                      dtype = {'user_id': object})
+                      dtype = {'user_id': object, 'id_str': object})
 friends_cleaned = clean_ideology_scores(friends)
 friends_cleaned.to_csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ideological_scores/cleaned_friends_ideology_scores.csv', index = False)
 del friends, friends_cleaned
@@ -68,11 +68,6 @@ del friends, friends_cleaned
 # Load and clean tweeter lists
 ####################
 tweeters = pd.read_csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ideological_scores/unique_tweeters_ideology_scores.csv',
-                      dtype = {'user_id': object})
-tweeters_cleaned = tweeters.drop(columns = ['Unnamed: 0'])
-tweeters_cleaned = tweeters_cleaned.rename(columns = {'0_norm': 'pablo_score'})
+                      dtype = {'user_id': object, 'id_str': object})
+tweeters_cleaned = clean_ideology_scores(tweeters)
 tweeters_cleaned.to_csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ideological_scores/cleaned_tweeter_ideology_scores.csv', index = False)
-
-
-tweeters_old = pd.read_csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ideological_scores/unique_tweeters_ideology_scores_OLD.csv',
-                      dtype = {'user_id': object})
