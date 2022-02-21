@@ -9,4 +9,4 @@
 ##Load anaconda python packages
 module load anaconda3 
 ##Run script
-srun python3 scripts/03c_count_users_in_study.py
+srun python3 scripts/03d_count_users_in_study.py
