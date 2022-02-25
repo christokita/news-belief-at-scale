@@ -12,9 +12,11 @@ Add in missing article IDs to tweets that were not matched in the first pass.
 import pandas as pd
 import re
 import numpy as np
+import math
 import requests
 from bs4 import BeautifulSoup
-from fuzzywuzzy import fuzz
+from thefuzz import fuzz, process
+import nltk
 
 # high level directory (external HD or cluster storage)
 #data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster storage
@@ -22,20 +24,134 @@ data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
 
 
 ####################
-# Step 1: Add in tweets with good fuzzy match score to headline in our article set
+# Step 1: Use fuzzy match to score headline relative to article set
+####################
+# Load unmatched tweets, unmatched URLs, and article data
+unmatched_tweets = pd.read_csv(data_directory + 'data_derived/tweets/noarticleID_tweets.csv',
+                            dtype ={'user_id': object, 'tweet_id': object})
+unmatched_urls = pd.read_csv(data_directory + 'data_derived/tweets/noarticleID_uniqueURLs.csv')
+articles = pd.read_csv(data_directory + "data/articles/daily_articles.csv")
+
+# Prep article data
+articles['headline_stemmed'] = None
+stemmer = nltk.stem.LancasterStemmer()
+for i, row in articles.iterrows():
+    tokenized_headline = nltk.tokenize.word_tokenize(row['headline'])
+    tokenized_headline = [token for token in tokenized_headline if re.match(r'[\w\d]', token)]
+    stemmed_headline = [stemmer.stem(token) for token in tokenized_headline]
+    articles.loc[i, 'headline_stemmed'] = ' '.join(stemmed_headline)
+    del tokenized_headline, stemmed_headline
+
+
+# Fuzzy match unique URL/tweet text combos
+def fuzzy_match_tweet(unmatched_data, article_data):
+    """
+    Match up unmatches tweets/headlines to articles in our dataset using fuzzy matching (and possibly stemming)
+    
+    :param unmatched_data: dataframe of unmatched urls/tweets/headlines
+    :param article_data: dataframe of our tracked articles.
+    :return: dataframe of unmaatched urls/tweets/headlines with best guess article IDs based on tweet text.
+    """
+    # Set up dictionary of headlines
+    article_dict_raw = dict(zip(article_data['headline'], article_data['total article number']))
+    article_dict_stem = dict(zip(article_data['headline_stemmed'], article_data['total article number']))
+    id_article_dict = dict(zip(article_data['total article number'], article_data['headline']))
+    
+    # Loop through unmatched headlines to find best match
+    unmatched_data['total_article_number_raw'] = None
+    unmatched_data['fuzzy_score_raw'] = np.nan
+    unmatched_data['matched_headline_raw'] = None
+    unmatched_data['total_article_number_stem'] = None
+    unmatched_data['fuzzy_score_stem'] = np.nan
+    unmatched_data['matched_headline_stem'] = None
+    five_percent = math.floor(unmatched_data.shape[0] / 20)
+    for i,row in unmatched_data.iterrows():
+        
+        # Print progress
+        if (i % five_percent) == 0:
+            print(f'{int( (i / five_percent) * 5 )}%...')
+        
+        # Grab tweet text and remove possible url data
+        tweet_text = row['tweet_text']
+        tweet_text = re.sub(r'[\s]*http[\w\d\./:]+', '', tweet_text)
+        
+        # Find best match of raw text
+        chosen_headline_raw, match_score_raw = process.extractOne(query = tweet_text, 
+                                                          choices = article_data['headline'].values,
+                                                          scorer = fuzz.token_set_ratio)
+        article_id_raw = article_dict_raw.get(chosen_headline_raw)
+        
+        # Find best match of stemmed text
+        tokenized_tweet = nltk.tokenize.word_tokenize(tweet_text)
+        tokenized_tweet = [token for token in tokenized_tweet if re.match(r'[\w\d]', token)] #remove non-alphanumeric
+        stemmed_tweet = [stemmer.stem(token) for token in tokenized_tweet]
+        stemmed_tweet = ' '.join(stemmed_tweet)
+        
+        chosen_headline_stem, match_score_stem = process.extractOne(query = stemmed_tweet, 
+                                                          choices = article_data['headline_stemmed'].values,
+                                                          scorer = fuzz.token_set_ratio)
+        article_id_stem = article_dict_stem.get(chosen_headline_stem)
+        chosen_headline_stem = id_article_dict.get(article_id_stem) #get unstemmed headline
+        
+        
+        # Raw
+        if match_score_raw == 0:
+            chosen_headline_raw = None
+            article_id_raw = None
+        unmatched_data.loc[i, 'total_article_number_raw'] = article_id_raw
+        unmatched_data.loc[i, 'fuzzy_score_raw'] = match_score_raw
+        unmatched_data.loc[i, 'matched_headline_raw'] = chosen_headline_raw
+        
+        if match_score_stem == 0:
+            chosen_headline_stem = None
+            article_id_stem = None
+        unmatched_data.loc[i, 'total_article_number_stem'] = article_id_stem
+        unmatched_data.loc[i, 'fuzzy_score_stem'] = match_score_stem
+        unmatched_data.loc[i, 'matched_headline_stem'] = chosen_headline_stem
+    
+    # Return
+    return unmatched_data
+    
+fuzzy_matches = fuzzy_match_tweet(unmatched_data = unmatched_tweets, article_data = articles)
+fuzzy_matches.to_csv(data_directory + 'data_derived/tweets/noarticleID_tweets_with_matchscores.csv', index = False)
+
+# Hand check
+matched_headlines = fuzzy_matches[['tweet_id', 'tweet_text', 'total_article_number_raw', 'fuzzy_score_raw', 'matched_headline_raw', 'total_article_number_stem', 'fuzzy_score_stem', 'matched_headline_stem']]
+
+# # Match up scored urls/headlines to tweets
+# # NOTE: manual check shows that scores on fuzzy match on raw score appear better.
+# scored_urls = pd.read_csv(data_directory + 'data_derived/tweets/noarticleID_uniqueURLs_with_matchscores.csv')
+# scored_urls = scored_urls.rename(columns = {'fuzzy_score_raw': 'fuzzy_score', 'total_article_number_raw': 'total_article_number'})
+# fuzzy_matches = unmatched_tweets.drop(columns = ['total_article_number'])
+# fuzzy_matches = fuzzy_matches.merge(scored_urls[['urls', 'urls_expanded', 'tweet_text', 'total_article_number', 'fuzzy_score']], on = ['urls', 'urls_expanded', 'tweet_text'], how = 'left')
+# fuzzy_matches.to_csv(data_directory + 'data_derived/tweets/noarticleID_tweets_with_matchscores.csv', index = False)
+
+####################
+# Step 2: Add in tweets with good fuzzy match score to headline in our article set
 ####################
 """
-This fuzzy matching was carried out by Will Godel
+One round of fuzzy matching was carried out by Will Godel and the other by me (in previous section of this script).
 The text of a tweet was compared with the headline of the article, as listed in our dataset.
-After manually checking these matches, it appears that all headlines with scores >=87 are good matches.
+After manually checking these matches, it appears that all tweets in Will's with scores >=87 are good matches and all tweets in my set with score >= 87 are good matches.
 """
 
 # Load fuzzy match scores, filter to good match scores
+fuzzy_matches_WG = pd.read_csv(data_directory + 'data_derived/tweets/WG_noarticleID_tweets_with_matchscores.csv',
+                            dtype ={'user_id': object, 'tweet_id': object})
+fuzzy_matches_WG = fuzzy_matches_WG.drop_duplicates()
+fuzzy_matches_WG = fuzzy_matches_WG.rename(columns = {'total article number': 'total_article_number'})
+fuzzy_matches_WG = fuzzy_matches_WG[fuzzy_matches_WG.fuzzy_score >= 87]
+fuzzy_matches_WG = fuzzy_matches_WG[['tweet_id', 'total_article_number']]
+
+
 fuzzy_matches = pd.read_csv(data_directory + 'data_derived/tweets/noarticleID_tweets_with_matchscores.csv',
                             dtype ={'user_id': object, 'tweet_id': object})
 fuzzy_matches = fuzzy_matches.drop_duplicates()
 fuzzy_matches = fuzzy_matches.rename(columns = {'total article number': 'total_article_number'})
-good_matches = fuzzy_matches[fuzzy_matches.fuzzy_score >= 87]
+fuzzy_matches = fuzzy_matches[fuzzy_matches.fuzzy_score >= 77]
+fuzzy_matches = fuzzy_matches[['tweet_id', 'total_article_number']]
+
+good_matches = fuzzy_matches.append(fuzzy_matches_WG)
 good_matches = good_matches[['tweet_id', 'total_article_number']].drop_duplicates() #duplicate tweets from previous version of tweets_parsed that had duplicates
 
 # Load labeled tweets, which already have metadata attached, and add in article IDs for good fuzzy-matched articles
@@ -97,7 +213,7 @@ tweets.loc[tweets['tweet_id'].isin(good_matches.tweet_id), 'manual_article_assig
 tweets.to_csv(data_directory + "data_derived/tweets/tweets_labeled.csv", index = False)
 
 ####################
-# Step 2: Get list of unique URLs and try to match headline from fetched URL to headline in dataset
+# Step 3: Get list of unique URLs and try to match headline from fetched URL to headline in dataset
 ####################
 # Load labeled tweets, which already have metadata attached
 tweets = pd.read_csv(data_directory + "data_derived/tweets/tweets_labeled.csv",
@@ -227,7 +343,7 @@ tweets.to_csv(data_directory + "data_derived/tweets/tweets_labeled.csv", index =
 
 
 ####################
-# Step 3: Output list final unmatched tweets and manually tag
+# Step 4: Output list final unmatched tweets and manually tag
 ####################
 # Grab unidentified URLs in remaining unidentified tweets
 last_unmatched_tweets = tweets[pd.isna(tweets['total_article_number'])]

@@ -67,6 +67,8 @@ if missing_ids.shape[0] > 0:
     missing_articles = articles[articles['total article number'].isin(missing_article_ids)]
     missing_articles.to_csv(data_directory + "data_derived/articles/articles_notfoundintweets.csv", index = False)
     missing_ids.to_csv(data_directory + "data_derived/tweets/noarticleID_tweets.csv", index = False)
+    unique_urls = missing_ids[['urls', 'urls_expanded', 'tweet_text']].drop_duplicates()
+    unique_urls.to_csv(data_directory + "data_derived/tweets/noarticleID_uniqueURLs.csv", index = False) #create a list of only unique URLs
 
 
 ####################

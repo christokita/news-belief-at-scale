@@ -4,5 +4,5 @@ pandas
 scipy
 matplotlib
 bs4
-fuzzywuzzy
+thefuzz
 pymc3
