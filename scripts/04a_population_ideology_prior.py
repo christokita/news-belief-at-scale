@@ -15,11 +15,6 @@ Conduct MCMC bayesian inference of population distribution of follower ideology
 import pandas as pd
 import numpy as np
 import pymc3 as pm
-import os
-import re
-import math
-import multiprocessing as mp
-
 
 
 # high level directory (external HD or cluster storage)
