@@ -11,6 +11,7 @@
 ## NOTE: We have 127 unique news stories stories as of now, hence the job array of 0 to 126 (zero indexing in python).
 
 ##Load anaconda python packages
-module load anaconda3 
+module load anaconda3module load anaconda3/2021.11 
+conda activate my_conda
 ##Run script
 srun python3 scripts/09_crowdsourced_interventions.py $SLURM_ARRAY_TASK_ID 

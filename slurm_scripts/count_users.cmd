@@ -7,6 +7,7 @@
 #SBATCH --output=slurm_outfiles/slurm-%A.out
 
 ##Load anaconda python packages
-module load anaconda3 
+module load anaconda3/2021.11 
+conda activate my_conda 
 ##Run script
 srun python3 scripts/02b_count_users.py

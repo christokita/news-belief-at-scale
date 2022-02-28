@@ -13,6 +13,7 @@
 ## NOTE: We have 29 unique fake news stories stories as of now, hence the job array of 0 to 28 (zero indexing in python).
 
 ##Load anaconda python packages
-module load anaconda3 
+module load anaconda3/2021.11 
+conda activate my_conda 
 ##Run script
 srun python3 scripts/08_model_interventions.py $SLURM_ARRAY_TASK_ID 

@@ -11,6 +11,7 @@
 ## NOTE: We have 136 unique stories as of now, hence the job array of 0 to 135 (zero indexing in python).
 
 ##Load anaconda python packages
-module load anaconda3 
+module load anaconda3/2021.11 
+conda activate my_conda
 ##Run script
 srun python3 scripts/05a_calculate_exposure.py $SLURM_ARRAY_TASK_ID 

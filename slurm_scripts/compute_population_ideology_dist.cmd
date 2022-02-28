@@ -9,7 +9,7 @@
 
 ##Load anaconda python packages
 module purge
-module load anaconda3 
+module load anaconda3/2021.11 
 conda activate my_conda
 ##Run script
 srun python3 scripts/04a_population_ideology_prior.py

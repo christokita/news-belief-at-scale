@@ -8,6 +8,7 @@
 #SBATCH --output=slurm_outfiles/slurm-%A_%a.out
 
 ##Load anaconda python packages
-module load anaconda3 
+module load anaconda3/2021.11 
+conda activate my_conda 
 ##Run script passing the array job number to the script
 srun python3 scripts/02a_parse_fakenews_spreaders.py $SLURM_ARRAY_TASK_ID 
