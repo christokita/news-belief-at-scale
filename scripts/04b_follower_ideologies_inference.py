@@ -19,6 +19,7 @@ import re
 import sys
 import time
 import pymc3 as pm
+import random
 
 
 # Get batch number
@@ -224,7 +225,7 @@ estimated_ideology_batch.to_csv(temp_dir + 'batch_' + str(batch).zfill(3) + '.cs
 # Combine all data that was processed in parallel
 ####################
 # If this is the last batch to finish, bind all temoprary files together and save
-time.sleep(10)
+time.sleep( random.randint(1, 30) ) #sleep random amount of time to try to ensure there is only one last process running.
 temp_files = os.listdir(temp_dir)
 if len(temp_files) == n_batches:
     estimated_ideology_distributions = pd.DataFrame(columns = estimated_ideology_batch.columns)
