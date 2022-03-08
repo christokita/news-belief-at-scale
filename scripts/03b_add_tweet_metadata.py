@@ -182,4 +182,4 @@ labeled_tweets.loc[labeled_tweets['user_ideology'].between(-ideo_threshold, ideo
 # Write to file
 ####################
 # Save
-labeled_tweets.to_csv(data_directory + "data_derived/tweets/tweets_labeled.csv", index = False)
+labeled_tweets.to_csv(data_directory + "data_derived/tweets/tweets_labeled_pre_manual_match.csv", index = False)
