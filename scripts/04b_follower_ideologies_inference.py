@@ -24,7 +24,7 @@ import random
 
 # Get batch number
 batch = int(sys.argv[1]) 
-n_batches = 200
+n_batches = 300
 
 # high level directory (external HD or cluster storage)
 data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster storage
@@ -38,7 +38,14 @@ map_estimate_file = outpath + "_population_MAP_estimate.csv"
 # Supress theano/pymc3 logging
 import logging
 logger = logging.getLogger("pymc3")
+logger.setLevel(logging.CRITICAL)
 logger.propagate = False
+
+# Parameters for bayesian inference of follower ideology
+# TOTAL SAMPLES will be n_chains*(n_samples - burn_in)
+n_samples = 1000
+burn_in = 500
+n_chains = 4
 
 
 ####################
@@ -163,8 +170,6 @@ prior_sigma = np.array([ prior['sigma_samples'] ]).T #needs to be column format 
 population_MAP_estimate = pd.read_csv(map_estimate_file)
 
 # Unpooled model
-n_samples = 1000
-burn_in = int(n_samples/2)
 estimated_ideology_batch = pd.DataFrame(columns = ['user_id', 'user_id_str', 'n_follower_samples', 'mu', 'sigma', 'basis'])   
 for user in users_with_scored_followers:
     
@@ -186,8 +191,16 @@ for user in users_with_scored_followers:
         observed_data = pm.Normal('observed_data', mu = mu, sigma = sigma, observed = follower_samples)
         
         # Sample from posterior
-        step = pm.NUTS(target_accept = 0.8)
-        trace = pm.sample(draws = n_samples, start = None, init = 'advi_map', step = step, random_seed = 323, cores = 2, chains = 2)
+        step = pm.NUTS(target_accept = 0.9) #0.8 is default, higher to deal with difficult posteriors
+        trace = pm.sample(draws = n_samples,
+                          tune = 2000,
+                          start = None,
+                          init = 'advi_map', 
+                          step = step, 
+                          random_seed = 323, 
+                          cores = None, 
+                          chains = n_chains, 
+                          progressbar = False)
  
     # Get estimate of parameters
     posterior_mu = trace.get_values('mu', burn = burn_in, combine = True)

@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=1
-#SBATCH --mem-per-cpu=16gb
-#SBATCH --array=0-399
+#SBATCH --cpus-per-task=2
+#SBATCH --mem-per-cpu=40gb
+#SBATCH --array=0-299
 #SBATCH --time=23:59:00
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user=ctokita@princeton.edu
