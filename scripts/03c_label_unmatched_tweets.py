@@ -192,7 +192,7 @@ for i in range(matched.shape[0]):
     del tweet_id, matched_article_number
 
 # Flag manually confirmed/matched tweets
-tweets['manual_article_assignmnet'] = False
+tweets['manual_article_assignment'] = False
 tweets.loc[tweets['tweet_id'].isin(matched.tweet_id), 'manual_article_assignment'] = True
 
 
@@ -214,12 +214,12 @@ def update_tweet_article_metadata(manually_matched_tweets, all_tweets, article_d
 # Load metadata for articles
 articles = pd.read_csv(data_directory + "data/articles/daily_articles.csv")
 articles = articles.rename(columns = {'total article number': 'total_article_number'})
-articles['source_lean'] = articles['source'].str.replace('rss_|ct_', '')
+articles['source_lean'] = articles['source'].str.replace('rss_|ct_', '', regex = True)
 lean_dict = {'con': 'C', 'lib': 'L', 'unclear': 'U'}
 articles['source_lean'] = articles['source_lean'].map(lean_dict)
-articles['source_type'] = articles['source'].str.replace('_con|_lib|_unclear', '')
-articles['source_type'] = articles['source_type'].str.replace('rss', 'fringe')
-articles['source_type'] = articles['source_type'].str.replace('ct', 'mainstream')
+articles['source_type'] = articles['source'].str.replace('_con|_lib|_unclear', '', regex = True)
+articles['source_type'] = articles['source_type'].str.replace('rss', 'fringe', regex = True)
+articles['source_type'] = articles['source_type'].str.replace('ct', 'mainstream', regex = True)
 articles = articles[['total_article_number', 'source_lean', 'source_type']]
 
 news_evaluations = pd.read_csv(data_directory + "data/articles/evaluations.csv")
