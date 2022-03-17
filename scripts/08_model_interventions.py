@@ -80,8 +80,8 @@ def simulate_intervention(tweets, paired_tweets_followers, ideologies, follower_
                                           belief_reduction = belief_reduction)
     
     # Bin exposure and belief by time
-    exposure_bin_counts, bin_edges = np.histogram(exposed_followers.relative_exposure_time, bins = 72*4, range = (0, 72))
-    belief_bin_counts, _ = np.histogram(believing_followers.relative_exposure_time, bins = 72*4, range = (0, 72))
+    exposure_bin_counts, bin_edges = np.histogram(exposed_followers.relative_exposure_time, bins = 14*24*4, range = (0, 14*24)) #bin over first 2 weeks
+    belief_bin_counts, _ = np.histogram(believing_followers.relative_exposure_time, bins = 14*24*4, range = (0, 14*24)) #bin over first 2 weeks
     exposure_over_time = pd.DataFrame({'intervention_time': intervention_time,
                                        'visibility_reduction': visibility_reduction,
                                        'sharing_reduction': sharing_reduction,
@@ -236,8 +236,8 @@ def match_followers_to_tweet(tweets, story_id, data_directory):
             followers = load_followers(file, data_directory)
             matched_followers = pd.DataFrame({'user_id': user_id, 'follower_id': followers}, dtype = 'int64')
             matched_followers = matched_followers.merge(tweet_list, how = "left", on = "user_id")
+            matched_followers = matched_followers[col_names] #make sure columns are in right order
             matched_followers.to_csv(file_name, mode = "a", index = False, header = False)
-            col_names = matched_followers.columns
             del matched_followers, followers
         
     # Load in compiled list, sort, and return
@@ -279,9 +279,9 @@ if __name__ == "__main__":
     
     # Parameters for simulation
     n_replicates = 10
-    visibility_reduction = 0
-    sharing_reduction = 0.25
-    belief_reduction = 0.17
+    visibility_reduction = 0.25
+    sharing_reduction = 0
+    belief_reduction = 0
     which_story = int(sys.argv[1]) #get from command line
     
     
