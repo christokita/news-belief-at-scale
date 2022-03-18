@@ -2,7 +2,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem-per-cpu=60gb
-#SBATCH --array=0-33 #we have34 fake news articles
+#SBATCH --array=0-33 #we have 34 fake news articles
 ##SBATCH --array=17 #only the largest fake news article
 #SBATCH --time=71:00:00
 ##SBATCH --time=120:00:00 #only largest fake news article
