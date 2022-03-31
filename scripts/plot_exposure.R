@@ -84,7 +84,7 @@ exposure_timeseries <- dummy_rows %>%
          total_article_number = rep(unique(article_data$total_article_number), each = 2)) %>% 
   merge(unique_article_ratings, by = "total_article_number") %>% 
   rbind(exposure_timeseries, .) %>% 
-  mutate(hour_bin = cut(time, breaks = seq(-2, 50, 1), include.lowest = TRUE, right = FALSE, labels = seq(-2, 49))) %>%  #bin by hour tweet appeared
+  mutate(hour_bin = cut(time, breaks = seq(-2, 24*14, 1), include.lowest = TRUE, right = FALSE, labels = seq(-2, 24*14-1))) %>%  #bin by hour tweet appeared
   mutate(hour_bin = as.numeric(as.character(hour_bin))) %>%  #convert from factor to plain number
   group_by(total_article_number) %>% 
   mutate(relative_cumulative_exposed = cumulative_exposed / max(cumulative_exposed),
@@ -117,14 +117,15 @@ exposure_timeseries <- exposure_timeseries %>%
 # Total cumulative exposed
 ####################
 gg_exposuretime <- exposure_timeseries %>% 
-  ggplot(., aes(x = time, y = cumulative_exposed, group = total_article_number)) +
+  ggplot(., aes(x = time/24, y = cumulative_exposed, group = total_article_number)) +
   geom_step(size = 0.3, alpha = 0.5, color = line_color) +
   # scale_y_log10() +
-  scale_x_continuous(breaks = seq(0, 48, 6)) +
-  scale_y_continuous(breaks = c(10^seq(1, 7, 2)),
+  scale_x_continuous(breaks = seq(0, 14, 1),
+                     limits = c(-0.01, 14)) +
+  scale_y_continuous(breaks = c(10^seq(1, 8, 2)),
                      labels = scales::trans_format("log10", scales::math_format(10^.x)),
                      trans = scales::pseudo_log_trans(base = 10)) +
-  xlab("Time since first article share (hrs)") +
+  xlab("Time since first article share (days)") +
   ylab("Total users exposed") +
   theme_ctokita() +
   theme(aspect.ratio = NULL) +
@@ -161,6 +162,9 @@ ggsave(gg_relexpostime, filename = paste0(outpath, "percentage_exposed_time.pdf"
 gg_exposuretweet <- exposure_timeseries %>% 
   ggplot(., aes(x = tweet_number, y = cumulative_exposed, group = total_article_number)) +
   geom_step(size = 0.3, alpha = 0.5, color = line_color) +
+  scale_x_continuous(breaks = c(0, 1, 10, 100, 1000, 10000, 100000),
+                     labels = scales::comma_format(accuracy = 1),
+                     trans = scales::pseudo_log_trans(base = 10)) +
   scale_y_continuous(breaks = c(10^seq(1, 7, 2)),
                      labels = scales::trans_format("log10", scales::math_format(10^.x)),
                      trans = scales::pseudo_log_trans(base = 10)) +
@@ -222,8 +226,8 @@ gg_ideol_total <- exposure_ideol %>%
   group_by(!!sym(grouping), ideology_bin) %>% 
   summarise(count = sum(count, na.rm = TRUE),
             avg_count = sum(count, na.rm = TRUE) / length(unique(total_article_number))) %>% 
-  ggplot(., aes(x = ideology_bin, y = count, fill = ideology_bin, color = ideology_bin)) +
-  geom_bar(stat = "identity") +
+  ggplot(., aes(x = ideology_bin, y = count, fill = ideology_bin)) +
+  geom_bar(stat = "identity", width = 0.5, color = NA) +
   scale_x_continuous(limits = c(-6, 6), 
                      expand = c(0, 0), 
                      breaks = seq(-6, 6, 2)) +
@@ -249,8 +253,8 @@ ggsave(gg_ideol_total, filename = paste0(outpath, "ideol_total_exposed.pdf"), wi
 gg_ideol_avg <- exposure_ideol %>% 
   group_by(!!sym(grouping), ideology_bin) %>% 
   summarise(avg_count = sum(count, na.rm = TRUE) / length(unique(total_article_number))) %>% 
-  ggplot(., aes(x = ideology_bin, y = avg_count, fill = ideology_bin, color = ideology_bin)) +
-  geom_bar(stat = "identity") +
+  ggplot(., aes(x = ideology_bin, y = avg_count, fill = ideology_bin)) +
+  geom_bar(stat = "identity", width = 0.5, color = NA) +
   scale_x_continuous(limits = c(-6, 6), 
                      expand = c(0, 0), 
                      breaks = seq(-6, 6, 2)) +
@@ -287,13 +291,13 @@ gg_ideol_dist <- exposure_ideol %>%
   group_by(!!sym(grouping), ideology_bin, n_articles_in_grouping) %>% 
   summarise(avg_exposed_prop = sum(exposed_prop) / unique(n_articles_in_grouping)) %>% 
   # Plot
-  ggplot(., aes(x = ideology_bin, y = avg_exposed_prop, fill = ideology_bin, color = ideology_bin)) +
-  geom_bar(stat = "identity") +
+  ggplot(., aes(x = ideology_bin, y = avg_exposed_prop, fill = ideology_bin)) +
+  geom_bar(stat = "identity", width = 0.5, color = NA) +
   scale_x_continuous(limits = c(-6, 6), 
                      expand = c(0, 0), 
                      breaks = seq(-6, 6, 2)) +
   scale_y_continuous(breaks = seq(0, 1, 0.05),
-                     limits = c(0, 0.25),
+                     limits = c(0, 0.2),
                      expand = c(0, 0)) +
   scale_color_gradientn(colours = ideol_pal, 
                         limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
@@ -321,7 +325,7 @@ gg_ideoltime <- exposure_ideol %>%
   group_by(!!sym(grouping), hour_bin, ideology_bin) %>% 
   summarise(count = sum(count)) %>%
   ggplot(., aes(x = hour_bin, y = count, fill = ideology_bin, color = ideology_bin)) +
-  geom_bar(position = "fill", stat = "identity", width = 1) +
+  geom_bar(position = "fill", stat = "identity", width = 1, size = 0.001) +
   scale_fill_gradientn(colours = ideol_pal, 
                        name = "User\nideology",
                        limits = c(-2, 2), 
@@ -329,8 +333,10 @@ gg_ideoltime <- exposure_ideol %>%
   scale_color_gradientn(colours = ideol_pal, 
                        name = "User\nideology",
                        limits = c(-2, 2), 
-                       oob = squish) +  scale_x_continuous(breaks = seq(0, 48, 6),
-                     expand = c(0, 0)) +
+                       oob = squish) +  
+  scale_x_continuous(breaks = seq(0, 48, 6),
+                     expand = c(0, 0),
+                     limits = c(-0.5, 48.5)) +
   scale_y_continuous(expand = c(0, 0)) +
   xlab("Time since first article share (hrs)") +
   ylab("Proportion of newly exposed users") +
@@ -354,8 +360,8 @@ gg_fake_exposure_article <- exposure_ideol %>%
   filter(article_fc_rating == "False/Misleading news") %>% 
   group_by(total_article_number, ideology_bin) %>% 
   summarise(count = sum(count, na.rm = TRUE)) %>% 
-  ggplot(., aes(x = ideology_bin, y = count, fill = ideology_bin, color = ideology_bin)) +
-  geom_bar(stat = "identity") +
+  ggplot(., aes(x = ideology_bin, y = count, fill = ideology_bin)) +
+  geom_bar(stat = "identity", width = 0.5, color = NA) +
   scale_x_continuous(breaks = seq(-3, 6, 3),
                      limits = c(-3, 6)) +
   scale_y_continuous(labels = comma) +
