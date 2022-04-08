@@ -123,7 +123,7 @@ gg_tweettime
 # Cumulative tweets
 ####################
 gg_totaltweets <- tweets %>% 
-  ggplot(., aes(x = relative_tweet_time, y = tweet_number, group = total_article_number)) +
+  ggplot(., aes(x = relative_tweet_time/24, y = tweet_number, group = total_article_number)) +
   geom_vline(aes(xintercept = 24), 
              linetype = "dotted",
              size = 0.3,
@@ -132,8 +132,8 @@ gg_totaltweets <- tweets %>%
   scale_y_continuous(breaks = c(10^seq(1, 5)),
                      labels = scales::trans_format("log10", scales::math_format(10^.x)),
                      trans = scales::pseudo_log_trans(base = 10)) +
-  scale_x_continuous(breaks = seq(0, 48, 6)) +
-  xlab("Time since first article share (hrs)") +
+  scale_x_continuous(breaks = seq(0, 90, 7)) +
+  xlab("Days since first article share") +
   ylab("Log total tweets") +
   theme_ctokita() +
   theme(aspect.ratio = NULL) +
@@ -152,7 +152,7 @@ if (grouping == "article_fc_rating") {
   plot_tag <- "veracity"
 }
 gg_totaltweets_color <- tweets %>% 
-  ggplot(., aes(x = relative_tweet_time, y = tweet_number, group = total_article_number, color = !!sym(other_grouping))) +
+  ggplot(., aes(x = relative_tweet_time/24, y = tweet_number, group = total_article_number, color = !!sym(other_grouping))) +
   geom_vline(aes(xintercept = 24), 
              linetype = "dotted",
              size = 0.3,
@@ -161,10 +161,10 @@ gg_totaltweets_color <- tweets %>%
   scale_y_continuous(breaks = c(10^seq(1, 5)),
                      labels = scales::trans_format("log10", scales::math_format(10^.x)),
                      trans = scales::pseudo_log_trans(base = 10)) +
-  scale_x_continuous(breaks = seq(0, 48, 6)) +
+  scale_x_continuous(breaks = seq(0, 90, 7)) +
   scale_color_manual(values = c("#EF8354", "#b80d48", "#EF8354", "#404040"), 
                      name = "") +
-  xlab("Time since first article share (hrs)") +
+  xlab("Days since first article share") +
   ylab("Log total tweets") +
   theme_ctokita() +
   theme(aspect.ratio = NULL) +

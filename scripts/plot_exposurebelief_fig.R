@@ -16,9 +16,14 @@ library(scales)
 source("scripts/_plot_themes/theme_ctokita.R")
 
 tweet_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv'
+
+# Set plotting palettes
 ideol_pal <- rev(brewer.pal(5, "RdBu"))
 ideol_pal[3] <- "#e0e0e0"
 ideol_limit <- 3 #limit beyond which we squish the color palette
+
+plot_color <- "#495867"
+grouping_pal <- c("#F18805", plot_color)
 
 
 ####################
@@ -59,7 +64,7 @@ belief_timeseries <- merge(belief_data, article_data, by = c("tweet_id", "total_
                                                                                   ifelse(article_lean == "U", "Unclear", source_type)))) )
 
 
-# Add ideological data
+# Add ideological data (data is melted to make one ideological bin per tweet per row)
 belief_ideol <- belief_timeseries %>% 
   select(-follower_count) %>% 
   gather(key = "ideology_bin", value = "count", 
@@ -73,7 +78,7 @@ belief_ideol <- belief_timeseries %>%
   # count number of articles per grouping (useful for average distributions)
   group_by(article_fc_rating) %>% 
   mutate(n_articles_in_grouping = length(unique(total_article_number)))
-rm(belief_data, belief_timeseries)
+rm(belief_data)
 
 
 ####################
@@ -100,7 +105,7 @@ exposure_timeseries <- merge(exposure_data, article_data, by = c("tweet_id", "to
                                                                            ifelse(article_lean == "N", "Neutral", 
                                                                                   ifelse(article_lean == "U", "Unclear", source_type)))) )
 
-# Add ideology data
+# Add ideology data (data is melted to make one ideological bin per tweet per row)
 exposure_ideol <- exposure_timeseries %>% 
   gather(key = "ideology_bin", value = "count", 
          -time, -tweet_number, -tweet_id, -user_id, -user_ideology, -follower_count, -new_exposed_users, -cumulative_exposed, -total_article_number, -source_type, -source_lean, -article_fc_rating, -article_lean) %>% 
@@ -115,6 +120,9 @@ exposure_ideol <- exposure_timeseries %>%
   mutate(n_articles_in_grouping = length(unique(total_article_number)))
 rm(exposure_data, exposure_timeseries, tweets, article_data)
 
+
+
+######################################## Total Exposure/Belief ########################################
 
 ####################
 # PLOT: Total exposure and belief
@@ -268,7 +276,7 @@ gg_exposebelief_total_article <- ggplot(exposure_belief_data, aes(x = ideology_b
   scale_x_continuous(limits = c(-6, 6), 
                      expand = c(0, 0), 
                      breaks = seq(-6, 6, 2)) +
-  scale_y_continuous(expand = c(0, 0), 
+  scale_y_continuous(expand = c(0, 0),
                      labels = comma) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   scale_color_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
@@ -283,33 +291,36 @@ gg_exposebelief_total_article
 ggsave(gg_exposebelief_total_article, filename = "output/belief/veracity/combined_total_beliefANDexposure_byarticlelean.pdf", width = 135, height = 90, units = "mm", dpi = 400)
 
 
+
+######################################## Exposure/Belief Over Time ########################################
+
 ####################
-# PLOT: Total exposure and belief, broken out by hours 0-6 vs. hours 18-24
+# PLOT: Total exposure and belief, broken out by hours 0-6, 6-12, 12-18, 18-24, and 24+
 ####################
 # Prep data
 exposure_ideol_sum <- exposure_ideol %>% 
-  filter( time < 24) %>% #grab first 24 hours
-  mutate(time_hr_6 = floor(time / 6)) %>% 
-  mutate(time_window = ifelse(time_hr_6 == 0, "First 6 hrs.", 
-                              ifelse(time_hr_6 == 1, "Hr. 6 to 12", 
-                                     ifelse(time_hr_6 == 2, "Hr. 12 to 18", 
-                                            ifelse(time_hr_6 == 3, "Hr. 18 to 24", NA))))) %>% 
+  mutate(time_hr_bin = floor(time / 2)) %>% 
+  mutate(time_window = ifelse(time_hr_bin == 0, "First 2 hrs.", 
+                              ifelse(time_hr_bin == 1, "Hr. 2 to 4", 
+                                     ifelse(time_hr_bin == 2, "Hr. 4 to 6", 
+                                            ifelse(time_hr_bin == 3, "Hr. 6 to 8", 
+                                                   "Hr. 8+"))))) %>% 
   group_by(article_fc_rating, time_window, ideology_bin) %>% 
   summarise(exposure_count = sum(count, na.rm = TRUE))
 
 belief_ideol_sum <- belief_ideol %>% 
-  filter( time < 24) %>% #grab first 24 hours
-  mutate(time_hr_6 = floor(time / 6)) %>% 
-  mutate(time_window = ifelse(time_hr_6 == 0, "First 6 hrs.", 
-                              ifelse(time_hr_6 == 1, "Hr. 6 to 12", 
-                                     ifelse(time_hr_6 == 2, "Hr. 12 to 18", 
-                                            ifelse(time_hr_6 == 3, "Hr. 18 to 24", NA))))) %>% 
+  mutate(time_hr_bin = floor(time / 2)) %>% 
+  mutate(time_window = ifelse(time_hr_bin == 0, "First 2 hrs.", 
+                              ifelse(time_hr_bin == 1, "Hr. 2 to 4", 
+                                     ifelse(time_hr_bin == 2, "Hr. 4 to 6", 
+                                            ifelse(time_hr_bin == 3, "Hr. 6 to 8", 
+                                                   "Hr. 8+"))))) %>% 
   group_by(article_fc_rating, time_window, ideology_bin) %>% 
   summarise(belief_count = sum(count, na.rm = TRUE))
 
 exposure_belief_data <- merge(exposure_ideol_sum, belief_ideol_sum, by = c("article_fc_rating", "ideology_bin", "time_window")) %>% 
   filter(article_fc_rating %in% c("False/Misleading news", "True news")) %>% 
-  mutate(time_window = factor(time_window, levels = c("First 6 hrs.", "Hr. 6 to 12", "Hr. 12 to 18", "Hr. 18 to 24")))
+  mutate(time_window = factor(time_window, levels = c("First 2 hrs.", "Hr. 2 to 4", "Hr. 4 to 6", "Hr. 6 to 8", "Hr. 8+")))
 
 # Plot
 gg_exposebelief_total_timewindow <- ggplot(exposure_belief_data, aes(x = ideology_bin, fill = ideology_bin)) +
@@ -343,8 +354,89 @@ gg_exposebelief_total_timewindow <- ggplot(exposure_belief_data, aes(x = ideolog
   theme_ctokita() +
   theme(legend.position = "none",
         aspect.ratio = NULL,
-        panel.spacing.x = unit(0.7, "lines")) +
-  facet_grid(article_fc_rating~time_window, scale = 'free')
+        panel.spacing.x = unit(0.4, "lines")) +
+  facet_grid(article_fc_rating~time_window, scale = "free")
 gg_exposebelief_total_timewindow
 
 ggsave(gg_exposebelief_total_timewindow, filename = "output/belief/veracity/combined_total_beliefANDexposure_timewindow.pdf", width = 90, height = 90, units = "mm", dpi = 400)
+
+
+####################
+# PLOT: Time to 50 percent exposure/belief
+####################
+# Prep data
+majority_exposure <- belief_timeseries %>% 
+  group_by(total_article_number) %>% 
+  mutate(relative_exposed = cumulative_exposed / max(cumulative_exposed),
+         majority_exposed = relative_exposed >= 0.5) %>% 
+  arrange(total_article_number, time, tweet_id) %>% 
+  filter(majority_exposed == TRUE) %>% 
+  filter(time == min(time),
+         relative_exposed == min(relative_exposed)) %>% 
+  distinct(time, relative_exposed, .keep_all = TRUE) %>% 
+  rename(time_majority_exposure = time) %>% 
+  select(total_article_number, time_majority_exposure, article_fc_rating, relative_exposed)
+  
+
+majority_belief <- belief_timeseries %>% 
+  group_by(total_article_number) %>% 
+  mutate(relative_believing = cumulative_believing / max(cumulative_believing),
+         majority_believing = relative_believing >= 0.5) %>% 
+  arrange(total_article_number, time, tweet_id) %>% 
+  filter(majority_believing == TRUE) %>% 
+  filter(time == min(time),
+         relative_believing == min(relative_believing)) %>% 
+  distinct(time, relative_believing, .keep_all = TRUE) %>% 
+  rename(time_majority_believing = time) %>% 
+  select(total_article_number, time_majority_believing, relative_believing)
+
+
+majority_point <- merge(majority_exposure, majority_belief, by = c("total_article_number")) %>% 
+  gather(key = "type", value = "time", 
+         -total_article_number, -article_fc_rating, -relative_exposed, -relative_believing) %>% 
+  filter(article_fc_rating %in% c("False/Misleading news", "True news")) %>% 
+  mutate(article_fc_rating = factor(article_fc_rating, levels = c("True news", "False/Misleading news")),
+         type = ifelse(type == "time_majority_exposure", "Exposure",
+                       ifelse(type == "time_majority_believing", "Belief", NA)),
+         type = factor(type, levels = c("Exposure", "Belief")))
+
+# Calculate mean
+mean_majority_point <- majority_point %>% 
+  group_by(article_fc_rating, type) %>% 
+  summarise(mean_time = mean(time))
+
+# Calculate statistics
+F_belief <- majority_point$time[majority_point$type == "Belief" & majority_point$article_fc_rating == "False/Misleading news"]
+T_belief <- majority_point$time[majority_point$type == "Belief" & majority_point$article_fc_rating == "True news"]
+t.test(T_belief, F_belief)
+
+F_exposure <- majority_point$time[majority_point$type == "Exposure" & majority_point$article_fc_rating == "False/Misleading news"]
+T_exposure <- majority_point$time[majority_point$type == "Exposure" & majority_point$article_fc_rating == "True news"]
+t.test(T_exposure, F_exposure)
+
+# Plot
+gg_majority_point <- ggplot(data = majority_point, aes(x = time, y = ..density.., group = article_fc_rating, fill = article_fc_rating)) + 
+  geom_histogram(bins = 10,
+                 alpha = 0.7,
+                 position = "identity") +
+  geom_vline(data = mean_majority_point, aes(xintercept = mean_time, color = article_fc_rating),
+             size = 0.75, linetype = "dotted") +
+  scale_x_continuous(trans = scales::pseudo_log_trans(base = 10),
+                     breaks = c(1, 10, 100, 1000),
+                     labels = scales::comma_format(accuracy = 1)) +
+  scale_fill_manual(name = "Article rating", labels = c("True", "False/Misleading"),
+                    values = grouping_pal[c(2, 1)]) +
+  scale_color_manual(name = "Article rating", labels = c("True", "False/Misleading"),
+                    values = grouping_pal[c(2, 1)]) +
+  xlab("Time to majority article exposure/belief (hrs.)") +
+  ylab("Density") +
+  facet_wrap(type~.,
+             ncol = 2,
+             scales = "free_x") +
+  theme_ctokita() +
+  theme(aspect.ratio = NULL,
+        legend.position = "top")
+
+gg_majority_point
+
+ggsave(gg_majority_point, filename = "output/belief/veracity/combined_time_to_majority.pdf", width = 90, height = 100, units = "mm", dpi = 400)

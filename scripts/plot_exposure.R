@@ -202,7 +202,7 @@ ggsave(gg_expVnum, filename = paste0(outpath, "relative_tweet_vs_exposure.pdf"),
 
 ############################## Plot article exposure by ideology ##############################
 
-# Prep data
+# Prep data (data is melted to make one ideological bin per tweet per row)
 exposure_ideol <- exposure_timeseries %>% 
   filter(hour_bin >= 0) %>% 
   select(-source_lean, -relative_cumulative_exposed, -relative_tweet_count) %>% 

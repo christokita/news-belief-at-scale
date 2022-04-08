@@ -34,7 +34,7 @@ add_dummy_time_points <- function(exposure_data) {
   # (1) Create dummy rows that make two "non tweets" in at two time points leading up to the first real tweet
   n_articles <- length(unique(exposure_data$total_article_number)) #number of unique articles
   dummy_rows <- exposure_data %>% 
-    distinct(total_article_number, intervention_time, visibility_reduction, sharing_reduction, replicate, simulation_type)
+    distinct(total_article_number, intervention_time, visibility_reduction, belief_reduction, sharing_reduction, replicate, simulation_type)
   dummy_row_time <- data.frame(total_article_number = rep(unique(exposure_data$total_article_number), each = 2),
                                time = rep(c(-2, 0), n_articles), 
                                new_exposed_users = rep(c(0, 0), n_articles),
@@ -204,11 +204,12 @@ gg_example_timeseries <- intervention_exposure %>%
   mutate(intervention_time = factor(intervention_time, levels = c("No intervention", paste(seq(2, 12, 2) , "hr.")) )) %>%
   ggplot(., aes(x = time, y = cumulative_exposed, color = intervention_time, group = simulation_number, alpha = simulation_type)) +
   geom_line(size = 0.3) +
-  scale_y_continuous(breaks = seq(0, 10000000, 2000000), 
-                     limits = c(0, 10000000),
+  scale_y_continuous(breaks = seq(0, 20000000, 2000000), 
+                     limits = c(0, 12000000),
                      # expand = c(0, 0),
                      labels = scales::comma) +
-  scale_x_continuous(breaks = seq(0, 48, 12)) +
+  scale_x_continuous(breaks = seq(0, 48, 6),
+                     limits = c(-0.1, 48)) +
   scale_color_manual(values = c("black", intervention_pal),
                      name = "Intervention time") +
   scale_alpha_manual(values = c(1, 0.2), 

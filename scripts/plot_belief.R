@@ -100,7 +100,7 @@ belief_timeseries <- dummy_rows %>%
          total_article_number = rep(unique(article_data$total_article_number), each = 2)) %>% 
   merge(unique_article_ratings, by = "total_article_number") %>% 
   rbind(belief_timeseries, .) %>% 
-  mutate(hour_bin = cut(time, breaks = seq(-2, 50, 1), include.lowest = TRUE, right = FALSE, labels = seq(-2, 49))) %>%  #bin by hour tweet appeared
+  mutate(hour_bin = cut(time, breaks = seq(-2, 24*14, 1), include.lowest = TRUE, right = FALSE, labels = seq(-2, 24*14-1))) %>%  #bin by hour tweet appeared
   mutate(hour_bin = as.numeric(as.character(hour_bin))) %>%  #convert from factor to plain number
   group_by(total_article_number) %>% 
   mutate(relative_cumulative_exposed = cumulative_exposed / max(cumulative_exposed),
@@ -131,7 +131,7 @@ belief_timeseries <- belief_timeseries %>%
 
 ############################## Plot belief by ideology ##############################
 
-# Prep data
+# Prep data (data is melted to make one ideological bin per tweet per row)
 belief_ideol <- belief_timeseries %>% 
   filter(hour_bin >= 0) %>% 
   select(-source_lean, -relative_cumulative_exposed, -relative_cumulative_belief, -relative_tweet_count, -follower_count) %>% 
@@ -228,7 +228,7 @@ gg_ideol_dist <- belief_ideol %>%
                      expand = c(0, 0), 
                      breaks = seq(-6, 6, 2)) +
   scale_y_continuous(breaks = seq(0, 1, 0.05), 
-                     limits = c(0, 0.25),
+                     limits = c(0, 0.2),
                      expand = c(0, 0)) +
   scale_color_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
@@ -263,10 +263,11 @@ gg_ideoltime <- belief_ideol %>%
                        limits = c(-2, 2), 
                        oob = squish) +
   scale_x_continuous(breaks = seq(0, 48, 6),
-                     expand = c(0, 0)) +
+                     expand = c(0, 0),
+                     limits = c(-0.5, 48.5)) +
   scale_y_continuous(expand = c(0, 0)) +
   xlab("Time since first article share (hrs)") +
-  ylab("New users believing") +
+  ylab("Proportion of newly believing users") +
   theme_ctokita() +
   theme(aspect.ratio = NULL, 
         legend.box.margin = unit(c(0, 0, 0, 0), "mm"),
@@ -287,7 +288,7 @@ ggsave(gg_ideoltime, filename = paste0(outpath, "ideol_belief_hourbin.pdf"), wid
 # Prep data
 belief_per_exposure <- belief_timeseries %>% 
   mutate(belief_per_exposure = new_believing_users / new_exposed_users) %>% 
-  filter(time >= 0 & time <= 24)
+  filter(time >= 0 & time <= 48)
 
 # Fit bayesian trend line of belief-per-exposure over time
 if (grouping == "article_fc_rating") {
@@ -303,8 +304,8 @@ if (grouping == "article_fc_rating") {
 }
 
 regression_belief <- brm_multiple(data = belief_split,
-                                 # formula = belief_per_exposure ~ 1 + time + I(time^2),
-                                 formula = belief_per_exposure ~ 1 + time,
+                                 formula = belief_per_exposure ~ 1 + time + I(time^2),
+                                 # formula = belief_per_exposure ~ 1 + time,
                                  family = gaussian(), #assume normally distributed error
                                  prior = c(prior(uniform(-100, 100), class = Intercept),
                                            prior(uniform(-100, 100), class = b),
@@ -322,7 +323,7 @@ hypothesis_t_less_fm <- sum(slope_fm > slope_t) / length(slope_fm) #what set of 
 bayes_factor <- hypothesis_t_less_fm / (1 - hypothesis_t_less_fm) #Inf
 
 # Get fitted values from model to data range/space
-x_values <- data.frame(time = seq(0, 24, 0.1))
+x_values <- data.frame(time = seq(0, 48, 0.1))
 fit_belief <- lapply(seq(1:length(group_names)), function(i) {
   group <- group_names[i]
   fit_line <- fitted(regression_belief[[i]], newdata = x_values) %>% 
@@ -349,8 +350,8 @@ gg_belief_rate_exposure <- belief_per_exposure %>%
   geom_point(stroke = 0, alpha = 0.15, size = 1) +
   geom_line(data = fit_belief, aes(x = time, y = Estimate),
             size = 0.6) +
-  scale_x_continuous(breaks = seq(0, 24, 6),
-                     limits = c(0, 24)) +
+  scale_x_continuous(breaks = seq(0, 48, 12),
+                     limits = c(0, 48)) +
   scale_y_continuous(breaks = seq(0, 1, 0.1),
                      limits = c(0.2, 0.9),
                      expand = c(0, 0)) +
@@ -387,7 +388,7 @@ for (i in seq(1, length(regression_belief) ) ) {
 ####################
 gg_24hr_belief <- belief_timeseries %>% 
   # Prep data
-  filter(time >= 0 & time <= 24) %>% 
+  filter(time >= 0 & time <= 48) %>% 
   group_by(total_article_number) %>% 
   arrange(time) %>% 
   mutate(relative_cumulative_exposed = cumulative_exposed / max(cumulative_exposed),
@@ -402,7 +403,7 @@ gg_24hr_belief <- belief_timeseries %>%
   geom_ribbon(aes(ymin = lower, ymax = upper), color = NA, alpha = 0.2) +
   geom_line(size = 0.6) +
   xlab("Hours since first article share") +
-  ylab("Relative cumulative belief over first 24 hrs.") +
+  ylab("Relative cumulative belief") +
   scale_x_continuous(breaks = seq(0, 24, 6),
                      limits = c(0, 24)) +
   scale_y_continuous(breaks = seq(0, 1, 0.25), 
@@ -448,7 +449,7 @@ gg_24hr_belief
 ####################
 gg_follower_count <- ggplot(belief_timeseries, aes(x = time, y = new_exposed_users, color = !!sym(grouping))) +
   geom_point(stroke = 0, size = 2, alpha = 0.5) +
-  # scale_y_continuous(trans = "log10") +
+  scale_y_continuous(trans = "log10") +
   scale_x_continuous(limits = c(0, 24)) +
   scale_color_manual(values = grouping_pal, name = "Article rating", labels = c("False/Misleading", "True")) +
   theme_ctokita() +
