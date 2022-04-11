@@ -34,7 +34,7 @@ rt_nodes = pd.read_csv(data_directory + "/data_derived/networks/rtnetwork_nodes.
 # Get source lean ratings
 articles = pd.read_csv(data_directory + "data/articles/daily_articles.csv")
 articles = articles.rename(columns = {'total article number': 'total_article_number'})
-articles['source_lean'] = articles['source'].str.replace('rss_|ct_', '')
+articles['source_lean'] = articles['source'].str.replace('rss_|ct_', '', regex = True)
 lean_dict = {'con': 'C', 'lib': 'L', 'unclear': 'U'}
 articles['source_lean'] = articles['source_lean'].map(lean_dict)
 articles = articles[['total_article_number', 'source_lean']]

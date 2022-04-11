@@ -366,7 +366,7 @@ ideoldiversity_estimates <- posterior_samples(blm_ideoldiversity) %>%
 hypothesis_ideoldiversity <- hypothesis(blm_ideoldiversity, "article_fc_ratingFM = article_fc_ratingT", alpha = 0.05)
 hypothesis_ideoldiversity #BF >> 100, P = 1
 
-t.test(ideology_sd ~ article_fc_rating, data = network_metrics %>% filter(article_fc_rating %in% c("T", "FM"))) #p = 0.0269
+t.test(ideology_sd ~ article_fc_rating, data = network_metrics %>% filter(article_fc_rating %in% c("T", "FM"))) #p = 0.07143
 
 # Plot
 gg_ideodiversity <- network_metrics %>% 
