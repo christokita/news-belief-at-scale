@@ -107,12 +107,27 @@ relative_effect <- intervention_exposure %>%
   mutate(intervention_amount = paste0("visibility", visibility_reduction, "-", "sharing", sharing_reduction)) %>% 
   group_by(intervention_amount, intervention_time) %>% 
   summarise(mean_exposure = mean(relative_cumulative_exposed),
-            mean_belief = mean(relative_cumulative_believing))
+            median_exosure = median(relative_cumulative_exposed),
+            exposure_5 = quantile(relative_cumulative_exposed, c(0.05)),
+            exposure_10 = quantile(relative_cumulative_exposed, c(0.1)),
+            exposure_25 = quantile(relative_cumulative_exposed, c(0.25)),
+            exposure_75 = quantile(relative_cumulative_exposed, c(0.75)),
+            exposure_90 = quantile(relative_cumulative_exposed, c(0.90)),
+            exposure_95 = quantile(relative_cumulative_exposed, c(0.95)),
+            mean_belief = mean(relative_cumulative_believing),
+            median_belief = median(relative_cumulative_believing),
+            belief_5 = quantile(relative_cumulative_believing, c(0.05)),
+            belief_10 = quantile(relative_cumulative_believing, c(0.1)),
+            belief_25 = quantile(relative_cumulative_believing, c(0.25)),
+            belief_75 = quantile(relative_cumulative_believing, c(0.75)),
+            belief_90 = quantile(relative_cumulative_believing, c(0.90)),
+            belief_95 = quantile(relative_cumulative_believing, c(0.95)))
 
-write.csv(relative_exposure, file = paste0(path_to_interventions, "interventions_mean_effect.csv"), row.names = FALSE) #write to file for use in crowd-sourced intervention analysis
+write.csv(relative_effect, file = paste0(path_to_interventions, "interventions_relative_effect.csv"), row.names = FALSE) #write to file for use in crowd-sourced intervention analysis
 
 
 # Prep plot labeling
+relative_effect <- read.csv(file = paste0(path_to_interventions, "interventions_relative_effect.csv"))
 relative_effect <- relative_effect %>% 
   mutate(intervention_type = ifelse(intervention_amount == "visibility0-sharing0.25", "Fact-check labeling",
                                     ifelse(intervention_amount == "visibility0-sharing0.75", "Sharing friction",
@@ -126,6 +141,7 @@ relative_effect <- relative_effect %>%
 ####################
 # Plot relative exposure by intervention
 ####################
+# Bar plot of mean
 gg_exposure_decrease <- ggplot(relative_effect, aes(x = intervention_time, y = mean_exposure, fill = intervention_type)) +
   geom_bar(stat = "identity", 
            color = NA,
@@ -156,9 +172,50 @@ gg_exposure_decrease
 ggsave(gg_exposure_decrease, filename = paste0(outpath, "interventions_relativeexposure.pdf"), width = 85, height = 100, units = "mm", dpi = 400)
 
 
+# Point plot of mean and quantiles
+gg_exposure_decrease_point <- ggplot(relative_effect, aes(x = intervention_time, y = mean_exposure, color = intervention_type, fill = intervention_type)) +
+  geom_ribbon(aes(ymin = exposure_5,
+                  ymax = exposure_95),
+              color = NA,
+              alpha = 0.25) +
+  geom_point() +
+  scale_x_continuous(breaks = seq(0, 12, 2),
+                     limits = c(0, 12),
+                     expand = c(0, 0)) +
+  scale_y_continuous(breaks = seq(0, 1, 0.2), 
+                     limits = c(0, 1), 
+                     expand = c(0,0)) +
+  scale_color_manual(values = c("#74c476", "#238b45", "#6baed6", "#2171b5"),
+                    name = "Intervention",
+                    labels = c("Fact-check labeling",
+                               "Sharing friction",
+                               "Visibility reduction (light)",
+                               "Visibility reduction (heavy)")) +
+  scale_fill_manual(values = c("#74c476", "#238b45", "#6baed6", "#2171b5"),
+                    name = "Intervention",
+                    labels = c("Fact-check labeling",
+                               "Sharing friction",
+                               "Visibility reduction (light)",
+                               "Visibility reduction (heavy)")) +
+  xlab(expression( paste("Intervention delay ", italic(t[int]), " (hr)") )) + 
+  ylab("Relative user exposure to misinformation") +
+  theme_ctokita() +
+  theme(axis.line = element_blank(),
+        panel.border = element_rect(size = 0.5, fill = NA),
+        panel.spacing = unit(0.25, "cm"),
+        legend.position = "none",
+        strip.text = element_text(vjust = -0.5)) +
+  facet_wrap(~intervention_type,
+             ncol = 2)
+gg_exposure_decrease_point
+
+ggsave(gg_exposure_decrease_point, filename = paste0(outpath, "interventions_relativeexposure_detailed.pdf"), width = 85, height = 100, units = "mm", dpi = 400)
+
+
 ####################
 # Plot relative belief by intervention
 ####################
+# Bar plot of mean
 gg_belief_decrease <- ggplot(relative_effect, aes(x = intervention_time, y = mean_belief, fill = intervention_type)) +
   geom_bar(stat = "identity", 
            color = NA,
@@ -187,6 +244,44 @@ gg_belief_decrease <- ggplot(relative_effect, aes(x = intervention_time, y = mea
 gg_belief_decrease
 
 ggsave(gg_belief_decrease, filename = paste0(outpath, "interventions_relativebelief.pdf"), width = 85, height = 100, units = "mm", dpi = 400)
+
+# Point plot of mean and quantiles
+gg_belief_decrease_point <- ggplot(relative_effect, aes(x = intervention_time, y = mean_belief, color = intervention_type, fill = intervention_type)) +
+  geom_ribbon(aes(ymin = belief_5,
+                  ymax = belief_95),
+              color = NA,
+              alpha = 0.25) +
+  geom_point() +
+  scale_x_continuous(breaks = seq(0, 12, 2),
+                     limits = c(0, 12),
+                     expand = c(0, 0)) +
+  scale_y_continuous(breaks = seq(0, 1, 0.2), 
+                     limits = c(0, 1), 
+                     expand = c(0,0)) +
+  scale_color_manual(values = c("#74c476", "#238b45", "#6baed6", "#2171b5"),
+                     name = "Intervention",
+                     labels = c("Fact-check labeling",
+                                "Sharing friction",
+                                "Visibility reduction (light)",
+                                "Visibility reduction (heavy)")) +
+  scale_fill_manual(values = c("#74c476", "#238b45", "#6baed6", "#2171b5"),
+                    name = "Intervention",
+                    labels = c("Fact-check labeling",
+                               "Sharing friction",
+                               "Visibility reduction (light)",
+                               "Visibility reduction (heavy)")) +
+  xlab(expression( paste("Intervention delay ", italic(t[int]), " (hr)") )) + 
+  ylab("Relative user belief of misinformation") +
+  theme_ctokita() +
+  theme(axis.line = element_blank(),
+        panel.border = element_rect(size = 0.5, fill = NA),
+        legend.position = "none",
+        strip.text = element_text(vjust = -0.5)) +
+  facet_wrap(~intervention_type,
+             ncol = 2)
+gg_belief_decrease_point
+
+ggsave(gg_exposure_decrease_point, filename = paste0(outpath, "interventions_relativeexposure_detailed.pdf"), width = 85, height = 100, units = "mm", dpi = 400)
 
 
 ####################

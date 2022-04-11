@@ -21,7 +21,7 @@ source("scripts/_plot_themes/theme_ctokita.R")
 # Choose grouping of interest. Options: 
 #     (1) article veracity: "article_fc_rating"
 #     (2) source: "source_type"
-grouping <- "source_type"
+grouping <- "article_fc_rating"
 
 # Paths to files/directories
 tweet_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv' #path to fitness cascade data
@@ -73,7 +73,7 @@ tweets <- dummy_rows %>%
          total_article_number = rep(unique(tweets$total_article_number), each = 2)) %>% 
   merge(unique_article_ratings, by = "total_article_number") %>% 
   rbind(tweets, .) %>% 
-  mutate(hour_bin = cut(relative_tweet_time, breaks = seq(-2, 50, 1), include.lowest = TRUE, right = FALSE, labels = seq(-2, 49))) %>%  #bin by hour tweet appeared
+  mutate(hour_bin = cut(relative_tweet_time, breaks = seq(-2, 24*14, 1), include.lowest = TRUE, right = FALSE, labels = seq(-2, 24*14-1))) %>%  #bin by hour tweet appeared
   mutate(hour_bin = as.numeric(as.character(hour_bin))) #convert from factor to plain number
 
 # If analyzing by veracity, drop out non-True/False articles
@@ -184,7 +184,8 @@ gg_perctweets <- tweets %>%
              size = 0.3,
              color = "grey60") +
   geom_step(size = 0.2, alpha = 0.5, color = line_color) +
-  scale_x_continuous(breaks = seq(0, 48, 6)) +
+  scale_x_continuous(breaks = seq(0, 48, 6),
+                     limits = c(0, 48)) +
   xlab("Time since first article share (hrs)") +
   ylab("Proportion of story stweets") +
   theme_ctokita() +
@@ -208,7 +209,7 @@ for (percentile in percentiles) {
     filter(relative_tweet_count == min(relative_tweet_count)) 
   
   gg_saturationcount <- ggplot(percentile_data, aes(x = relative_tweet_time)) +
-    geom_histogram(aes(y = stat(density)), binwidth = 2, color = 'white', fill = line_color) +
+    geom_histogram(aes(y = stat(density)), binwidth = 2, color = NA, fill = line_color) +
     xlab(paste0("Time to ", percentile*100, "% sharing saturation (hrs.)")) +
     theme_ctokita() +
     facet_wrap(as.formula(paste("~", grouping)), 
@@ -240,7 +241,9 @@ gg_retweets <- tweets %>%
                   ymax = ifelse((mean_perc_RTs + sd_perc_RTs) > 1, 1, mean_perc_RTs + sd_perc_RTs)),
               fill = line_color, alpha = 0.2) +
   geom_line(color = line_color) +
-  scale_x_continuous(breaks = seq(0, 48, 6)) +
+  scale_x_continuous(breaks = seq(0, 48, 6),
+                     limits = c(0, 48),
+                     expand = c(0, 0)) +
   # scale_y_continuous(limits = c(0, 1)) +
   xlab("Time since first article share (hrs)") +
   ylab("Prop. retweets") +
@@ -277,7 +280,9 @@ gg_ideoldisttime <- tweets %>%
   #graph
   ggplot(., aes(x = hour_bin, y = freq_ideol_distance, fill = factor(ideol_distance, levels = c(1, 0, -1)))) +
   geom_bar(position = "fill", stat = "identity", width = 1) +
-  scale_x_continuous(breaks = seq(0, 48, 6)) +
+  scale_x_continuous(breaks = seq(0, 48, 6),
+                     limits = c(-0.5, 48.5),
+                     expand = c(0, 0)) +
   scale_fill_manual(values = rev(ideol_dist_pal[c(1,3,5)]),
                     name = "User ideology relative to\narticle content",
                     labels = c("User more conservative", 
@@ -312,7 +317,9 @@ gg_ideoltime <- tweets %>%
   # graph
   ggplot(., aes(x = hour_bin, y = freq_ideol_bin, fill = factor(ideol_bin, levels = c(1, 0, -1)))) +
   geom_bar(position = "fill", stat = "identity", width = 1) +
-  scale_x_continuous(breaks = seq(0, 48, 6)) +
+  scale_x_continuous(breaks = seq(0, 48, 6),
+                     limits = c(-0.5, 48.5),
+                     expand = c(0, 0)) +
   scale_fill_manual(values = rev(ideol_pal[c(1,3,5)]),
                     name = "Tweeter ideology",
                     labels = c("Conservative", "Moderate", "Liberal")) +
@@ -340,7 +347,9 @@ gg_ideoltime_fine <- tweets %>%
   # graph
   ggplot(., aes(x = hour_bin, y = freq_ideol_bin, fill = factor(ideol_bin, levels = c(1, 0, -1)))) +
   geom_bar(position = "fill", stat = "identity", width = 1) +
-  scale_x_continuous(breaks = seq(0, 48, 6)) +
+  scale_x_continuous(breaks = seq(0, 48, 24),
+                     limits = c(-0.5, 48.5),
+                     expand = c(0, 0)) +
   scale_fill_manual(values = rev(ideol_pal[c(1,3,5)]),
                     name = "Tweeter ideology",
                     labels = c("Conservative", "Moderate", "Liberal")) +
@@ -362,7 +371,9 @@ gg_ideoltime_raw <- tweets %>%
   ggplot(., aes(x = relative_tweet_time, y = user_ideology, color = user_ideology)) +
   geom_point(size = 0.3, stroke = 0, position = position_jitter(width = 0.1, height = 0.1)) +
   scale_color_gradientn(colors = ideol_pal, limits = c(-2, 2), oob = scales::squish) +
-  scale_x_continuous(breaks = seq(0, 48, 6)) +
+  scale_x_continuous(breaks = seq(0, 48, 6),
+                     limits = c(0, 48),
+                     expand = c(0, 0)) +
   scale_y_continuous(breaks = seq(-4, 4, 2)) +
   xlab("Time since first article share (hrs)") +
   ylab("User ideology") +
@@ -381,7 +392,9 @@ gg_ideoltime_raw <- tweets %>%
   ggplot(., aes(x = relative_tweet_time, y = user_ideology, color = user_ideology)) +
   geom_point(size = 0.3, stroke = 0, position = position_jitter(width = 0.1, height = 0.1)) +
   scale_color_gradientn(colors = ideol_pal, limits = c(-2, 2), oob = scales::squish) +
-  scale_x_continuous(breaks = seq(0, 48, 12)) +
+  scale_x_continuous(breaks = seq(0, 48, 12),
+                     limits = c(0, 48),
+                     expand = c(0, 0)) +
   scale_y_continuous(breaks = seq(-4, 4, 2)) +
   xlab("Time since first article share (hrs)") +
   ylab("User ideology") +
@@ -409,7 +422,9 @@ gg_ideoltimesource <- tweets %>%
   summarise(freq_ideol_bin = mean(freq_ideol_bin)) %>% 
   ggplot(., aes(x = hour_bin, y = freq_ideol_bin, fill = factor(ideol_bin, levels = c(1, 0, -1)))) +
   geom_bar(position = "fill", stat = "identity", width = 1) +
-  scale_x_continuous(breaks = seq(0, 48, 12)) +
+  scale_x_continuous(breaks = seq(0, 48, 6),
+                     limits = c(-0.5, 48.5),
+                     expand = c(0, 0)) +
   scale_fill_manual(values = rev(ideol_pal[c(1,3,5)]),
                     name = "User ideology",
                     labels = c("Conservative", "Moderate", "Liberal")) +
