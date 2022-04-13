@@ -220,9 +220,9 @@ gg_ideology_comp <- shapes %>%
   distinct() %>% 
   filter(!is.na(user_ideology)) %>% 
   ggplot(., aes(x = user_ideology, y = mu, color = user_ideology)) +
-  geom_point(alpha = 0.1, size = 0.6, stroke = 0) +
-  scale_y_continuous(breaks = seq(-3, 5, 1)) +
-  scale_x_continuous(breaks = seq(-3, 5, 1)) +
+  geom_point(alpha = 0.1, size = 1, stroke = 0) +
+  scale_y_continuous(breaks = seq(-6, 6, 1)) +
+  scale_x_continuous(breaks = seq(-6, 6, 1)) +
   scale_color_gradientn(name = "User\nideology",
                         colours = ideol_pal, 
                         limit = c(-2, 2), 

@@ -376,7 +376,7 @@ gg_ideodiversity <- network_metrics %>%
   #            size = 1.2, stroke = 0, alpha = 0.2,
   #            position = position_jitter(width = 0.05)) +
   ggbeeswarm::geom_quasirandom(aes(y = ideology_sd),
-                               size = 1.2, stroke = 0, alpha = 0.3,
+                               size = 1.5, stroke = 0, alpha = 0.3,
                                width = 0.2) +
   geom_errorbar(data = ideoldiversity_estimates, aes(ymin = CI_low, ymax = CI_high), 
                 size = 0.6, width = 0) +
