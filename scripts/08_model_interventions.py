@@ -77,6 +77,7 @@ def simulate_intervention(tweets, paired_tweets_followers, ideologies, follower_
                                           follower_ideol_distributions = follower_ideol_distributions, 
                                           article_id = tweets['total_article_number'].unique(), 
                                           article_belief_data = article_belief_data,
+                                          intervention_time = intervention_time,
                                           belief_reduction = belief_reduction)
     
     # Bin exposure and belief by time
