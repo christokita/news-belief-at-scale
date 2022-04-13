@@ -72,7 +72,7 @@ def simulate_intervention(tweets, paired_tweets_followers, ideologies, follower_
     exposed_per_tweet = pd.DataFrame({'tweet_id': exposed_per_tweet.index, 'new_exposed_users': exposed_per_tweet.values})
     
     # Estimate belief for a tweet under intervention
-    believing_followers = estimate_belief(belief_users = exposed_followers, 
+    believing_followers = estimate_belief(exposed_users = exposed_followers, 
                                           ideologies = ideologies, 
                                           follower_ideol_distributions = follower_ideol_distributions, 
                                           article_id = tweets['total_article_number'].unique(), 
@@ -102,7 +102,7 @@ def simulate_intervention(tweets, paired_tweets_followers, ideologies, follower_
     return intervention_tweets, exposure_over_time
 
 # Estimate exposure of unique users to the story, assuming the story, assuming users are x% less likely to see a tweet after time point t
-def estimate_belief(belief_users, ideologies, follower_ideol_distributions, article_id, article_belief_data, belief_reduction = 0.0):
+def estimate_belief(exposed_users, ideologies, follower_ideol_distributions, article_id, article_belief_data, intervention_time, belief_reduction = 0.0):
     """
     Function that calculates the estimated belief among users exposued to tweets
     
@@ -112,13 +112,14 @@ def estimate_belief(belief_users, ideologies, follower_ideol_distributions, arti
     - follower_ideol_distributions(dataframe):   dataframe of the estimated distribution of ideology each tweeter's followers
     - article_id (int):                          article number
     - article_belief_data (dataframe):           survey data of frequency of individual belief by demographics (e.g., ideology)
+    - interention_time (float):                  relative time at which an intervention kicks in.
     - belief_reduction (float):                  reduction in belief, accounting for intervention. Must be between 0.0 and 1.0, with 0.0 = 0% reduction and 1.0 = 100% reduction.
     
     OUTPUT:
     - 
     """
     # Add in ideology scores
-    belief_users = belief_users.merge(ideologies, on = 'follower_id', how = 'left')
+    belief_users = exposed_users.merge(ideologies, on = 'follower_id', how = 'left')
     
     # Loop through users and draw missing ideologies from user's follower ideology distribution
     unique_tweeters = belief_users['user_id'].unique()
@@ -142,7 +143,7 @@ def estimate_belief(belief_users, ideologies, follower_ideol_distributions, arti
     article_belief_data = article_belief_data[['belief_freq', 'belief', 'ideology_score']]
     article_belief_data = article_belief_data.rename(columns = {'ideology_score': 'ideology_bin'})
     belief_users = belief_users.merge(article_belief_data, on = 'ideology_bin')
-    belief_users['belief_freq'] = belief_users['belief_freq'] * (1 - belief_reduction)
+    belief_users.loc[belief_users.relative_exposure_time >= intervention_time, 'belief_freq'] *= (1 - belief_reduction) #reduce belief freq for those after intervention kicks in
     belief_users['follower_belief'] = belief_users['belief_freq'].apply(lambda x: np.random.binomial(1, x)) #draw belief from binomial distribution
     
     # Filter to just believeing users and return
