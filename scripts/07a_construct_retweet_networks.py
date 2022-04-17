@@ -292,6 +292,7 @@ if __name__ == '__main__':
     articles = pd.read_csv(data_directory + "data/articles/daily_articles.csv")
     checked_unmatched_urls = pd.read_csv(data_directory + 'data_derived/articles/manuallyconfirmed_unmatched_urls.csv') 
     checked_unmatched_urls.loc[~pd.isna(checked_unmatched_urls['manual_matched_ID']), 'total_article_number'] = checked_unmatched_urls.loc[~pd.isna(checked_unmatched_urls['manual_matched_ID']), 'manual_matched_ID'] #plugs in manually fixed article number
+    checked_unmatched_urls.loc[~pd.isna(checked_unmatched_urls['manual_matched_ID']), 'good_match'] = True #mark `good match` for manually matched articles
     confirmed_matches =  checked_unmatched_urls[checked_unmatched_urls['good_match'] == True]
 
     # Get list of friend files for reference
