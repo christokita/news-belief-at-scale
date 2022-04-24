@@ -236,3 +236,35 @@ no_followers_complete.to_csv(data_directory + 'data_derived/_data_checks/alluser
 no_friends_complete.to_csv(data_directory + 'data_derived/_data_checks/allusers_no_friends_{}.csv'.format(today), index = False)
 new_tweeters_need_to_check.to_csv(data_directory + 'data_derived/_data_checks/new_tweeters_needing_friendsfollowers_{}.csv'.format(today), index = False)
 
+
+
+
+######################################## April 23, 2022 ########################################
+
+####################
+# Get last tweet from each story
+####################
+labeled_tweets = pd.read_csv(data_directory + "data_derived/tweets/tweets_labeled.csv",
+                             dtype = {'quoted_urls': object, 'quoted_urls_expanded': object, #these two columns cause memory issues if not pre-specified dtype
+                                      'user_id': 'int64', 'tweet_id': 'int64'})
+labeled_tweets['tweet_time'] = pd.to_datetime(labeled_tweets['tweet_time'], format = '%a %b %d %H:%M:%S %z %Y')
+
+
+minmax_tweets = labeled_tweets.groupby('total_article_number').agg({'tweet_time': [np.min, np.max, 'count']})
+
+tweet_times = pd.DataFrame({'total_article_number': minmax_tweets.index,
+                            'n_tweets_in_data': minmax_tweets['tweet_time']['count'],
+                            'first_tweet_time': minmax_tweets['tweet_time']['amin'], 
+                            'last_tweet_time': minmax_tweets['tweet_time']['amax']})
+tweet_times['time_window_in_data'] = tweet_times['last_tweet_time'] - tweet_times['first_tweet_time']
+tweet_times = tweet_times.sort_values(['time_window_in_data'])
+
+####################
+# Write to file
+####################
+today = pd.to_datetime("today")
+today = str(today.year) + "-" + str(today.month) + "-" + str(today.day)
+tweet_times.to_csv(data_directory + 'data_derived/_data_checks/tweets_firstlast_{}.csv'.format(today), index = False)
+
+
+
