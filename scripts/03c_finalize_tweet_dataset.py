@@ -6,7 +6,10 @@ Created on Sun Jul 26 12:11:34 2020
 @author: ChrisTokita
 
 Script:
-Add in missing article IDs to tweets that were not matched in the first pass.
+Finalize our tweet dataset.
+This script will do two main things:
+    (1) Manually confirm/label tweets that still are not associated with a particular article ID
+    (2) Filter our tweets to only those that fall within a one-week window after the first article share.
 """
 
 import pandas as pd
@@ -247,6 +250,29 @@ article_metadata = article_metadata.merge(article_ratings, on = 'total_article_n
 tweets =  update_tweet_article_metadata(manually_matched_tweets = matched, 
                                         all_tweets = tweets, 
                                         article_data = article_metadata)
+
+####################
+# Step 6: Filter to tweets that are only up to one week after first link share
+####################
+# Determine first time each article was shared
+tweets['tweet_time_dt'] = pd.to_datetime(tweets['tweet_time'], format = '%a %b %d %H:%M:%S %z %Y')
+first_tweets = tweets.groupby('total_article_number')['tweet_time_dt'] \
+    .min() \
+    .reset_index() \
+    .rename(columns = {'tweet_time_dt': 'article_first_time'})
+        
+# Determine time since first share
+tweets = tweets.merge(first_tweets, on = 'total_article_number', how = 'left')
+tweets['relative_tweet_time'] = tweets['tweet_time_dt'] - tweets['article_first_time']
+tweets['relative_tweet_time'] = tweets['relative_tweet_time'] / np.timedelta64(1, 'h') #convert to hours
+
+# Number sequence of tweets within article
+tweets['tweet_number'] = tweets.sort_values('relative_tweet_time').groupby('total_article_number').cumcount()
+
+# Filter to tweets up to one week after the first link share and finalize dataset
+tweets = tweets[tweets.relative_tweet_time <= 7*24] #one-week limit
+tweets = tweets.sort_values(by = ['total_article_number', 'relative_tweet_time'])
+tweets = tweets.drop(columns = ['tweet_time_dt'])
 
 # Save!
 tweets.to_csv(data_directory + "data_derived/tweets/tweets_labeled.csv", index = False)
