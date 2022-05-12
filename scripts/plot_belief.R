@@ -253,7 +253,7 @@ gg_ideoltime <- belief_ideol %>%
   group_by(!!sym(grouping), hour_bin, ideology_bin) %>% 
   summarise(count = sum(count)) %>%
   ggplot(., aes(x = hour_bin, y = count, fill = ideology_bin, color = ideology_bin)) +
-  geom_bar(position = "fill", stat = "identity", width = 1) +
+  geom_bar(position = "fill", stat = "identity", width = 1, size = 0.01) +
   scale_fill_gradientn(colours = ideol_pal, 
                        name = "User\nideology",
                        limits = c(-2, 2), 
@@ -262,9 +262,9 @@ gg_ideoltime <- belief_ideol %>%
                        name = "User\nideology",
                        limits = c(-2, 2), 
                        oob = squish) +
-  scale_x_continuous(breaks = seq(0, 48, 6),
+  scale_x_continuous(breaks = seq(0, 72, 12),
                      expand = c(0, 0),
-                     limits = c(-0.5, 48.5)) +
+                     limits = c(-0.5, 72.5)) +
   scale_y_continuous(expand = c(0, 0)) +
   xlab("Time since first article share (hrs)") +
   ylab("Proportion of newly believing users") +
@@ -450,7 +450,7 @@ gg_24hr_belief
 gg_follower_count <- ggplot(belief_timeseries, aes(x = time, y = new_exposed_users, color = !!sym(grouping))) +
   geom_point(stroke = 0, size = 2, alpha = 0.5) +
   scale_y_continuous(trans = "log10") +
-  scale_x_continuous(limits = c(0, 24)) +
+  scale_x_continuous(limits = c(0, 7*24)) +
   scale_color_manual(values = grouping_pal, name = "Article rating", labels = c("False/Misleading", "True")) +
   theme_ctokita() +
   facet_wrap(as.formula(paste("~", grouping)),
