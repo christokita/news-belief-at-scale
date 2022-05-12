@@ -129,8 +129,8 @@ gg_RTtypes <-
   ggplot(., aes(x = RT_type, fill = RT_type)) +
   geom_bar(stat = "count") +
   scale_fill_manual(values = c("#1d91c0", "#41b6c4", "#c7e9b4", "#edf8b1")) +
-  scale_y_continuous(breaks = seq(0, 80000, 20000), 
-                     limits = c(0, 80000),
+  scale_y_continuous(breaks = seq(0, 100000, 20000), 
+                     limits = c(0, 100000),
                      expand = c(0, 0),
                      labels = scales::comma) +
   xlab("Retweet type") +
@@ -366,7 +366,7 @@ ideoldiversity_estimates <- posterior_samples(blm_ideoldiversity) %>%
 hypothesis_ideoldiversity <- hypothesis(blm_ideoldiversity, "article_fc_ratingFM = article_fc_ratingT", alpha = 0.05)
 hypothesis_ideoldiversity #BF >> 100, P = 1
 
-t.test(ideology_sd ~ article_fc_rating, data = network_metrics %>% filter(article_fc_rating %in% c("T", "FM"))) #p = 0.07143
+t.test(ideology_sd ~ article_fc_rating, data = network_metrics %>% filter(article_fc_rating %in% c("T", "FM"))) #p = 0.03955
 
 # Plot
 gg_ideodiversity <- network_metrics %>% 
