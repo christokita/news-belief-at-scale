@@ -121,7 +121,7 @@ gg_exposuretime <- exposure_timeseries %>%
   geom_step(size = 0.3, alpha = 0.5, color = line_color) +
   # scale_y_log10() +
   scale_x_continuous(breaks = seq(0, 14, 1),
-                     limits = c(-0.01, 14)) +
+                     limits = c(-0.1, 7)) +
   scale_y_continuous(breaks = c(10^seq(1, 8, 2)),
                      labels = scales::trans_format("log10", scales::math_format(10^.x)),
                      trans = scales::pseudo_log_trans(base = 10)) +
@@ -140,12 +140,12 @@ ggsave(gg_exposuretime, filename = paste0(outpath, "total_exposed_time.pdf"), wi
 # Percentiage of tweets per story
 ####################
 gg_relexpostime <- exposure_timeseries %>% 
-  ggplot(., aes(x = time, y = relative_cumulative_exposed, group = total_article_number)) +
+  ggplot(., aes(x = time/24, y = relative_cumulative_exposed, group = total_article_number)) +
   geom_step(size = 0.3, alpha = 0.5, color = line_color) +
   # scale_y_log10() +
-  scale_x_continuous(breaks = seq(0, 48, 6)) +
-  scale_y_continuous(labels = scales::comma) +
-  xlab("Time since first article share (hrs)") +
+  scale_x_continuous(breaks = seq(0, 14, 1),
+                       limits = c(-0.1, 7)) +
+  xlab("Time since first article share (days)") +
   ylab("Proportion of total users exposed") +
   theme_ctokita() +
   theme(aspect.ratio = NULL) +
@@ -175,7 +175,7 @@ gg_exposuretweet <- exposure_timeseries %>%
   facet_wrap(as.formula(paste(grouping, "~.")), 
              ncol = 2)
 gg_exposuretweet
-ggsave(gg_exposuretweet, filename = paste0(outpath, "total_exposed_tweetnumber.pdf"), width = 45, height = 45, units = "mm", dpi = 400)
+ggsave(gg_exposuretweet, filename = paste0(outpath, "total_exposed_tweetnumber.pdf"), width = 90, height = 45, units = "mm", dpi = 400)
 
 
 ####################
@@ -325,7 +325,7 @@ gg_ideoltime <- exposure_ideol %>%
   group_by(!!sym(grouping), hour_bin, ideology_bin) %>% 
   summarise(count = sum(count)) %>%
   ggplot(., aes(x = hour_bin, y = count, fill = ideology_bin, color = ideology_bin)) +
-  geom_bar(position = "fill", stat = "identity", width = 1, size = 0.001) +
+  geom_bar(position = "fill", stat = "identity", width = 1, size = 0.1) +
   scale_fill_gradientn(colours = ideol_pal, 
                        name = "User\nideology",
                        limits = c(-2, 2), 
@@ -334,9 +334,9 @@ gg_ideoltime <- exposure_ideol %>%
                        name = "User\nideology",
                        limits = c(-2, 2), 
                        oob = squish) +  
-  scale_x_continuous(breaks = seq(0, 48, 6),
+  scale_x_continuous(breaks = seq(0, 72, 12),
                      expand = c(0, 0),
-                     limits = c(-0.5, 48.5)) +
+                     limits = c(-0.5, 72.5)) +
   scale_y_continuous(expand = c(0, 0)) +
   xlab("Time since first article share (hrs)") +
   ylab("Proportion of newly exposed users") +
