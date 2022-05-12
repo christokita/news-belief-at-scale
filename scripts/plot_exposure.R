@@ -325,7 +325,7 @@ gg_ideoltime <- exposure_ideol %>%
   group_by(!!sym(grouping), hour_bin, ideology_bin) %>% 
   summarise(count = sum(count)) %>%
   ggplot(., aes(x = hour_bin, y = count, fill = ideology_bin, color = ideology_bin)) +
-  geom_bar(position = "fill", stat = "identity", width = 1, size = 0.1) +
+  geom_bar(position = "fill", stat = "identity", width = 1, size = 0.01) +
   scale_fill_gradientn(colours = ideol_pal, 
                        name = "User\nideology",
                        limits = c(-2, 2), 
