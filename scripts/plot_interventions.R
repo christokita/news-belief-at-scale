@@ -199,6 +199,7 @@ gg_exposure_decrease_point <- ggplot(relative_effect, aes(x = intervention_time,
                                "Visibility reduction (heavy)")) +
   xlab(expression( paste("Intervention delay ", italic(t[int]), " (hr)") )) + 
   ylab("Relative user exposure to misinformation") +
+  coord_cartesian(clip = 'off') + #prevent clipping of po9ints on axis line
   theme_ctokita() +
   theme(axis.line = element_blank(),
         panel.border = element_rect(size = 0.5, fill = NA),
@@ -272,6 +273,7 @@ gg_belief_decrease_point <- ggplot(relative_effect, aes(x = intervention_time, y
                                "Visibility reduction (heavy)")) +
   xlab(expression( paste("Intervention delay ", italic(t[int]), " (hr)") )) + 
   ylab("Relative user belief of misinformation") +
+  coord_cartesian(clip = 'off') + #prevent clipping of po9ints on axis line
   theme_ctokita() +
   theme(axis.line = element_blank(),
         panel.border = element_rect(size = 0.5, fill = NA),
@@ -285,18 +287,19 @@ ggsave(gg_exposure_decrease_point, filename = paste0(outpath, "interventions_rel
 
 
 ####################
-# Plot example exposure intervention time series
+# Plot example intervention time series
 ####################
 intervention_pal <- scales::viridis_pal(begin = 0, end = 0.9, direction = -1, option = "plasma")
-intervention_pal <- intervention_pal(6)
+intervention_pal <- intervention_pal(7)
 
-gg_example_timeseries <- intervention_exposure %>% 
+# Exposure
+gg_example_timeseries_exposure <- intervention_exposure %>% 
   filter(total_article_number == 28, 
          sharing_reduction == 0.75,
          visibility_reduction == 0,
          intervention_time %in% c(seq(0, 12, 2))) %>% 
   mutate(intervention_time = ifelse(simulation_type == "no intervention", "No intervention", paste(intervention_time, "hr."))) %>%
-  mutate(intervention_time = factor(intervention_time, levels = c("No intervention", paste(seq(2, 12, 2) , "hr.")) )) %>%
+  mutate(intervention_time = factor(intervention_time, levels = c("No intervention", paste(seq(0, 12, 2) , "hr.")) )) %>%
   ggplot(., aes(x = time, y = cumulative_exposed, color = intervention_time, group = simulation_number, alpha = simulation_type)) +
   geom_line(size = 0.3) +
   scale_y_continuous(breaks = seq(0, 20000000, 2000000), 
@@ -317,6 +320,39 @@ gg_example_timeseries <- intervention_exposure %>%
         legend.key.height = unit(0.5, 'mm'),
         legend.spacing = unit(0, 'mm'),
         legend.title = element_text(vjust = -1))
-gg_example_timeseries
-ggsave(gg_example_timeseries, filename = paste0(outpath, "exampleintervention_article28.pdf"), width = 120, height = 45, units = "mm", dpi = 400)
+gg_example_timeseries_exposure
+ggsave(gg_example_timeseries_exposure, filename = paste0(outpath, "exampleintervention_exposure_article28.pdf"), width = 120, height = 45, units = "mm", dpi = 400)
+
+
+# Exposure
+gg_example_timeseries_belief <- intervention_exposure %>% 
+  filter(total_article_number == 28, 
+         sharing_reduction == 0.75,
+         visibility_reduction == 0,
+         intervention_time %in% c(seq(0, 12, 2))) %>% 
+  mutate(intervention_time = ifelse(simulation_type == "no intervention", "No intervention", paste(intervention_time, "hr."))) %>%
+  mutate(intervention_time = factor(intervention_time, levels = c("No intervention", paste(seq(0, 12, 2) , "hr.")) )) %>%
+  ggplot(., aes(x = time, y = cumulative_believing, color = intervention_time, group = simulation_number, alpha = simulation_type)) +
+  geom_line(size = 0.3) +
+  scale_y_continuous(breaks = seq(0, 20000000, 1000000), 
+                     limits = c(0, 4000000),
+                     # expand = c(0, 0),
+                     labels = scales::comma) +
+  scale_x_continuous(breaks = seq(0, 48, 6),
+                     limits = c(-0.1, 48)) +
+  scale_color_manual(values = c("black", intervention_pal),
+                     name = "Intervention time") +
+  scale_alpha_manual(values = c(1, 0.2), 
+                     guide = NULL) +
+  xlab("Time since first article share (hrs)") +
+  ylab("Total users believing") +
+  theme_ctokita() +
+  theme(legend.position = "right",
+        aspect.ratio = 0.5,
+        legend.key.height = unit(0.5, 'mm'),
+        legend.spacing = unit(0, 'mm'),
+        legend.title = element_text(vjust = -1))
+gg_example_timeseries_belief
+ggsave(gg_example_timeseries_belief, filename = paste0(outpath, "exampleintervention_belief_article28.pdf"), width = 120, height = 45, units = "mm", dpi = 400)
+
 
