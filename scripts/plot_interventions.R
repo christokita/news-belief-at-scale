@@ -283,7 +283,7 @@ gg_belief_decrease_point <- ggplot(relative_effect, aes(x = intervention_time, y
              ncol = 2)
 gg_belief_decrease_point
 
-ggsave(gg_exposure_decrease_point, filename = paste0(outpath, "interventions_relativeexposure_detailed.pdf"), width = 85, height = 100, units = "mm", dpi = 400)
+ggsave(gg_belief_decrease_point, filename = paste0(outpath, "interventions_relativebelief_detailed.pdf"), width = 85, height = 100, units = "mm", dpi = 400)
 
 
 ####################
