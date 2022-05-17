@@ -228,7 +228,8 @@ gg_exposebelief_total_source <- ggplot(exposure_belief_data, aes(x = ideology_bi
   ylab("Total number of users") +
   theme_ctokita() +
   theme(legend.position = "none",
-        aspect.ratio = NULL) +
+        aspect.ratio = NULL,
+        panel.spacing = unit(5, "mm")) +
   facet_grid(article_fc_rating~source_lean, scale = 'free_y')
 gg_exposebelief_total_source
 
@@ -284,7 +285,8 @@ gg_exposebelief_total_article <- ggplot(exposure_belief_data, aes(x = ideology_b
   ylab("Total number of users") +
   theme_ctokita() +
   theme(legend.position = "none",
-        aspect.ratio = NULL) +
+        aspect.ratio = NULL,
+        panel.spacing = unit(5, "mm")) +
   facet_grid(article_fc_rating~article_lean, scale = 'free_y')
 gg_exposebelief_total_article
 
