@@ -384,6 +384,114 @@ for (i in seq(1, length(regression_belief) ) ) {
 
 
 ####################
+# Belief per exposure by article/source type
+####################
+# Prep data
+belief_per_exposure <- belief_timeseries %>% 
+  mutate(belief_per_exposure = new_believing_users / new_exposed_users) %>% 
+  filter(time >= 0 & time <= 48)
+
+# Fit bayesian trend line of belief-per-exposure over time
+belief_split <- belief_per_exposure %>% 
+  filter(!is.na(belief_per_exposure)) %>% 
+  mutate(split_factor = paste(article_fc_rating, source_type, sep = "---")) %>% 
+  split(.$split_factor)
+group_names <- names(belief_split)
+
+regression_belief <- brm_multiple(data = belief_split,
+                                  formula = belief_per_exposure ~ 1 + time + I(time^2),
+                                  # formula = belief_per_exposure ~ 1 + time,
+                                  family = gaussian(), #assume normally distributed error
+                                  prior = c(prior(uniform(-100, 100), class = Intercept),
+                                            prior(uniform(-100, 100), class = b),
+                                            prior(uniform(-100, 100), class = sigma)),
+                                  iter = 3500,
+                                  warmup = 1000,
+                                  chains = 4,
+                                  seed = 323,
+                                  combine = FALSE)
+
+# Get fitted values from model to data range/space
+x_values <- data.frame(time = seq(0, 48, 0.1))
+fit_belief <- lapply(seq(1:length(group_names)), function(i) {
+  fit_line <- fitted(regression_belief[[i]], newdata = x_values) %>% 
+    as.data.frame() %>% 
+    mutate(article_fc_rating = str_split(group_names[i], "---")[[1]][1],
+           source_type = str_split(group_names[i], "---")[[1]][2],
+           time = x_values$time)
+})
+fit_belief <- do.call("rbind", fit_belief)
+
+
+# Plot: Belief-per-exposure by source type and veracity
+minutes_per_bin <- 5
+
+gg_belief_rate_exposure_source <- belief_per_exposure %>% 
+  # Prep data
+  mutate(binned_time = floor(time / (minutes_per_bin / 60)  ), #assign to bin
+         binned_time = binned_time / (60 / minutes_per_bin)) %>% #translate bin into real time
+  group_by(source_type, article_fc_rating, binned_time) %>% 
+  summarise(belief_per_exposure = mean(belief_per_exposure, na.rm = TRUE)) %>% 
+  # Plot
+  ggplot(., aes(x = binned_time, y = belief_per_exposure, color = article_fc_rating)) +
+  geom_point(stroke = 0, alpha = 0.15, size = 1) +
+  geom_line(data = fit_belief, aes(x = time, y = Estimate),
+            size = 0.6) +
+  scale_x_continuous(breaks = seq(0, 48, 12),
+                     limits = c(0, 48)) +
+  scale_y_continuous(breaks = seq(0, 1, 0.1),
+                     limits = c(0, 1),
+                     expand = c(0, 0)) +
+  scale_color_manual(values = grouping_pal, 
+                     name = "Article rating", 
+                     labels = c("False/Misleading", "True")) +
+  xlab("Time since first article share (hrs.)") +
+  ylab("Beliefs per exposure") +
+  facet_grid(~source_type,
+             scales = "free_y") +
+  theme_ctokita() +
+  theme(legend.position = "none")
+
+gg_belief_rate_exposure_source
+ggsave(gg_belief_rate_exposure_source, filename = "output/belief/veracity/beliefs_per_exposure_sourceandveracity.pdf", width = 90, height = 45, units = "mm", dpi = 400)
+
+
+# Plot: Belief-per-exposure by source lean
+minutes_per_bin <- 5
+
+gg_belief_rate_exposure_source <- belief_per_exposure %>% 
+  # Prep data
+  mutate(binned_time = floor(time / (minutes_per_bin / 60)  ), #assign to bin
+         binned_time = binned_time / (60 / minutes_per_bin)) %>% #translate bin into real time
+  group_by(source_type, article_lean, !!sym(grouping), binned_time) %>% 
+  summarise(belief_per_exposure = mean(belief_per_exposure, na.rm = TRUE)) %>% 
+  rename(group = !!sym(grouping)) %>% 
+  # Plot
+  ggplot(., aes(x = binned_time, y = belief_per_exposure, color = group)) +
+  geom_point(stroke = 0, alpha = 0.15, size = 1) +
+  # geom_line(data = fit_belief, aes(x = time, y = Estimate),
+  #           size = 0.6) +
+  scale_x_continuous(breaks = seq(0, 48, 12),
+                     limits = c(0, 48)) +
+  scale_y_continuous(breaks = seq(0, 1, 0.2),
+                     limits = c(0, 1),
+                     expand = c(0, 0)) +
+  scale_color_manual(values = grouping_pal, 
+                     name = "Article rating", 
+                     labels = c("False/Misleading", "True")) +
+  xlab("Time since first article share (hrs.)") +
+  ylab("Beliefs per exposure") +
+  facet_grid(article_lean~source_type,
+             scales = "free_y") +
+  theme_ctokita() +
+  theme(legend.position = "none",
+        aspect.ratio = NULL)
+
+gg_belief_rate_exposure_source
+ggsave(gg_belief_rate_exposure_source, filename = "output/belief/veracity/beliefs_per_exposure_sourceandveracityandlean.pdf", width = 90, height = 120, units = "mm", dpi = 400)
+
+
+####################
 # Relative cumulative belief over first 24 hours
 ####################
 gg_24hr_belief <- belief_timeseries %>% 
