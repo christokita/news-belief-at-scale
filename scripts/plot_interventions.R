@@ -324,7 +324,7 @@ gg_example_timeseries_exposure
 ggsave(gg_example_timeseries_exposure, filename = paste0(outpath, "exampleintervention_exposure_article28.pdf"), width = 120, height = 45, units = "mm", dpi = 400)
 
 
-# Exposure
+# Belief
 gg_example_timeseries_belief <- intervention_exposure %>% 
   filter(total_article_number == 28, 
          sharing_reduction == 0.75,
