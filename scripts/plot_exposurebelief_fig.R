@@ -293,6 +293,99 @@ gg_exposebelief_total_article
 ggsave(gg_exposebelief_total_article, filename = "output/belief/veracity/combined_total_beliefANDexposure_byarticlelean.pdf", width = 135, height = 90, units = "mm", dpi = 400)
 
 
+####################
+# PLOT: Difference in exposure and belief between T and F/M News
+####################
+# Calculate cumulative distribution of exposure and belief
+bins <- seq(-5.5, 5.5, 0.5)
+missing_bins <- data.frame("article_fc_rating" = rep(c("False/Misleading news", "True news"), each = length(bins)),
+                           "ideology_bin" = rep(bins, 2))
+
+exposure_belief_diff <- exposure_belief_data %>% 
+  mutate(ideology_bin = ideology_bin + 0.25) %>%  #bins in original data represent left edge
+  merge(missing_bins, by = c("ideology_bin", "article_fc_rating"), all = TRUE) %>% 
+  group_by(article_fc_rating) %>% 
+  arrange(article_fc_rating, ideology_bin) %>% 
+  mutate(exposure_count = replace_na(exposure_count, 0),
+         belief_count = replace_na(belief_count, 0), 
+         exposure_pct = exposure_count / sum(exposure_count),
+         belief_pct = belief_count / sum(belief_count),
+         diff_pct = belief_pct - exposure_pct,
+         ratio_pct = belief_pct / exposure_pct - 1,
+         exposure_cumulative = cumsum(exposure_count),
+         belief_cumulative = cumsum(belief_count),
+         exposure_cdf = exposure_cumulative / max(exposure_cumulative),
+         belief_cdf = belief_cumulative / max(belief_cumulative),
+         diff_cdf = belief_cdf - exposure_cdf)
+
+
+# Plot CDF
+gg_cdf <- exposure_belief_diff %>% 
+  select(article_fc_rating, ideology_bin, exposure_cdf, belief_cdf) %>% 
+  gather(key = "cdf_type", value = "cdf", -article_fc_rating, -ideology_bin) %>% 
+  ggplot(., aes(x = ideology_bin, y =cdf, color = article_fc_rating, shape = cdf_type, linetype = cdf_type)) +
+  geom_line(size = 0.6) +
+  geom_point(size = 1.5, fill = "white") +
+  scale_x_continuous(breaks = seq(-6, 6, 2)) +
+  scale_color_manual(values = grouping_pal) +
+  scale_shape_manual(values = c(19, 21)) +
+  xlab("User ideology") +
+  ylab("Cumulative probability") +
+  theme_ctokita()
+
+gg_cdf
+
+# Plot Q-Q plot of CDF
+gg_qq_cdf <- ggplot(exposure_belief_diff, aes(x = exposure_cdf, y = belief_cdf, color = article_fc_rating)) +
+  geom_abline(aes(slope = 1, intercept = 0), size = 0.3, linetype = "dotted") +
+  geom_point(size = 2) +
+  scale_color_manual(values = grouping_pal) +
+  theme_ctokita()
+
+gg_qq_cdf
+
+# Plot ideology bin % of exposure vs % of belief
+gg_pct_exposurebelief <- ggplot(exposure_belief_diff, aes(x = exposure_pct, y = belief_pct, color = ideology_bin)) +
+  geom_abline(aes(slope = 1, intercept = 0), size = 0.3, linetype = "dotted") +
+  geom_point(size = 3, stroke = 0) +
+  # scale_color_manual(values = grouping_pal) +
+  scale_x_continuous(breaks = seq(0, 0.2, 0.1), limits = c(0, 0.21)) +
+  scale_y_continuous(breaks = seq(0, 0.2, 0.1), limits = c(0, 0.21)) +
+  scale_color_gradientn(colors = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish, name = "User ideology") +
+  scale_shape_manual(values = c(19, 0)) +
+  xlab("Proportion of total exposed users") +
+  ylab("Propotion of total believing users") +
+  facet_wrap(~article_fc_rating, ncol = 1, scales = "free") +
+  theme_ctokita() +
+  theme(panel.spacing = unit(0.5, "mm"))
+
+gg_pct_exposurebelief
+ggsave(gg_pct_exposurebelief, filename = "output/belief/veracity/belief_vs_exosure/belief_vs_exposure.pdf", height = 90, width = 70, units = "mm", dpi = 400)
+
+# Plot diff in % between exposure and belief by ideology bin
+gg_pctdiff_exposurebelief <- exposure_belief_diff %>% 
+  filter(ideology_bin > -3) %>% 
+  ggplot(., aes(x = ideology_bin, y = diff_pct, color = ideology_bin, fill = ideology_bin)) +
+  geom_bar(stat = "identity", size = 0, width = 0.05) +
+  geom_hline(yintercept = 0, size = 0.3) +
+  geom_point(size = 1.5) +
+  scale_color_gradientn(colors = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
+  scale_fill_gradientn(colors = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
+  scale_x_continuous(breaks = seq(-6, 6, 2), limits = c(-3, 6)) +
+  scale_y_continuous(breaks = seq(-0.025, 0.075, 0.025), labels = seq(1-0.025, 1+0.075, 0.025)) +
+  xlab("User ideology") +
+  ylab("Relative abundance of believing users given exposure") +
+  facet_grid(~article_fc_rating) +
+  theme_ctokita() +
+  theme(legend.position = "none",
+        aspect.ratio = NULL)
+
+gg_pctdiff_exposurebelief
+
+# Statistical test
+exposure_ideol$count[exposure_ideol$article_fc_rating == "False/Misleading news"]
+ks.test(exposure_ideol$count[exposure_ideol$article_fc_rating == "False/Misleading news"], belief_ideol$count[belief_ideol$article_fc_rating == "False/Misleading news"])
+
 
 ######################################## Exposure/Belief Over Time ########################################
 
