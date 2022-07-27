@@ -219,7 +219,7 @@ gg_exposebelief_total_source <- ggplot(exposure_belief_data, aes(x = ideology_bi
   #Plot params
   scale_x_continuous(limits = c(-6, 6), 
                      expand = c(0, 0), 
-                     breaks = seq(-6, 6, 2)) +
+                     breaks = seq(-6, 6, 3)) +
   scale_y_continuous(expand = c(0, 0), 
                      labels = comma) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
@@ -230,10 +230,10 @@ gg_exposebelief_total_source <- ggplot(exposure_belief_data, aes(x = ideology_bi
   theme(legend.position = "none",
         aspect.ratio = NULL,
         panel.spacing = unit(5, "mm")) +
-  facet_grid(article_fc_rating~source_lean, scale = 'free_y')
+  facet_grid(article_fc_rating~source_lean, scale = 'free')
 gg_exposebelief_total_source
 
-ggsave(gg_exposebelief_total_source, filename = "output/belief/veracity/combined_total_beliefANDexposure_bysourcelean.pdf", width = 135, height = 90, units = "mm", dpi = 400)
+ggsave(gg_exposebelief_total_source, filename = "output/belief/veracity/combined_total_beliefANDexposure_bysourcelean.pdf", width = 90, height = 80, units = "mm", dpi = 400)
 
 
 ####################
@@ -276,7 +276,7 @@ gg_exposebelief_total_article <- ggplot(exposure_belief_data, aes(x = ideology_b
   #Plot params
   scale_x_continuous(limits = c(-6, 6), 
                      expand = c(0, 0), 
-                     breaks = seq(-6, 6, 2)) +
+                     breaks = seq(-6, 6, 3)) +
   scale_y_continuous(expand = c(0, 0),
                      labels = comma) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
@@ -290,7 +290,7 @@ gg_exposebelief_total_article <- ggplot(exposure_belief_data, aes(x = ideology_b
   facet_grid(article_fc_rating~article_lean, scale = 'free_y')
 gg_exposebelief_total_article
 
-ggsave(gg_exposebelief_total_article, filename = "output/belief/veracity/combined_total_beliefANDexposure_byarticlelean.pdf", width = 135, height = 90, units = "mm", dpi = 400)
+ggsave(gg_exposebelief_total_article, filename = "output/belief/veracity/combined_total_beliefANDexposure_byarticlelean.pdf", width = 90, height = 90, units = "mm", dpi = 400)
 
 
 ####################
