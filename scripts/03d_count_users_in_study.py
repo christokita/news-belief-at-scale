@@ -37,12 +37,7 @@ tweets = tweets[tweets.total_article_number > 10].copy()
 
 # Count up tweets and unique tweeters
 n_tweets = tweets.shape[0]
-n_fm_tweets = tweets[tweets.article_fc_rating == 'FM'].shape[0]
 n_tweeters = tweets['user_id'].unique().shape[0]
-n_fm_tweeters = tweets['user_id'][tweets.article_fc_rating == 'FM'].unique().shape[0]
-
-# List of FM tweeters for reference
-fm_tweeters = tweets['user_id'][tweets.article_fc_rating == 'FM'].unique()
 
 ####################
 # Count up followers
@@ -50,7 +45,6 @@ fm_tweeters = tweets['user_id'][tweets.article_fc_rating == 'FM'].unique()
 follower_files = os.listdir(data_directory + "data/followers/")
 follower_files = [file for file in follower_files if re.match('^[0-9]', file)] #filter out hidden copies of same files
 followers = np.array([], dtype = 'int64')
-fm_followers = np.array([], dtype = 'int64')
 
 # Loop through user IDs and add to list followers
 for user_id in tweets['user_id'].unique():
@@ -62,20 +56,16 @@ for user_id in tweets['user_id'].unique():
         follower_list = np.genfromtxt(data_directory + "data/followers/" + file[0], dtype = 'int64')
         follower_list = follower_list[1:len(follower_list)] #remove header, will raise error if empty
         followers = np.append(followers, follower_list)
-        if user_id in fm_tweeters: #if a FM tweeter, add their followers to the separate list as well
-            fm_followers = np.append(fm_followers, follower_list)
         del follower_list
     except:
         continue
         
 # Get unique of lists
 followers = np.unique(followers)        
-fm_followers = np.unique(fm_followers)
 
 # Count up unique followers
 n_followers = len(followers)
-n_fm_followers = len(fm_followers)
-del followers, fm_followers
+del followers
 
 ####################
 # Count up friends
@@ -83,7 +73,6 @@ del followers, fm_followers
 friend_files = os.listdir(data_directory + "data/friends/")
 friend_files = [file for file in friend_files if re.match('^[0-9]', file)] #filter out hidden copies of same files
 friends = np.array([], dtype = 'int64')
-fm_friends = np.array([], dtype = 'int64')
 
 # Loop through user IDs and add to list followers
 for user_id in tweets['user_id'].unique():
@@ -95,31 +84,24 @@ for user_id in tweets['user_id'].unique():
         friend_list = np.genfromtxt(data_directory + "data/friends/" + file[0], dtype = 'int64')
         friend_list = friend_list[1:len(friend_list)] #remove header, will raise error if empty
         friends = np.append(friends, friend_list)
-        if user_id in fm_tweeters: #if a FM tweeter, add their followers to the separate list as well
-            fm_friends = np.append(fm_friends, friend_list)
         del friend_list
     except:
         continue
         
 # Get unique of lists
 friends = np.unique(friends)        
-fm_friends = np.unique(fm_friends)
 
 # Count up unique followers
 n_friends = len(friends)
-n_fm_friends = len(fm_friends)
-del friends, fm_friends
+del friends
 
 
 ####################
 # Ouatput summary
 #################### 
-unique_users = pd.DataFrame({'study_object': ["Tweets", "FM tweets", 
-                                           "Tweeters", "FM tweeters", 
-                                           "Followers", "FM followers",
-                                           "Friends", "FM friends"], 
-                             'unique_count': [n_tweets, n_fm_tweets,
-                                              n_tweeters, n_fm_tweeters, 
-                                              n_followers, n_fm_followers,
-                                              n_friends, n_fm_friends]})
+unique_users = pd.DataFrame({'study_object': ["Tweets", "Tweeters", "Followers", "Friends"], 
+                             'unique_count': [n_tweets,
+                                              n_tweeters, 
+                                              n_followers,
+                                              n_friends]})
 unique_users.to_csv(outpath + "summary_users_in_study.csv", index = False)
