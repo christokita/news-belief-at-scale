@@ -146,8 +146,8 @@ gg_exposure_decrease <- ggplot(relative_effect, aes(x = intervention_time, y = m
   geom_bar(stat = "identity", 
            color = NA,
            width = 0.8) +
-  scale_x_continuous(breaks = seq(1, 12, 1),
-                     limits = c(0, 13),
+  scale_x_continuous(breaks = seq(0, 12, 1),
+                     limits = c(-1, 13),
                      expand = c(0, 0)) +
   scale_y_continuous(breaks = seq(0, 1, 0.2), 
                      limits = c(0, 1), 
@@ -221,8 +221,8 @@ gg_belief_decrease <- ggplot(relative_effect, aes(x = intervention_time, y = mea
   geom_bar(stat = "identity", 
            color = NA,
            width = 0.8) +
-  scale_x_continuous(breaks = seq(1, 12, 1),
-                     limits = c(0, 13),
+  scale_x_continuous(breaks = seq(0, 12, 1),
+                     limits = c(-1, 13),
                      expand = c(0, 0)) +
   scale_y_continuous(breaks = seq(0, 1, 0.2), 
                      limits = c(0, 1), 
@@ -354,5 +354,4 @@ gg_example_timeseries_belief <- intervention_exposure %>%
         legend.title = element_text(vjust = -1))
 gg_example_timeseries_belief
 ggsave(gg_example_timeseries_belief, filename = paste0(outpath, "exampleintervention_belief_article28.pdf"), width = 120, height = 45, units = "mm", dpi = 400)
-
 
