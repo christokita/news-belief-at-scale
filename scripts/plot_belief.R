@@ -290,6 +290,12 @@ belief_per_exposure <- belief_timeseries %>%
   mutate(belief_per_exposure = new_believing_users / new_exposed_users) %>% 
   filter(time >= 0 & time <= 48)
 
+# Quick average for paper: belief-per-exposure upon publication
+belief_per_exposure %>% 
+  filter(time == 0) %>% 
+  group_by(!!sym(grouping)) %>% 
+  summarise(mean_rate = mean(belief_per_exposure, na.rm = T))
+
 # Fit bayesian trend line of belief-per-exposure over time
 if (grouping == "article_fc_rating") {
   belief_split <- belief_per_exposure %>% 
@@ -492,15 +498,22 @@ ggsave(gg_belief_rate_exposure_source, filename = "output/belief/veracity/belief
 
 
 ####################
-# Relative cumulative belief over first 24 hours
+# Relative cumulative belief over first 48 hours
 ####################
-gg_24hr_belief <- belief_timeseries %>% 
-  # Prep data
+missing_hour_bins <- expand_grid(total_article_number = unique(belief_timeseries$total_article_number), 
+                                 hour_bin = seq(0, 48, 1))
+
+gg_48hr_belief <- belief_timeseries %>% 
+  # Remove articles that didn't expose anyone
+  filter(!is.na(relative_cumulative_belief)) %>% 
+  # Add in missing hour bins
   filter(time >= 0 & time <= 48) %>% 
-  group_by(total_article_number) %>% 
-  arrange(time) %>% 
-  mutate(relative_cumulative_exposed = cumulative_exposed / max(cumulative_exposed),
-         relative_cumulative_belief = cumulative_believing / max(cumulative_believing)) %>% 
+  merge(missing_hour_bins, by = c("total_article_number", "hour_bin"), all = TRUE) %>% 
+  fill(relative_cumulative_belief, !!sym(grouping)) %>% 
+  # Prep data
+  group_by(!!sym(grouping), hour_bin, total_article_number) %>% 
+  summarise(relative_cumulative_belief = max(relative_cumulative_belief, na.rm = TRUE)) %>% 
+  ungroup() %>% 
   group_by(!!sym(grouping), hour_bin) %>% 
   summarise(mean_relative_cumulative_belief = mean(relative_cumulative_belief, na.rm = TRUE),
             sd_belief = sd(relative_cumulative_belief, na.rm = TRUE)) %>% 
@@ -512,26 +525,23 @@ gg_24hr_belief <- belief_timeseries %>%
   geom_line(size = 0.6) +
   xlab("Hours since first article share") +
   ylab("Relative cumulative belief") +
-  scale_x_continuous(breaks = seq(0, 24, 6),
-                     limits = c(0, 24)) +
+  scale_x_continuous(breaks = seq(0, 48, 12),
+                     limits = c(0, 48)) +
   scale_y_continuous(breaks = seq(0, 1, 0.25), 
                      labels = c("0.0", "", "0.5", "", "1.0"),
                      expand = c(0, 0), 
                      limits = c(0, 1)) +
   scale_color_manual(values = grouping_pal, name = "Article rating", labels = c("False/Misleading", "True")) +
   scale_fill_manual(values = grouping_pal, name = "Article rating", labels = c("False/Misleading", "True")) +
-  # facet_wrap(as.formula(paste("~", grouping)),
-  #            ncol = 1,
-  #            strip.position = "top") +
   theme_ctokita() +
   theme(legend.position = c(0.75, 0.2))
   
-gg_24hr_belief
-ggsave(gg_24hr_belief, filename = paste0(outpath, "relative_cumulative_belief.pdf"), width = 45, height = 45, units = "mm", dpi = 400)
+gg_48hr_belief
+ggsave(gg_48hr_belief, filename = paste0(outpath, "relative_cumulative_belief.pdf"), width = 45, height = 45, units = "mm", dpi = 400)
 
 
 # Just raw article data
-gg_24hr_belief <- belief_timeseries %>% 
+gg_48hr_belief <- belief_timeseries %>% 
   ggplot(., aes(x = time, y = relative_cumulative_belief, color = !!sym(grouping), group = total_article_number)) +
   geom_line(size = 0.6, alpha = 0.15) +
   xlab("Hours since first article share") +
@@ -549,7 +559,7 @@ gg_24hr_belief <- belief_timeseries %>%
   theme_ctokita() +
   theme(legend.position = c(0.75, 0.2))
 
-gg_24hr_belief
+gg_48hr_belief
 
 
 ####################
