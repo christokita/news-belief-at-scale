@@ -374,3 +374,98 @@ gg_fake_exposure_article <- exposure_ideol %>%
   facet_wrap(~total_article_number)
 gg_fake_exposure_article
 ggsave(gg_fake_exposure_article, filename = paste0(outpath, "fake_news_exposure_by_article.pdf"), width = 180, height = 180, units = "mm", dpi = 400)
+
+
+####################
+# Cross-ideology exposure vs. tweeter ideology
+####################
+# Re-load exposure data 
+exposure_data <- read.csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/exposure/estimated_users_exposed_over_time.csv', 
+                          header = TRUE, colClasses = c("user_id"="character", "tweet_id"="character")) %>% 
+  filter(total_article_number > 10) %>% #discard first 10 articles from analysis
+  mutate(tweet_number = tweet_number+1) %>%  #python zero index
+  rename(time = relative_time) %>% 
+  arrange(total_article_number, tweet_number)
+
+# Add in user_ideology
+user_ideologies <- read.csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv') %>% 
+  select(user_id, user_ideology) %>% 
+  distinct()
+
+exposure_by_ideology <- user_ideologies %>% 
+  merge(exposure_data, by = "user_id", all.y = TRUE) %>% 
+  mutate(bin = cut(user_ideology, breaks = seq(-5.5, 5.5, 0.5)))%>% 
+  mutate(lower_edge = as.numeric( gsub("^[^0-9]([-\\.0-9]+),.*", "\\1", bin, perl = TRUE) ),
+         upper_edge = as.numeric( gsub(".*,([-\\.0-9]+)[^0-9]$", "\\1", bin, perl = TRUE) )) %>% 
+  mutate(user_ideology_bin = (lower_edge + upper_edge) / 2) %>% 
+  select(-bin, -lower_edge, -upper_edge)
+
+# Calculate left-vs-right exposure by tweet
+exposure_by_ideology <- exposure_by_ideology %>% 
+  mutate(exposed_left = ideol_.3.0_.2.5 + ideol_.2.5_.2.0 + ideol_.2.0_.1.5 + ideol_.1.5_.1.0 + ideol_.1.0_.0.5 + ideol_.0.5_0.0,
+         exposed_right = ideol_0.0_0.5 + ideol_0.5_1.0 + ideol_1.0_1.5 + ideol_1.5_2.0 + ideol_2.0_2.5 + ideol_2.5_3.0 + ideol_3.0_3.5 + ideol_3.5_4.0 + ideol_4.0_4.5 + ideol_4.5_5.0 + ideol_5.0_5.5) %>%
+  mutate(cross_exposure = ifelse(user_ideology < 0, exposed_right, exposed_left),
+         cross_exposure_percent = cross_exposure / (exposed_left + exposed_right)) 
+  # select(time, tweet_number, tweet_id, user_id, user_ideology, user_ideology_bin, follower_count, new_exposed_users, cumulative_exposed, total_article_number, exposed_left, exposed_right, cross_exposure, cross_exposure_percent)
+
+cross_exposure_data <- exposure_by_ideology %>% 
+  group_by(user_ideology_bin) %>% 
+  summarise(total_tweets = length(cross_exposure),
+            cross_exposure_sum = sum(cross_exposure, na.rm = TRUE),
+            cross_exposure_per_tweet = cross_exposure_sum / total_tweets,
+            cross_exposure_percent_avg = mean(cross_exposure_percent, na.rm = TRUE))
+
+# Plot average cross-ideology exposure per tweet
+gg_crossexposure <- ggplot(cross_exposure_data, aes(x = user_ideology_bin, y = cross_exposure_per_tweet, fill = user_ideology_bin)) +
+  geom_bar(stat = "identity") +
+  geom_vline(xintercept = 0, linetype = "dotted", size = 0.3) +
+  scale_x_continuous(limits = c(-3, 5), 
+                     expand = c(0, 0), 
+                     breaks = seq(-6, 6, 1)) +
+  scale_y_continuous(limits = c(0, 12000),
+                     expand = c(0, 0),
+                     labels = scales::comma) +
+  scale_fill_gradientn(colors = ideol_pal, limits = c(-ideol_limit, ideol_limit), oob = scales::squish) +
+  xlab("Tweeter ideology") +
+  ylab("Avg. cross-ideology\nexposure per tweet") +
+  theme_ctokita() +
+  theme(legend.position = "none")
+
+gg_crossexposure
+ggsave(gg_crossexposure, filename = "output/exposure/avg_crossideology_exposure.pdf", width = 55, height = 45, units = "mm", dpi = 400)
+
+
+# Plot standard deviation of exposure
+exposure_diversity <- exposure_by_ideology %>% 
+  select(user_ideology_bin, user_id, tweet_id, ideol_.3.0_.2.5:ideol_5.0_5.5) %>% 
+  gather("bin", "count", -user_ideology_bin, -user_id, -tweet_id) %>% 
+  mutate(bin = gsub("_\\.", "_-", bin)) %>% 
+  mutate(lower_edge = as.numeric( gsub("^ideol_([-\\.0-9]+)_.*$", "\\1", bin, perl = TRUE) ),
+         upper_edge = as.numeric( gsub("^ideol_[-\\.0-9]+_([-\\.0-9]+)$", "\\1", bin, perl = TRUE) )) %>% 
+  mutate(exposed_bin = (lower_edge + upper_edge) / 2) %>% 
+  select(-bin, -lower_edge, -upper_edge) %>% 
+  mutate(weighted_ideol = exposed_bin * count) %>% 
+  group_by(tweet_id, user_ideology_bin) %>% 
+  summarise(exposure_mean = sum(weighted_ideol) / sum(count),
+            exposure_sd = sqrt( sum((exposed_bin - exposure_mean)^2 * count) / sum(count) ) )
+
+gg_exposure_sd <- exposure_diversity %>% 
+  ggplot(., aes(x = user_ideology_bin, y = exposure_sd, fill = user_ideology_bin, group = user_ideology_bin)) +
+  geom_violin(size = 0, color = NA) +
+  stat_summary(fun.y = mean, geom = "point", size = 0.7, color = "white") +
+  geom_vline(xintercept = 0, linetype = "dotted", size = 0.3) +
+  scale_x_continuous(limits = c(-3, 5), 
+                     expand = c(0, 0), 
+                     breaks = seq(-6, 6, 1)) +
+  scale_y_continuous(limits = c(0, 2),
+                     breaks = seq(0, 3, 0.5),
+                     expand = c(0, 0),
+                     labels = scales::comma) +
+  scale_fill_gradientn(colors = ideol_pal, limits = c(-ideol_limit, ideol_limit), oob = scales::squish) +
+  xlab("Tweeter ideology") +
+  ylab("Standard deviation of\nideologies exposed per tweet") +
+  theme_ctokita() +
+  theme(legend.position = "none")
+
+gg_exposure_sd
+ggsave(gg_exposure_sd, filename = "output/exposure/exposure_ideology_diversity.pdf", width = 55, height = 45, units = "mm", dpi = 400)
