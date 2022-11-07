@@ -32,6 +32,8 @@ Most of this project is written in Python. Python scripts are used to construct 
 * `news-belief-at-scale.Rproj`: R project for easier running of plotting scripts.
 
 ### Structure of the code
+
+#### The main analysis and data visualization scripts
 Python scripts are named with a leading number that indicates the order in which they should be run, e.g., `01_parse_tweets.py`. Thus, the python script are structured in the analysis pipeline for the paper. The general steps of the pipeline are as follows:
 
 1. Parsing tweet data
