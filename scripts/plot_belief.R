@@ -292,7 +292,13 @@ belief_per_exposure <- belief_timeseries %>%
 
 # Quick average for paper: belief-per-exposure upon publication
 belief_per_exposure %>% 
-  filter(time == 0) %>% 
+  filter(time < 1) %>% 
+  group_by(!!sym(grouping)) %>% 
+  summarise(mean_rate = mean(belief_per_exposure, na.rm = T))
+
+belief_per_exposure %>% 
+  filter(time < 24) %>% 
+  filter(time >= 23) %>% 
   group_by(!!sym(grouping)) %>% 
   summarise(mean_rate = mean(belief_per_exposure, na.rm = T))
 
