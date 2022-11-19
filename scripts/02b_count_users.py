@@ -1,18 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Tue Apr 14 10:44:52 2020
+Name: `02b_count_users.py`
+Date: April 14, 2020
+Author: Chris Tokita
+Purpose: Count ALL (even those not used in study) user lists in our dataset---i.e., tweeters, followers, friends.
 
-@author: ChrisTokita
+Data In: 
+    `<data storage location>/data_derived/tweets/tweets_parsed.csv`: Consolidated tweet dataframe from `01_parse_tweets.py`.
+    `<data storage location>/data_derived/followers/`: consolidated follower lists from `02a_parse_users.py` containing Twitter user IDs of followers.
+    `<data storage location>/data_derived/friends/`: consolidated friend lists from `02a_parse_users.py` containing Twitter user IDs of friends.
 
-SCRIPT
-Parse user data to determine the unique number and IDs of all users (and user types) of all the tracked articles.
-In later script 03c_count_users_in_study.py we will count only the users user in the study (we exclude the first 10 articles from analysis).
-This script uses a high performance computing cluster, assuming a slurm-based scheduling system.
+Data Out: `<external harddrive>/data_derived/summary_unique_users.csv`
+    CSV file summarizing the number of unique tweeters, friends, and followers in our complete dataset, 
+    before filtering out data that won't be used in study.
 
-NOTE:
-Normally, I would handle IDs as strings, but counting such large number is slow. 
-I handled as int64 explicitly and hand checking suggets this is still good! 
+Machine: High-performance computing cluster
+    This script is batched to the cluster using `slurm_scripts/count_users.cmd`
 """
 
 ####################

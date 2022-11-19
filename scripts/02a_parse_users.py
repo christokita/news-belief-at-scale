@@ -1,17 +1,26 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri Apr 17 15:14:12 2020
+Name: `02a_parse_users.py`
+Date: April 17, 2020
+Author: Chris Tokita
+Purpose: Parse ALL (even those not used in study) user lists in our dataset---i.e., tweeters, followers, friends---and compile into consolidated lists in preparation for counting.
+Details:
+    This script processes the large amount of user data in parallel chunks.
+    Each batch focuses on a certain chunk of unique tweeters and compiles their friend/follower lists.
+    The chunk number is passed to the script from the bash scrip that submits and runs the script on cluster.
 
-@author: ChrisTokita
+Data In: `<data storage location>/data_derived/tweets/tweets_parsed.csv`
+    (Data is currently stored on external harddrive.)
+    Consolidated tweet dataframe from `01_parse_tweets.py`.
 
-SCRIPT:
-Determine who shared news articles and who their firnds and followers are 
+Data Out: `<external harddrive>/data_derived/friends/`
+          `<external harddrive>/data_derived/followers/`
+    CSV file containing a consolidated friend/follower lists for a subset of tweeters.
+    Each consolidated list is simply a list of Twitter user IDs.
 
-Note: 
-The overall logic of this script is to 
-(1) load in user IDs as int64 to prevent truncation. 
-(2) convert to str?
+Machine: High-performance computing cluster
+    This script is batched to the cluster using `slurm_scripts/parse_users.cmd`
 """
 
 ####################
@@ -31,23 +40,23 @@ i = int(sys.argv[1]) # get which chunk of the
 data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/"
 
 ####################
-# load data
+# Load data
 ####################
+# Load compiled tweet dataset
 tweets = pd.read_csv(data_directory + "data_derived/tweets/tweets_parsed.csv",
                      dtype = {'quoted_urls': object, 'quoted_urls_expanded': object, #these two columns cause memory issues if not pre-specified dtype
                               'user_id': object, 'tweet_id': object, 
                               'retweeted_user_id': object, 'retweet_id': object,
                               'quoted_user_id': object, 'quoted_id': object})
-tweeters = tweets['user_id']
 
-####################
-# Determine how many users were potentially exposed to these articles
-####################
-# Take chunk of FM article tweeters and combine followers
+# Determine which set of users to analyze
+tweeters = np.unique(tweets.user_id)
 step_size = math.ceil(len(tweeters) / 300)
 tweeters = tweeters[ (step_size*i) : (step_size*(i+1)) ]
-tweeters = np.unique(tweeters) 
 
+####################
+# Compile all followers of our tweeters
+####################
 # loop through files and get set of unique followers who were exposed to the article
 follower_files = os.listdir(data_directory + "data/followers/")
 follower_files = [file for file in follower_files if re.match('^[0-9]', file)] #filter out hidden copies of same files
@@ -76,7 +85,7 @@ del followers, no_follower_list
 
 
 ####################
-# Determine the friends of tweeters (i.e., who they are following)
+# Compile all friends of tweeters (i.e., who they are following)
 ####################
 # loop through friend files and get set of unique followers who were exposed to the article
 friend_files = os.listdir(data_directory + "data/friends/")

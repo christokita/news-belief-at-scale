@@ -1,12 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri Apr  3 16:14:18 2020
+Name: `01_parse_tweets.py`
+Date: April 3, 2020
+Author: Chris Tokita
+Purpose: Parse the JSON files containing tweet data, turn it into a pandas dataframe, and write to csv.
 
-@author: ChrisTokita
+Data In: `<data storage location>/data/tweets/` 
+    (Data is currently stored on external harddrive.)
+    JSON files containing tweet data pulled direclty from Twitter API.
 
-SCRIPT:
-Looking at tweet data
+Data Out: `<data storage location>/data_derived/tweets/`
+    The CSV file contains the extracted tweet information in a flat, dataframe format.
+
+Machine: Chris' laptop
 """
 
 ####################
