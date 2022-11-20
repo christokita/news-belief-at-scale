@@ -1,15 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Mon Aug 17 11:56:51 2020
+Name: `03d_count_users_in_study.py`
+Date: August 17, 2020
+Author: Chris Tokita
+Purpose: Count the unique Twitter users (tweeters, friends, followers) in our study.
+Details:
+    (Copies of data are currently stored on external harddrive and high-performance cluster.)
+    The study excludes the first 10 articles from analysis.
+    For counting purposes, int64 is faster than handling IDs as str/object.
 
-@author: ChrisTokita
+Data In: CSV files of tweets, all tweeters friend lists, and all tweeter follower lists
+    `<data storage location>/data_derived/tweets/tweets_labeled.csv`
+    `<data storage location>/data/followers/`
+    `<data storage location>/data/friends/`
 
-SCRIPT
-Count just the users in our study. We exclude the first 10 articles from analysis.
+Data Out: CSV summarizing number of unique tweeters, friends, and followers that will be included in our study.
+    `<data storage location>/data_derived/summary_users_in_study.csv`
 
-NOTE
-Again, for counting purposes, int64 is faster than handling IDs as str/object.
+Machine: High-performance computing cluster
+    This script is batched to the cluster using `slurm_scripts/count_users_in_study.cmd`
 """
 
 ####################
@@ -97,7 +107,7 @@ del friends
 
 
 ####################
-# Ouatput summary
+# Output summary
 #################### 
 unique_users = pd.DataFrame({'study_object': ["Tweets", "Tweeters", "Followers", "Friends"], 
                              'unique_count': [n_tweets,

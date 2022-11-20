@@ -1,15 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Sun Jul 26 12:11:34 2020
+Name: `03c_finalize_tweet_data.py`
+Date: July 26, 2020
+Author: Chris Tokita
+Purpose: Finalize our tweet dataset for the study.
+Details:
+    (Copies of data are currently stored on external harddrive and high-performance cluster.)
+    This script will do two main things:
+        (1) Manually confirm/label tweets that still are not associated with a particular article ID
+        (2) Filter our tweets to only those that fall within a one-week window after the first article share.
 
-@author: ChrisTokita
+Data In: CSV file of tweets with added tweeter ideology and article information, but where some tweets still need to be matched to an article.
+    `<data storage location>/data_derived/tweets/tweets_labeled_pre_manual_match.csv`
 
-Script:
-Finalize our tweet dataset.
-This script will do two main things:
-    (1) Manually confirm/label tweets that still are not associated with a particular article ID
-    (2) Filter our tweets to only those that fall within a one-week window after the first article share.
+Data Out: CSV containing fully labeled (all matched to article and having tweeter ideology and article metadata) tweet dataset for the study.
+    `<data storage location>/data_derived/tweets/tweets_labeled.csv`
+
+Machine: Chris' laptop
 """
 
 import pandas as pd
