@@ -1,12 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Thu Apr 30 16:15:11 2020
+Name: `03b_add_tweet_metadata.py`
+Date: April 30, 2020
+Author: Chris Tokita
+Purpose: Add user ideology and article-level data to tweet data.
+Details:
+    (Copies of data are currently stored on external harddrive and high-performance cluster.)
+    This script will also calculate the missing ideology scores for tweeters by using the ideology of their friends.
 
-@author: ChrisTokita
+Data In: CSV files containing article information, tweets, and tweeter/friend ideology scores.
+    `<data storage location>/data/articles/daily_articles.csv`
+    `<data storage location>/data_derived/tweets/tweets_parsed.csv`
+    `<data storage location>/data_derived/ideological_scores/cleaned_tweeter_ideology_scores.csv`
+    `<data storage location>/data_derived/ideological_scores/cleaned_friends_ideology_scores.csv`
 
-SCRIPT:
-Add user ideology and article-level data to tweet data.
+Data Out: CSV file containing tweets with filled in twitter ideology and article metadata, although some are still missing matched article information.
+    `<data storage location>/data_derived/tweets/tweets_labeled_pre_manual_match.csv`
+
+Machine: High-performance computing cluster
+    This script is batched to the cluster using `slurm_scripts/add_tweet_metadata.cmd`
 """
 
 ####################

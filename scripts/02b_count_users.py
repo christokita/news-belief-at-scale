@@ -5,15 +5,16 @@ Name: `02b_count_users.py`
 Date: April 14, 2020
 Author: Chris Tokita
 Purpose: Count ALL (even those not used in study) user lists in our dataset---i.e., tweeters, followers, friends.
+Details:
+    (Copies of data are currently stored on external harddrive and high-performance cluster.)
 
 Data In: 
     `<data storage location>/data_derived/tweets/tweets_parsed.csv`: Consolidated tweet dataframe from `01_parse_tweets.py`.
     `<data storage location>/data_derived/followers/`: consolidated follower lists from `02a_parse_users.py` containing Twitter user IDs of followers.
     `<data storage location>/data_derived/friends/`: consolidated friend lists from `02a_parse_users.py` containing Twitter user IDs of friends.
 
-Data Out: `<external harddrive>/data_derived/summary_unique_users.csv`
-    CSV file summarizing the number of unique tweeters, friends, and followers in our complete dataset, 
-    before filtering out data that won't be used in study.
+Data Out: CSV file summarizing the number of unique tweeters, friends, and followers in our complete dataset, before filtering out data that won't be used in study.
+    `<data storage location>/data_derived/summary_unique_users.csv`
 
 Machine: High-performance computing cluster
     This script is batched to the cluster using `slurm_scripts/count_users.cmd`

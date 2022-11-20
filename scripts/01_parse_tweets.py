@@ -5,13 +5,14 @@ Name: `01_parse_tweets.py`
 Date: April 3, 2020
 Author: Chris Tokita
 Purpose: Parse the JSON files containing tweet data, turn it into a pandas dataframe, and write to csv.
+Details:
+    (Copies of data are currently stored on external harddrive and high-performance cluster.)
 
-Data In: `<data storage location>/data/tweets/` 
-    (Data is currently stored on external harddrive.)
-    JSON files containing tweet data pulled direclty from Twitter API.
+Data In: JSON files containing tweet data pulled direclty from Twitter API.
+    `<data storage location>/data/tweets/`    
 
-Data Out: `<data storage location>/data_derived/tweets/`
-    The CSV file contains the extracted tweet information in a flat, dataframe format.
+Data Out: The CSV file contains the extracted tweet information in a flat, dataframe format.
+    `<data storage location>/data_derived/tweets/`
 
 Machine: Chris' laptop
 """

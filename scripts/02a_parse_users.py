@@ -6,18 +6,17 @@ Date: April 17, 2020
 Author: Chris Tokita
 Purpose: Parse ALL (even those not used in study) user lists in our dataset---i.e., tweeters, followers, friends---and compile into consolidated lists in preparation for counting.
 Details:
+    (Copies of data are currently stored on external harddrive and high-performance cluster.)
     This script processes the large amount of user data in parallel chunks.
     Each batch focuses on a certain chunk of unique tweeters and compiles their friend/follower lists.
     The chunk number is passed to the script from the bash scrip that submits and runs the script on cluster.
 
-Data In: `<data storage location>/data_derived/tweets/tweets_parsed.csv`
-    (Data is currently stored on external harddrive.)
-    Consolidated tweet dataframe from `01_parse_tweets.py`.
-
-Data Out: `<external harddrive>/data_derived/friends/`
-          `<external harddrive>/data_derived/followers/`
-    CSV file containing a consolidated friend/follower lists for a subset of tweeters.
-    Each consolidated list is simply a list of Twitter user IDs.
+Data In: Consolidated tweet dataframe from `01_parse_tweets.py`.
+    `<data storage location>/data_derived/tweets/tweets_parsed.csv`
+    
+Data Out: CSV file containing a consolidated lists of Twitter user IDs for friend/follower for a subset of tweeters. 
+    `<data storage location>/data_derived/friends/`
+    `<data storage location>/data_derived/followers/`
 
 Machine: High-performance computing cluster
     This script is batched to the cluster using `slurm_scripts/parse_users.cmd`
