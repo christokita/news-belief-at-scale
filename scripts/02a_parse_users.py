@@ -37,7 +37,7 @@ import math
 i = int(sys.argv[1]) # get which chunk of the 
 
 # high level directory (external HD or cluster storage)
-data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/"
+data_directory = "/scratch/gpfs/ctokita/news-belief-at-scale/"
 
 ####################
 # Load data

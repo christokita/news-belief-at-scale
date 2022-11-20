@@ -27,7 +27,7 @@ import numpy as np
 import os
 
 # path to data
-data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/"
+data_directory = "/scratch/gpfs/ctokita/news-belief-at-scale/"
 path_to_tweets = data_directory + "data_derived/tweets/"
 path_to_followers = data_directory + "data_derived/followers/processed_followers/"
 path_tweeters_nofollowers = data_directory + "data_derived/followers/tweeters_nofollowers/"
