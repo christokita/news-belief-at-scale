@@ -1,17 +1,27 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri Jul 24 12:36:49 2020
+Name: `03a_clean_ideology_scores.py`
+Date: July 24, 2020
+Author: Chris Tokita
+Purpose: Compile and format all the ideology scores of followers/friends calcualted by SMaPP.
+Details:
+    (Copies of data are currently stored on external harddrive and high-performance cluster.)
 
-@author: ChrisTokita
+Data In: CSV files containing list of Twitter user IDs and corresponding ideology (Pablo) score.
+    `<data storage location>/data_derived/ideological_scores/`
+        `unique_followers_excl_tweeters--with_scores.csv`
+        `unique_followers_zerohedge--with_scores.csv`
+        `unique_friends_excl_tweeters--with_scores.csv`
+        `unique_tweeters_ideology_scores--with_scores.csv`
 
-SCRIPT:
-Take in the ideology scores of followers/friends from SMAPP and format for use in this project.
+Data Out: CSV files containing compiled and cleaned ideology scores for tweeters, followers, and friends.
+    `<data storage location>/data_derived/ideological_scores/`
+        `cleaned_followers_ideology_scores.csv`
+        `cleaned_friends_ideology_scores.csv`
+        `cleaned_tweeter_ideology_scores.csv`
 
-We had to piece together the ideology lists from disparate sources:
-    (1) the original set of unique friend, followers, tweeters with ideology scores
-    (2) missing accounts that we realized we didn't have friend/follower lists for (these will be tagged with the account name or id)
-    (3) the new set of friend/follower ideology scores from new batch of Covid-19 articles
+Machine: Chris' laptop
 """
 
 import pandas as pd
@@ -33,13 +43,13 @@ def clean_ideology_scores(scores):
 # Load, process, write follower data
 ####################
 # Original list
-followers_original = pd.read_csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ideological_scores/unique_followers_excl_tweeters--with_scores.csv',
+followers_original = pd.read_csv('/Volumes/CKT-DATA/news-belief-at-scale/data_derived/ideological_scores/unique_followers_excl_tweeters--with_scores.csv',
                         dtype = {'user_id': object, 'id_str': object})
 followers_original_cleaned = clean_ideology_scores(followers_original)
 del followers_original
 
-# Missing account list
-followers_zerohedge = pd.read_csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ideological_scores/unique_followers_zerohedge--with_scores.csv',
+# Missing account list: we were previously missing scores for this account's followers, so we calculated them separately
+followers_zerohedge = pd.read_csv('/Volumes/CKT-DATA/news-belief-at-scale/data_derived/ideological_scores/unique_followers_zerohedge--with_scores.csv',
                                   dtype = {'user_id': object})
 followers_zerohedge_cleaned = clean_ideology_scores(followers_zerohedge)
 del followers_zerohedge
@@ -50,24 +60,24 @@ followers_cleaned.shape[0] - followers_original_cleaned.shape[0] #check how many
 del followers_original_cleaned, followers_zerohedge_cleaned
 
 followers_cleaned = followers_cleaned.drop_duplicates(subset = ['user_id']) 
-followers_cleaned.to_csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ideological_scores/cleaned_followers_ideology_scores.csv', index = False)
+followers_cleaned.to_csv('/Volumes/CKT-DATA/news-belief-at-scale/data_derived/ideological_scores/cleaned_followers_ideology_scores.csv', index = False)
 del followers_cleaned
 
 
 ####################
 # Load and clean friend lists
 ####################
-friends = pd.read_csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ideological_scores/unique_friends_excl_tweeters--with_scores.csv',
+friends = pd.read_csv('/Volumes/CKT-DATA/news-belief-at-scale/data_derived/ideological_scores/unique_friends_excl_tweeters--with_scores.csv',
                       dtype = {'user_id': object, 'id_str': object})
 friends_cleaned = clean_ideology_scores(friends)
-friends_cleaned.to_csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ideological_scores/cleaned_friends_ideology_scores.csv', index = False)
+friends_cleaned.to_csv('/Volumes/CKT-DATA/news-belief-at-scale/data_derived/ideological_scores/cleaned_friends_ideology_scores.csv', index = False)
 del friends, friends_cleaned
 
 
 ####################
 # Load and clean tweeter lists
 ####################
-tweeters = pd.read_csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ideological_scores/unique_tweeters_ideology_scores.csv',
+tweeters = pd.read_csv('/Volumes/CKT-DATA/news-belief-at-scale/data_derived/ideological_scores/unique_tweeters_ideology_scores.csv',
                       dtype = {'user_id': object, 'id_str': object})
 tweeters_cleaned = clean_ideology_scores(tweeters)
-tweeters_cleaned.to_csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ideological_scores/cleaned_tweeter_ideology_scores.csv', index = False)
+tweeters_cleaned.to_csv('/Volumes/CKT-DATA/news-belief-at-scale/data_derived/ideological_scores/cleaned_tweeter_ideology_scores.csv', index = False)
