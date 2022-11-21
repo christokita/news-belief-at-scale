@@ -1,12 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri Aug 14 14:36:31 2020
+Name: `06_estimate_belief.py`
+Date: Aug 14, 2020
+Author: Chris Tokita
+Purpose: Estimate the number of people who believed the articles they were exposed to on Twitter.
+Details:
+    (Copies of data are currently stored on external harddrive and high-performance cluster.)
+ 
+Data In: CSV files of the full exposure over time dataframe (including ideologies) and data from experimental survey of belief in tracked news articles.
+    `<data storage location>/data_derived/exposure/estimated_users_exposed_over_time.csv`
+    `<data storage location>/data/article_belief/response_distribution.p`
 
-@author: ChrisTokita
+Data Out: CSV file of belief over time dataframe, including information about the ideologies of believing users.
+    `<data storage location>/data_derived/belief/estimated_belief_over_time.csv`
 
-SCRIPT
-Estimate the number of people who believed the articles they were exposed to on Twitter.
+Machine: High-performance computing cluster
+    This script is batched to the cluster using `slurm_scripts/estimate_belief.cmd`
 """
 
 ####################

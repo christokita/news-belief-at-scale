@@ -8,7 +8,7 @@ Purpose: Estimate what user ideologies were exposed over time to the news articl
 Details:
     (Copies of data are currently stored on external harddrive and high-performance cluster.)
  
-Data In: CSV files the compiled exposure over time dataframe and the known Twitter user ideologies.
+Data In: CSV files of the compiled exposure over time dataframe and the known Twitter user ideologies.
     `<data storage location>/data_derived/exposure/users_exposed_over_time.csv`
     `<data storage location>/data_derived/ideological_scores/cleaned_followers_ideology_scores.csv`
 
