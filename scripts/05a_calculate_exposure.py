@@ -1,16 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-Created on Thu Jul 30 12:00:20 2020
+Name: `05a_calculate_exposure.py`
+Date: July 30, 2020
+Author: Chris Tokita
+Purpose: Estimate exposure to news articles among Twitter users.
+Details:
+    (Copies of data are currently stored on external harddrive and high-performance cluster.)
+ 
+Data In: CSV files of (a) tweets, (b) follower lists, and (c) known user ideologies.
+    (a) `<data storage location>/data_derived/tweets/tweets_labeled.csv`
+    (b) `<data storage location>/data/followers/`
+    (c) `<data storage location>/data_derived/ideological_scores/cleaned_followers_ideology_scores.csv`
 
-@author: ChrisTokita
+Data Out: CSV files of user exposure over time (i.e., by tweet) for each individual article and a compiled exposure over time dataframe.
+    `<data storage location>/data_derived/exposure/individual_articles/`
+    `<data storage location>/data_derived/exposure/users_exposed_over_time.csv`
 
-SCRIPT:
-Determine exposure by political type over time.
+Machine: High-performance computing cluster
+    This script is batched to the cluster using `slurm_scripts/compute_exposure.cmd`
 """
-
 
 ####################
 # Load libraries and packages, set important parameter

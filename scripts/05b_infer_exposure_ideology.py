@@ -1,12 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Mon Aug 24 09:36:18 2020
+Name: `05b_infer_exposure_ideology.py`
+Date: Aug 24, 2020
+Author: Chris Tokita
+Purpose: Estimate what user ideologies were exposed over time to the news articles.
+Details:
+    (Copies of data are currently stored on external harddrive and high-performance cluster.)
+ 
+Data In: CSV files the compiled exposure over time dataframe and the known Twitter user ideologies.
+    `<data storage location>/data_derived/exposure/users_exposed_over_time.csv`
+    `<data storage location>/data_derived/ideological_scores/cleaned_followers_ideology_scores.csv`
 
-@author: ChrisTokita
+Data Out: CSV file of exposure over time dataframe, including information about the user ideologies exposed.
+    `<data storage location>/data_derived/exposure/estimated_users_exposed_over_time.csv`
 
-SCRIPTS
-Exposure over time using inferred distribution of followers. We are determining total exposure.
+Machine: High-performance computing cluster
+    This script is batched to the cluster using `slurm_scripts/estimate_exposure_ideology.cmd`
 """
 
 ####################

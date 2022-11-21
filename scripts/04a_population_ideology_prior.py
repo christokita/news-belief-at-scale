@@ -1,12 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri Aug  28 11:08:00 2020
+Name: `04a_population_ideology_prior.py`
+Date: August 28, 2020
+Author: Chris Tokita
+Purpose: Conduct MCMC bayesian inference of population-level distribution of follower ideology.
+Details:
+    (Copies of data are currently stored on external harddrive and high-performance cluster.)
+    The results of this inference will be used as the prior for the inference of tweeter's follower ideology.
 
-@author: ChrisTokita
+Data In: CSV files of tweets and follower ideologies.
+    `<data storage location>/data_derived/tweets/tweets_labeled.csv`
+    `<data storage location>/data_derived/ideological_scores/cleaned_followers_ideology_scores.csv`
 
-SCRIPT:
-Conduct MCMC bayesian inference of population distribution of follower ideology
+Data Out: CSV files of posterior samples and of the point estimate for Twitter population ideology.
+    `<data storage location>/data_derived/ideological_scores/estimated_ideol_distributions/`
+        `_population_posterior_samples.csv`
+        `_population_MAP_estimate.csv`
+
+Machine: High-performance computing cluster
+    This script is batched to the cluster using `slurm_scripts/compute_population_ideology_dist.cmd`
 """
 
 ####################
