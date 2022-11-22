@@ -1,12 +1,28 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri Oct 16 12:23:28 2020
+Name: `07b_analyze_retweet_networks.py`
+Date: October 16, 2020
+Author: Chris Tokita
+Purpose: Simulate simple platofmr-level interventions to prevent the spread of misinformation on Twitter.
+Details:
+    (Copies of data are currently stored on external harddrive and high-performance cluster.)
+    To fully simulate interventions, we need to essentially rerun the entire exposure/belief estimation pipeline each time.
+    Thus, this is a long script since it needs to figure out which retweets did not occur 
+    and then rerun estimations of exposure/belief under the intervention parameters.
+ 
+Data In: CSV files of (a) tweets, (b) known ideologies of followers, (c) inferred distributions for ideology of tweeters' followers, (d) article belief survey data, (e) article retweet networks.
+    (a) `<data storage location>/data_derived/tweets/tweets_labeled.csv`
+    (b) `<data storage location>/data_derived/ideological_scores/cleaned_followers_ideology_scores.csv`
+    (c) `<data storage location>/data_derived/ideological_scores/estimated_ideol_distributions/follower_ideology_distribution_shapes.csv`
+    (d) `<data storage location>/data/article_belief/response_distribution.p`
+    (e) `<data storage location>/data_derived/networks/specific_article_networks/`
 
-@author: ChrisTokita
+Data Out: CSV files of article tweets and exposure over time under specific intervention parameters (e.g., sharing reduction, visibility reduction, belief reduction)
+    `<data storage location>/data_derived/interventions/{}reduce_sharing{}_visibility{}_belief{}/`
 
-SCRIPT
-Simulate simple interventions to prevent the spread of fake news
+Machine: High-performance computing cluster
+    This script is batched to the cluster using `slurm_scripts/simulate_intervention.cmd`
 """
 
 ####################

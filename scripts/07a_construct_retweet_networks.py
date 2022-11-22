@@ -1,14 +1,27 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Thu Apr 30 16:15:11 2020
+Name: `07a_construct_retweet_networks.py`
+Date: April 30, 2020
+Author: Chris Tokita
+Purpose: Construct the retweet networks of the news articles to determine who retweeted whom.
+Details:
+    (Copies of data are currently stored on external harddrive and high-performance cluster.)
+    Gephi--the network visualization program---needs the coulumns "Source" and "Target" to be capitalized.
+ 
+Data In: CSV files of (a) tweets, (b) article data, (c) manually confirmed article URLs, (d) user exposure data, and (e) tweeter follower ideology data
+    (a) `<data storage location>/data_derived/tweets/tweets_labeled.csv`
+    (b) `<data storage location>/data/articles/daily_articles.csv`
+    (c) `<data storage location>/data_derived/articles/manuallyconfirmed_unmatched_urls.csv`
+    (d) `<data storage location>/data_derived/exposure/users_exposed_over_time.csv`
+    (e) `<data storage location>/data_derived/ideological_scores/estimated_ideol_distributions/follower_ideology_distribution_shapes.csv`
 
-@author: ChrisTokita
+Data Out: CSV files of retweet network edges and nodes.
+    `<data storage location>/data_derived/networks/rtnetwork_edges.csv`
+    `<data storage location>/data_derived/networks/rtnetwork_nodes.csv`
 
-SCRIPT:
-Construct the rewteet network of fake news articles
-
-Note: normally I prefer columns to all have lowercase names, but Gephi needs "Source" and "Target" to be capitalized.
+Machine: High-performance computing cluster
+    This script is batched to the cluster using `slurm_scripts/construct_retweet_network.cmd`
 """
 
 ####################

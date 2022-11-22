@@ -1,12 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Thu Apr 30 16:15:11 2020
+Name: `07b_analyze_retweet_networks.py`
+Date: April 30, 2020
+Author: Chris Tokita
+Purpose: Analyze article retweet networks.
+Details:
+    (Copies of data are currently stored on external harddrive and high-performance cluster.)
+ 
+Data In: CSV files of (a) retweet network edges, (b) retweet network nodes, (c) article list, (d) article fact-check evaluations, and (e) article ideological lean ratings.
+    (a) `<data storage location>/data_derived/networks/rtnetwork_edges.csv`
+    (b) `<data storage location>/data_derived/networks/rtnetwork_nodes.csv`
+    (c) `<data storage location>/"data/articles/daily_articles.csv`
+    (d) `<data storage location>/data/articles/evaluations.csv`
+    (e) `<data storage location>/data/articles/article_level.csv`
 
-@author: ChrisTokita
+Data Out: CSV file of network metrics for each article.
+    `<data storage location>/data_derived/networks/article_network_metrics.csv`
 
-SCRIPT:
-Analyze the rewteet network of fake news articles
+Machine: High-performance computing cluster
+    This script is batched to the cluster using `slurm_scripts/simulate_intervention.cmd`
 """
 
 ####################
