@@ -60,3 +60,14 @@ All R scripts for generating plots and summary statistics are denoted by the lea
 
 ### Data
 Given the large size of the Twitter data, all the data in this study is currently held on an external harddrive, with a backup copy stored on Princeton's Della cluster.
+
+### Structure of folders in `output/`
+The `output/` folder contains all of the results of our analysis and visualization scripts (almost exclusively our `.R` scripts). Generally, the results are plots and data visualizations.
+
+* `belief/`: estimates for the scale of user belief in news articles (subfolders break this down by article veracity and news source type).
+* `exposure/`: estimates for the scale of user exposure to news articles (subfolders break this down by article veracity and news source type).
+* `ideology_basis/`: comparison of self-reported user ideology (e.g., "liberal", "very liberal", etc.) and estimated ideology from Twitter data. This serves as a check on our basis for aligning self-reported ideology categories with the continuous ideology scores estimated from Twitter data.
+* `interventions/`: the impact of different platform-level interventions on user exposure/belief in misinformation artilces in our dataset.
+* `networks/`: visualization retweetn networks and analyzing their structure (includes break down by article veracity and news source type).
+* `tweeter_ideology/`: distribution of ideologies among users who tweeted articles, along with estimates for the ideology of their followers (subfolders break this down by article veracity and news source type).
+* `tweeting`: how users shared articles on Twitter via tweets (subfolders break this down by article veracity and news source type).
