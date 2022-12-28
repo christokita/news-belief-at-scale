@@ -14,7 +14,7 @@ Details:
 Data In: Consolidated tweet dataframe from `01_parse_tweets.py`.
     `<data storage location>/data_derived/tweets/tweets_parsed.csv`
     
-Data Out: CSV file containing a consolidated lists of Twitter user IDs for friend/follower for a subset of tweeters. 
+Data Out: CSV file containing a single column Twitter user IDs for friend/follower for a subset of tweeters. 
     `<data storage location>/data_derived/friends/`
     `<data storage location>/data_derived/followers/`
 

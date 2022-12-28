@@ -70,7 +70,7 @@ def unique_exposed_over_time(story_id, tweets, data_directory, ideol_bin_size, m
     
     # We will now create a list of uniquely exposed followers, matched to ideology.
     # Becuase we want to also count users that we do not have ideology scores for, 
-    # we will not use our paired tweeter-follower ideology dataset crated in script 5a
+    # we will not use our paired tweeter-follower ideology dataset created in script 4a.
     
     # Load follower IDs for each tweeter and include important tweet metadata
     tweets_with_followers = match_followers_to_tweet(article_tweets = selected_tweets, 
@@ -143,7 +143,7 @@ def match_followers_to_tweet(article_tweets, story_id, data_directory):
        data_directory (str):       path to high-level data directory.
    
    Returns:
-       matched_followers (dataframe):   dataframe listing tweet ID with the set of follower IDs that could have potentially seen it (i.e., the followers of the user who tweeted it).
+       matched_followers (dataframe):   dataframe listing with two columns, tweet ID and user IDs of those who could have potentially seen the tweet (i.e., the followers of the user who tweeted it).
    """
    
    # Set place to store compiled lists
