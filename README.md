@@ -51,7 +51,6 @@ All R scripts for generating plots and summary statistics are denoted by the lea
 
 #### Other folders in `scripts/`
 * `scripts/suppl_code`: scripts for supplemental/ad hoc analysis.
-* `scripts/analysis_functions`: contains the main `tweet_parser()` function that parses the tweet Json files.
 * `scripts/_plot_themes`: contains the custom ggplot2 and plotnine themes for quicker plot formatting.
 
 ### Installing necessary packages
