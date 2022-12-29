@@ -15,8 +15,14 @@ Data In: CSV files of tweets and follower ideologies.
 
 Data Out: CSV files of posterior samples and of the point estimate for Twitter population ideology.
     `<data storage location>/data_derived/ideological_scores/estimated_ideol_distributions/`
+
         `_population_posterior_samples.csv`
+            `mu_samples`:    posterior samples for population ideology mean.
+            `sigma_samples`: posterior samples for pouplation ideology standard deviation.
+
         `_population_MAP_estimate.csv`
+            `mu`:    MAP estimate of mean ideology of population of Twitter users.
+            `sigma`: MAP estimate of standard deviation of ideology of population of Twitter users.
 
 Machine: High-performance computing cluster
     This script is batched to the cluster using `slurm_scripts/compute_population_ideology_dist.cmd`

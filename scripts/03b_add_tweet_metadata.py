@@ -17,6 +17,21 @@ Data In: CSV files containing article information, tweets, and tweeter/friend id
 
 Data Out: CSV file containing tweets with filled in twitter ideology and article metadata, although some are still missing matched article information.
     `<data storage location>/data_derived/tweets/tweets_labeled_pre_manual_match.csv`
+        This data file is the tweet information parsed from Tweet Jsons in 01_parse_tweets.py with the following additional columns:
+            `total_article_number`:   ID of tracked article.
+            `source_lean`:            ideological lean of news source.
+            `source_type`:            whether news source is mainstream or fringe.
+            `article_fc_rating`:      fact-check rating.
+            `article_main_tag`:       main subject-matter of article.
+            `article_other_tags`:     other subject-matters in article.
+            `article_lean`:           ideological lean of the article.
+            `article_con_feel`:       rating of conservative feel of article.
+            `article_lib_feel`:       rating of liberal feel of article.
+            `accounts_followed`:      number of known-political/cultural accounts---used to determine tweeter ideology---that the tweeter follows.
+            `user_ideology`:          Pablo score of tweeter.
+            `manual_ideology_score`:  Whether the Pablo score was created by averaging the ideologies of their friends.
+            `user_ideol_extremity`:   Absolute value of tweeter's ideology, i.e., absolute deviation from 0.
+            `user_ideol_category`:    whether user is broadly liberal (-1), moderate (0), or conservative (1). Moderate ideologies rated as those between -1.0 and 1.0.
 
 Machine: High-performance computing cluster
     This script is batched to the cluster using `slurm_scripts/add_tweet_metadata.cmd`
