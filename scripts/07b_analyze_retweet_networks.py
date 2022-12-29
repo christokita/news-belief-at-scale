@@ -32,7 +32,7 @@ import scipy.stats as stats
 
     
 # high level directory (external HD or cluster storage)
-data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
+data_directory = "/Volumes/CKT-DATA/news-belief-at-scale/" #external HD
 
 ####################
 # Load rt networks (temporary)

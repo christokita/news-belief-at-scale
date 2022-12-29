@@ -46,8 +46,8 @@ import re
 import os
     
 # high level directory (external HD or cluster storage)
-data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster storage
-#data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
+data_directory = "/scratch/gpfs/ctokita/news-belief-at-scale/" #HPC cluster storage
+#data_directory = "/Volumes/CKT-DATA/news-belief-at-scale/" #external HD
 
 ####################
 # Parse articles to assign article number to tweet

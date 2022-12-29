@@ -24,7 +24,7 @@ source("scripts/_plot_themes/theme_ctokita.R")
 grouping <- "article_fc_rating"
 
 # Paths to files/directories
-tweet_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv' #path to fitness cascade data
+tweet_path <- '/Volumes/CKT-DATA/news-belief-at-scale/data_derived/tweets/tweets_labeled.csv' #path to fitness cascade data
 if (grouping == "article_fc_rating") {
   outpath <- 'output/tweeting/veracity/'
 } else if(grouping == "source_type") {

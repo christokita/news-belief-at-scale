@@ -25,7 +25,7 @@ source("scripts/_plot_themes/theme_ctokita.R")
 grouping <- "article_fc_rating"
 
 # Paths to files/directories
-tweet_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv' #path to fitness cascade data
+tweet_path <- '/Volumes/CKT-DATA/news-belief-at-scale/data_derived/tweets/tweets_labeled.csv' #path to fitness cascade data
 outpath <- 'output/ideology/'
 
 # Color palette
@@ -60,7 +60,7 @@ article_data <- tweets %>%
 # NOTE:
 # - for the raw count of exposure of followers we have ideology scores for user: users_exposed_over_time.csv
 # - for the estimated ideology of all exposed followers: estimated_users_exposed_over_time.csv
-exposure_data <- read.csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/exposure/estimated_users_exposed_over_time.csv', 
+exposure_data <- read.csv('/Volumes/CKT-DATA/news-belief-at-scale/data_derived/exposure/estimated_users_exposed_over_time.csv', 
                           header = TRUE, colClasses = c("user_id"="character", "tweet_id"="character")) %>% 
   filter(total_article_number > 10) %>% #discard first 10 articles from analysis
   mutate(tweet_number = tweet_number+1) %>%  #python zero index

@@ -23,7 +23,7 @@ source("scripts/_plot_themes/theme_ctokita.R")
 grouping <- "article_fc_rating"
 
 # Paths to data
-tweeter_score_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv' 
+tweeter_score_path <- '/Volumes/CKT-DATA/news-belief-at-scale/data_derived/tweets/tweets_labeled.csv' 
 if (grouping == "article_fc_rating") {
   outpath <- 'output/tweeter_ideology/veracity/'
 } else if(grouping == "source_type") {
@@ -71,7 +71,7 @@ if (grouping == "article_fc_rating") {
 
 
 # Load follower distribution shape data
-shapes <- read.csv("/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ideological_scores/estimated_ideol_distributions/follower_ideology_distribution_shapes.csv") %>% 
+shapes <- read.csv("/Volumes/CKT-DATA/news-belief-at-scale/data_derived/ideological_scores/estimated_ideol_distributions/follower_ideology_distribution_shapes.csv") %>% 
   mutate(user_id = gsub("\"" , "", user_id_str)) %>% 
   merge(tweets, by = 'user_id')
 

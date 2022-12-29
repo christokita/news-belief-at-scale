@@ -16,7 +16,7 @@ source("scripts/_plot_themes/theme_ctokita.R")
 # Paramters for analysis: gpaths to data, paths for output, and filename
 ####################
 # Paths to files/directories
-path_to_interventions <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/interventions/'
+path_to_interventions <- '/Volumes/CKT-DATA/news-belief-at-scale/data_derived/interventions/'
 intervention_dirs <- list.dirs(path_to_interventions)
 intervention_dirs <- intervention_dirs[grepl('.*/reduce_', intervention_dirs)]
 outpath <- 'output/interventions/'

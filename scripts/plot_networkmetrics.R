@@ -23,10 +23,10 @@ source("scripts/_plot_themes/theme_ctokita.R")
 grouping <- "article_fc_rating"
 
 # Paths
-tweet_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv'
-exposure_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/exposure/estimated_users_exposed_over_time.csv'
-network_metric_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/networks/article_network_metrics.csv'
-retweet_network_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/networks/'
+tweet_path <- '/Volumes/CKT-DATA/news-belief-at-scale/data_derived/tweets/tweets_labeled.csv'
+exposure_path <- '/Volumes/CKT-DATA/news-belief-at-scale/data_derived/exposure/estimated_users_exposed_over_time.csv'
+network_metric_path <- '/Volumes/CKT-DATA/news-belief-at-scale/data_derived/networks/article_network_metrics.csv'
+retweet_network_path <- '/Volumes/CKT-DATA/news-belief-at-scale/data_derived/networks/'
 outpath <- 'output/networks/'
 
 # Path to specific subdirectory for grouping specific resultes

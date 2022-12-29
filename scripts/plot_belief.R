@@ -25,7 +25,7 @@ source("scripts/_plot_themes/theme_ctokita.R")
 grouping <- "article_fc_rating"
 
 # Paths to files/directories
-tweet_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv' #path to fitness cascade data
+tweet_path <- '/Volumes/CKT-DATA/news-belief-at-scale/data_derived/tweets/tweets_labeled.csv' #path to fitness cascade data
 if (grouping == "article_fc_rating") {
   outpath <- 'output/belief/veracity/'
 } else if(grouping == "source_type") {
@@ -64,7 +64,7 @@ article_data <- tweets %>%
   select(tweet_id, total_article_number, source_type, source_lean, article_fc_rating, article_lean, user_ideology) 
 
 # Load belief data 
-belief_data <- read.csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/belief/estimated_belief_over_time.csv', 
+belief_data <- read.csv('/Volumes/CKT-DATA/news-belief-at-scale/data_derived/belief/estimated_belief_over_time.csv', 
                           header = TRUE, colClasses = c("user_id"="character", "tweet_id"="character")) %>% 
   filter(total_article_number > 10) %>% #discard first 10 articles from analysis
   mutate(tweet_number = tweet_number+1) %>%  #python zero index

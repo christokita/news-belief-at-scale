@@ -37,8 +37,8 @@ import pymc3 as pm
 
 
 # high level directory (external HD or cluster storage)
-data_directory = "/scratch/gpfs/ctokita/fake-news-diffusion/" #HPC cluster storage
-#data_directory = "/Volumes/CKT-DATA/fake-news-diffusion/" #external HD
+data_directory = "/scratch/gpfs/ctokita/news-belief-at-scale/" #HPC cluster storage
+#data_directory = "/Volumes/CKT-DATA/news-belief-at-scale/" #external HD
 
 # Paths for ideology distrubtion data
 outpath = data_directory + "data_derived/ideological_scores/estimated_ideol_distributions/"

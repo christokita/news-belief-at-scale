@@ -24,7 +24,7 @@ source("scripts/_plot_themes/theme_ctokita.R")
 grouping <- "article_fc_rating"
 
 # Paths to files/directories
-tweet_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv'
+tweet_path <- '/Volumes/CKT-DATA/news-belief-at-scale/data_derived/tweets/tweets_labeled.csv'
 if (grouping == "article_fc_rating") {
   outpath <- 'output/exposure/veracity/'
 } else if(grouping == "source_type") {
@@ -54,7 +54,7 @@ article_data <- read.csv(tweet_path, header = TRUE, colClasses = c("user_id"="ch
 # NOTE:
 # - for the raw count of exposure of followers we have ideology scores for user: users_exposed_over_time.csv
 # - for the estimated ideology of all exposed followers: estimated_users_exposed_over_time.csv
-exposure_data <- read.csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/exposure/estimated_users_exposed_over_time.csv', 
+exposure_data <- read.csv('/Volumes/CKT-DATA/news-belief-at-scale/data_derived/exposure/estimated_users_exposed_over_time.csv', 
                           header = TRUE, colClasses = c("user_id"="character", "tweet_id"="character")) %>% 
   filter(total_article_number > 10) %>% #discard first 10 articles from analysis
   mutate(tweet_number = tweet_number+1) %>%  #python zero index
@@ -380,7 +380,7 @@ ggsave(gg_fake_exposure_article, filename = paste0(outpath, "fake_news_exposure_
 # Cross-ideology exposure vs. tweeter ideology
 ####################
 # Re-load exposure data 
-exposure_data <- read.csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/exposure/estimated_users_exposed_over_time.csv', 
+exposure_data <- read.csv('/Volumes/CKT-DATA/news-belief-at-scale/data_derived/exposure/estimated_users_exposed_over_time.csv', 
                           header = TRUE, colClasses = c("user_id"="character", "tweet_id"="character")) %>% 
   filter(total_article_number > 10) %>% #discard first 10 articles from analysis
   mutate(tweet_number = tweet_number+1) %>%  #python zero index
@@ -388,7 +388,7 @@ exposure_data <- read.csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/ex
   arrange(total_article_number, tweet_number)
 
 # Add in user_ideology
-user_ideologies <- read.csv('/Volumes/CKT-DATA/fake-news-diffusion/data_derived/tweets/tweets_labeled.csv') %>% 
+user_ideologies <- read.csv('/Volumes/CKT-DATA/news-belief-at-scale/data_derived/tweets/tweets_labeled.csv') %>% 
   select(user_id, user_ideology) %>% 
   distinct()
 
