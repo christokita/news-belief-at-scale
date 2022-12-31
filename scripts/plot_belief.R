@@ -1,7 +1,23 @@
-########################################
-#
-# PLOT: Estimated belief to news articles over time, comparing by article veracity or by news source type
-#
+#########################################
+# Name: `plot_belief.R`
+# Author: Chris Tokita
+# Purpose: Plot estimated belief in news article tweets over time, comparing by article veracity or by news source type.
+# Details:
+#   (Copies of data are currently stored on external hard drive and high-performance cluster.)
+#   At the beginning of this script, you can choose to analyze through the lens of 
+#     (a) article veracity ("article_fc_rating"), i.e., True or False/Misleading articles
+#     (b) news source type ("source_type"), i.e., mainstream news source vs. fringe news source
+#   This determines whether the plots will break out tweet belief according to the veracity of the content or the source of the article.
+# 
+# Data In:
+# `<data storage location>/data_derived/tweets/tweets_labeled.csv`: article tweets with article and tweeter metadata.
+# `<data storage location>/data_derived/belief/estimated_belief_over_time.csv`: estimated belief in each article tweet.
+# 
+# Data Out: Plots written to output sub-folder depending on if we are comparing article veracity or news source type. 
+# `<data storage location>/output/belief/veracity/`
+# `<data storage location>/output/belief/source_type/`
+# 
+# Machine: Chris' laptop
 ########################################
 
 ####################
@@ -17,7 +33,7 @@ library(brms)
 source("scripts/_plot_themes/theme_ctokita.R")
 
 ####################
-# Paramters for analysis: grouping of interest, paths to data, paths for output, and filename
+# Parameters for analysis: grouping of interest, paths to data, paths for output, and file name
 ####################
 # Choose grouping of interest. Options: 
 #     (1) article veracity: "article_fc_rating"
@@ -122,16 +138,13 @@ belief_timeseries <- belief_timeseries %>%
   mutate(article_fc_rating = ifelse(article_fc_rating == "T", "True news", ifelse(article_fc_rating == "FM", "False/Misleading news", 
                                                                                   ifelse(article_fc_rating == "CND", "Borderline", 
                                                                                          ifelse(article_fc_rating == "No Mode!", "No mode", article_fc_rating)))),
-         source_type = ifelse(source_type == "mainstream", "Mainstream", ifelse(source_type == "fringe", "Fringe", source_type)),
+         source_type = ifelse(source_type == "mainstream", "Mainstream outlet", ifelse(source_type == "fringe", "Fringe outlet", source_type)),
          article_lean = ifelse(article_lean == "C", "Conservative", ifelse(article_lean == "L", "Liberal",
                                                                            ifelse(article_lean == "N", "Neutral", 
                                                                                   ifelse(article_lean == "U", "Unclear", source_type)))) )
 
-
-
-############################## Plot belief by ideology ##############################
-
-# Prep data (data is melted to make one ideological bin per tweet per row)
+# Melt data to make one ideological bin per tweet per row
+# This is helpful for plotting belief by ideological bin
 belief_ideol <- belief_timeseries %>% 
   filter(hour_bin >= 0) %>% 
   select(-source_lean, -relative_cumulative_exposed, -relative_cumulative_belief, -relative_tweet_count, -follower_count) %>% 
@@ -149,7 +162,7 @@ belief_ideol <- belief_timeseries %>%
 
 
 ####################
-# Total ideologies believing articles (by veracity)
+# PLOT: Total number of users estimated to believe articles, broken out by user ideology
 ####################
 gg_ideol_total <- belief_ideol %>% 
   # Calculate totals
@@ -179,7 +192,7 @@ gg_ideol_total
 ggsave(gg_ideol_total, filename = paste0(outpath, "ideol_total_belief.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
 
 ####################
-# Avg number of believing article across ideologies (by type)
+# PLOT: Average number of users believing an article, broken out by user ideology
 ####################
 gg_ideol_avg <- belief_ideol %>% 
   # Calculate average exposed
@@ -190,7 +203,7 @@ gg_ideol_avg <- belief_ideol %>%
   geom_bar(stat = "identity") +
   scale_x_continuous(limits = c(-6, 6), 
                      expand = c(0, 0), 
-                     breaks = seq(-6, 6, 1)) +
+                     breaks = seq(-6, 6, 2)) +
   scale_y_continuous(labels = comma,
                      expand = c(0, 0)) +
   scale_color_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
@@ -205,11 +218,11 @@ gg_ideol_avg <- belief_ideol %>%
              strip.position = "top",
              scales = "free")
 gg_ideol_avg
-ggsave(gg_ideol_avg, filename = paste0(outpath, "ideol_avg_belief.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideol_avg, filename = paste0(outpath, "ideol_avg_belief.pdf"), width = 50, height = 90, units = "mm", dpi = 400)
 
 
 ####################
-# Ideological distributions of belief
+# PLOT: Average proportion of user ideologies believing an article
 ####################
 gg_ideol_dist <- belief_ideol %>% 
   # Calculate average distribution of belief
@@ -247,7 +260,7 @@ ggsave(gg_ideol_dist, filename = paste0(outpath, "ideol_avg_belief_distribution.
 
 
 ####################
-# Belief time series
+# PLOT: Belief time series
 ####################
 gg_ideoltime <- belief_ideol %>% 
   group_by(!!sym(grouping), hour_bin, ideology_bin) %>% 
@@ -283,7 +296,7 @@ ggsave(gg_ideoltime, filename = paste0(outpath, "ideol_belief_hourbin.pdf"), wid
 
 
 ####################
-# Belief as function of exposure over time
+# PLOT: Belief as function of exposure over time
 ####################
 # Prep data
 belief_per_exposure <- belief_timeseries %>% 
@@ -345,9 +358,8 @@ fit_belief <- lapply(seq(1:length(group_names)), function(i) {
 })
 fit_belief <- do.call("rbind", fit_belief)
 
-
-
 # Plot trend line and binned mean of belief-per-exposure over time
+# NOTE: labels for trend lines are added later in vector art program during figure creation for paper
 minutes_per_bin <- 5
 
 gg_belief_rate_exposure <- belief_per_exposure %>% 
@@ -367,9 +379,7 @@ gg_belief_rate_exposure <- belief_per_exposure %>%
   scale_y_continuous(breaks = seq(0, 1, 0.1),
                      limits = c(0.2, 0.9),
                      expand = c(0, 0)) +
-  scale_color_manual(values = grouping_pal, 
-                     name = "Article rating", 
-                     labels = c("False/Misleading", "True")) +
+  scale_color_manual(values = grouping_pal) +
   xlab("Time since first article share (hrs.)") +
   ylab("Beliefs per exposure") +
   # facet_wrap(~group,
@@ -396,7 +406,10 @@ for (i in seq(1, length(regression_belief) ) ) {
 
 
 ####################
-# Belief per exposure by article/source type
+# PLOT: Belief per exposure by article/source type
+#
+# NOTE: This hard-codes groupings and will be the same regardless of which `grouping` variable is selected at the top of the script
+#
 ####################
 # Prep data
 belief_per_exposure <- belief_timeseries %>% 
@@ -436,6 +449,7 @@ fit_belief <- do.call("rbind", fit_belief)
 
 
 # Plot: Belief-per-exposure by source type and veracity
+# NOTE: labels for trend lines are added later in vector art program during figure creation for paper
 minutes_per_bin <- 5
 
 gg_belief_rate_exposure_source <- belief_per_exposure %>% 
@@ -454,9 +468,7 @@ gg_belief_rate_exposure_source <- belief_per_exposure %>%
   scale_y_continuous(breaks = seq(0, 1, 0.1),
                      limits = c(0, 1),
                      expand = c(0, 0)) +
-  scale_color_manual(values = grouping_pal, 
-                     name = "Article rating", 
-                     labels = c("False/Misleading", "True")) +
+  scale_color_manual(values = grouping_pal) +
   xlab("Time since first article share (hrs.)") +
   ylab("Beliefs per exposure") +
   facet_grid(~source_type,
@@ -504,8 +516,18 @@ ggsave(gg_belief_rate_exposure_source, filename = "output/belief/veracity/belief
 
 
 ####################
-# Relative cumulative belief over first 48 hours
+# PLOT: Relative cumulative belief over first 48 hours
 ####################
+# Prep legend labels for plot
+if (grouping == "article_fc_rating") {
+  legend_name <- "Article rating"
+  legend_labels <- c("False/Misleading", "True")
+} else if (grouping == "source_type") {
+  legend_name <- "News Source Type"
+  legend_labels <- c("Fringe", "Mainstream")
+} 
+
+# Plot
 missing_hour_bins <- expand_grid(total_article_number = unique(belief_timeseries$total_article_number), 
                                  hour_bin = seq(0, 48, 1))
 
@@ -537,8 +559,8 @@ gg_48hr_belief <- belief_timeseries %>%
                      labels = c("0.0", "", "0.5", "", "1.0"),
                      expand = c(0, 0), 
                      limits = c(0, 1)) +
-  scale_color_manual(values = grouping_pal, name = "Article rating", labels = c("False/Misleading", "True")) +
-  scale_fill_manual(values = grouping_pal, name = "Article rating", labels = c("False/Misleading", "True")) +
+  scale_color_manual(values = grouping_pal, name = legend_name, labels = legend_labels) +
+  scale_fill_manual(values = grouping_pal, name = legend_name, labels = legend_labels) +
   theme_ctokita() +
   theme(legend.position = c(0.75, 0.2))
   
@@ -547,7 +569,7 @@ ggsave(gg_48hr_belief, filename = paste0(outpath, "relative_cumulative_belief.pd
 
 
 # Just raw article data
-gg_48hr_belief <- belief_timeseries %>% 
+gg_48hr_belief_raw <- belief_timeseries %>% 
   ggplot(., aes(x = time, y = relative_cumulative_belief, color = !!sym(grouping), group = total_article_number)) +
   geom_line(size = 0.6, alpha = 0.15) +
   xlab("Hours since first article share") +
@@ -561,24 +583,11 @@ gg_48hr_belief <- belief_timeseries %>%
   scale_color_manual(values = grouping_pal, name = "Article rating", labels = c("False/Misleading", "True")) +
   facet_wrap(as.formula(paste("~", grouping)),
              ncol = 1,
-             strip.position = "top") +
-  theme_ctokita() +
-  theme(legend.position = c(0.75, 0.2))
-
-gg_48hr_belief
-
-
-####################
-# Follower count of users sharing news
-####################
-gg_follower_count <- ggplot(belief_timeseries, aes(x = time, y = new_exposed_users, color = !!sym(grouping))) +
-  geom_point(stroke = 0, size = 2, alpha = 0.5) +
-  scale_y_continuous(trans = "log10") +
-  scale_x_continuous(limits = c(0, 7*24)) +
-  scale_color_manual(values = grouping_pal, name = "Article rating", labels = c("False/Misleading", "True")) +
-  theme_ctokita() +
-  facet_wrap(as.formula(paste("~", grouping)),
-             ncol = 1,
              strip.position = "top",
-             scales = "free_y") 
-gg_follower_count
+             scales = "free") +
+  theme_ctokita() +
+  theme(legend.position = "none")
+
+gg_48hr_belief_raw
+ggsave(gg_48hr_belief_raw, filename = paste0(outpath, "relative_cumulative_belief_rawdata.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
+
