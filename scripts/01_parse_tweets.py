@@ -8,7 +8,7 @@ Purpose: Parse the JSON files containing tweet data, turn it into a pandas dataf
 Details:
     (Copies of data are currently stored on external harddrive and high-performance cluster.)
 
-Data In: JSON files containing tweet data pulled direclty from Twitter API.
+Data In: JSON files containing tweet data pulled directly from Twitter API.
     `<data storage location>/data/tweets/`    
 
 Data Out: The CSV file contains the extracted tweet information in a flat, dataframe format.
