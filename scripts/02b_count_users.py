@@ -6,7 +6,7 @@ Date: April 14, 2020
 Author: Chris Tokita
 Purpose: Count ALL (even those not used in study) user lists in our dataset---i.e., tweeters, followers, friends.
 Details:
-    (Copies of data are currently stored on external harddrive and high-performance cluster.)
+    (Copies of data are currently stored on external hard drive and high-performance cluster.)
 
 Data In: 
     `<data storage location>/data_derived/tweets/tweets_parsed.csv`: Consolidated tweet dataframe from `01_parse_tweets.py`.

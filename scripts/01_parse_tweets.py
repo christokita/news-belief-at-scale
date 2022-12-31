@@ -6,7 +6,7 @@ Date: April 3, 2020
 Author: Chris Tokita
 Purpose: Parse the JSON files containing tweet data, turn it into a pandas dataframe, and write to csv.
 Details:
-    (Copies of data are currently stored on external harddrive and high-performance cluster.)
+    (Copies of data are currently stored on external hard drive and high-performance cluster.)
 
 Data In: JSON files containing tweet data pulled directly from Twitter API.
     `<data storage location>/data/tweets/`    

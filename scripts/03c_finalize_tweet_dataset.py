@@ -6,7 +6,7 @@ Date: July 26, 2020
 Author: Chris Tokita
 Purpose: Finalize our tweet dataset for the study.
 Details:
-    (Copies of data are currently stored on external harddrive and high-performance cluster.)
+    (Copies of data are currently stored on external hard drive and high-performance cluster.)
     This script will do two main things:
         (1) Manually confirm/label tweets that still are not associated with a particular article ID
         (2) Filter our tweets to only those that fall within a one-week window after the first article share.

@@ -6,7 +6,7 @@ Date: Aug 14, 2020
 Author: Chris Tokita
 Purpose: Estimate the number of people who believed the articles they were exposed to on Twitter.
 Details:
-    (Copies of data are currently stored on external harddrive and high-performance cluster.)
+    (Copies of data are currently stored on external hard drive and high-performance cluster.)
     We estimate the number of users believing an article by mapping the ideologies of users exposed to the article to the data from the experimental
     surveys, in which we know how likely a person is to believe a news article based on their ideology.
     Therefore, the total number of users believing an articles is N_users_of_ideology X rate_of_beleif_among_ideology.

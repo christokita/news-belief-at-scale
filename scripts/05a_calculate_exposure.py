@@ -6,7 +6,7 @@ Date: July 30, 2020
 Author: Chris Tokita
 Purpose: Estimate exposure to news articles among Twitter users.
 Details:
-    (Copies of data are currently stored on external harddrive and high-performance cluster.)
+    (Copies of data are currently stored on external hard drive and high-performance cluster.)
  
 Data In: CSV files of (a) tweets, (b) follower lists, and (c) known user ideologies.
     (a) `<data storage location>/data_derived/tweets/tweets_labeled.csv`

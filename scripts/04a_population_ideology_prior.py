@@ -6,7 +6,7 @@ Date: August 28, 2020
 Author: Chris Tokita
 Purpose: Conduct MCMC bayesian inference of population-level distribution of follower ideology.
 Details:
-    (Copies of data are currently stored on external harddrive and high-performance cluster.)
+    (Copies of data are currently stored on external hard drive and high-performance cluster.)
     The results of this inference will be used as the prior for the inference of tweeter's follower ideology.
 
 Data In: CSV files of tweets and follower ideologies.

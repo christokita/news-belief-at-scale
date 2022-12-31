@@ -6,7 +6,7 @@ Date: April 30, 2020
 Author: Chris Tokita
 Purpose: Construct the retweet networks of the news articles to determine who retweeted whom.
 Details:
-    (Copies of data are currently stored on external harddrive and high-performance cluster.)
+    (Copies of data are currently stored on external hard drive and high-performance cluster.)
     Gephi--the network visualization program---needs the coulumns "Source" and "Target" to be capitalized.
  
 Data In: CSV files of (a) tweets, (b) article data, (c) manually confirmed article URLs, (d) user exposure data, and (e) tweeter follower ideology data

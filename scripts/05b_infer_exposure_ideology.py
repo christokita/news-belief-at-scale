@@ -6,7 +6,7 @@ Date: Aug 24, 2020
 Author: Chris Tokita
 Purpose: Estimate what user ideologies were exposed over time to the news articles.
 Details:
-    (Copies of data are currently stored on external harddrive and high-performance cluster.)
+    (Copies of data are currently stored on external hard drive and high-performance cluster.)
  
 Data In: CSV files of the compiled exposure over time dataframe and the known Twitter user ideologies.
     `<data storage location>/data_derived/exposure/users_exposed_over_time.csv`

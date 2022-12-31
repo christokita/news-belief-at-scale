@@ -6,7 +6,7 @@ Date: April 30, 2020
 Author: Chris Tokita
 Purpose: Add user ideology and article-level data to tweet data.
 Details:
-    (Copies of data are currently stored on external harddrive and high-performance cluster.)
+    (Copies of data are currently stored on external hard drive and high-performance cluster.)
     This script will also calculate the missing ideology scores for tweeters by using the ideology of their friends.
 
 Data In: CSV files containing article information, tweets, and tweeter/friend ideology scores.

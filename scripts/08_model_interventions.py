@@ -6,7 +6,7 @@ Date: October 16, 2020
 Author: Chris Tokita
 Purpose: Simulate simple platofmr-level interventions to prevent the spread of misinformation on Twitter.
 Details:
-    (Copies of data are currently stored on external harddrive and high-performance cluster.)
+    (Copies of data are currently stored on external hard drive and high-performance cluster.)
     To fully simulate interventions, we need to essentially rerun the entire exposure/belief estimation pipeline each time.
     Thus, this is a long script since it needs to figure out which retweets did not occur 
     and then rerun estimations of exposure/belief under the intervention parameters.

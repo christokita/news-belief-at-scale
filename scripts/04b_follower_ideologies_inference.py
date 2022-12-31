@@ -6,7 +6,7 @@ Date: August 28, 2020
 Author: Chris Tokita
 Purpose: Conduct MCMC bayesian inference of the distirubtion of ideologies among each tweeter's followers.
 Details:
-    (Copies of data are currently stored on external harddrive and high-performance cluster.)
+    (Copies of data are currently stored on external hard drive and high-performance cluster.)
     The point of this step is to create an estimate for followers without known ideology scores.
     The posterior from the inference of the population-level distirbution of ideologies serves as the prior for each tweeter's set of followers.
     Then, for each follower, we infer the distribution of their follower's ideologies by using the prior and the followers with already known ideology scores.

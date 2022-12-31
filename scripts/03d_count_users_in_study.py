@@ -6,7 +6,7 @@ Date: August 17, 2020
 Author: Chris Tokita
 Purpose: Count the unique Twitter users (tweeters, friends, followers) in our study.
 Details:
-    (Copies of data are currently stored on external harddrive and high-performance cluster.)
+    (Copies of data are currently stored on external hard drive and high-performance cluster.)
     The study excludes the first 10 articles from analysis.
     For counting purposes, int64 is faster than handling IDs as str/object.
 

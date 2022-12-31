@@ -6,7 +6,7 @@ Date: July 24, 2020
 Author: Chris Tokita
 Purpose: Compile and format all the ideology scores of followers/friends calcualted by SMaPP.
 Details:
-    (Copies of data are currently stored on external harddrive and high-performance cluster.)
+    (Copies of data are currently stored on external hard drive and high-performance cluster.)
 
 Data In: CSV files containing list of Twitter user IDs and corresponding ideology (Pablo) score.
     `<data storage location>/data_derived/ideological_scores/`

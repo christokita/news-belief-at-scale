@@ -6,7 +6,7 @@ Date: April 17, 2020
 Author: Chris Tokita
 Purpose: Parse ALL (even those not used in study) user lists in our dataset---i.e., tweeters, followers, friends---and compile into consolidated lists in preparation for counting.
 Details:
-    (Copies of data are currently stored on external harddrive and high-performance cluster.)
+    (Copies of data are currently stored on external hard drive and high-performance cluster.)
     This script processes the large amount of user data in parallel chunks.
     Each batch focuses on a certain chunk of unique tweeters and compiles their friend/follower lists.
     The chunk number is passed to the script from the bash scrip that submits and runs the script on cluster.

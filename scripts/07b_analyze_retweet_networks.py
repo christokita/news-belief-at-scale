@@ -6,7 +6,7 @@ Date: April 30, 2020
 Author: Chris Tokita
 Purpose: Analyze article retweet networks.
 Details:
-    (Copies of data are currently stored on external harddrive and high-performance cluster.)
+    (Copies of data are currently stored on external hard drive and high-performance cluster.)
  
 Data In: CSV files of (a) retweet network edges, (b) retweet network nodes, (c) article list, (d) article fact-check evaluations, and (e) article ideological lean ratings.
     (a) `<data storage location>/data_derived/networks/rtnetwork_edges.csv`
