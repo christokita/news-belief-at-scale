@@ -1,8 +1,25 @@
-########################################
+#########################################
+# Name: `plot_exposure.R`
+# Author: Chris Tokita
+# Purpose: Plot estimated exposure to news articles over time, comparing by article veracity or by news source type
+# Details:
+#   (These R scripts assume the use of the `.Rproj` at top of the news-belief-at-scale/ repo. Otherwise, set the working directory to one level above this script.)
 #
-# PLOT: Exposure to news articles over time, comparing by article veracity or by news source type
-#
+#   The Variables at the beginning of the script that are in all caps---`GROUPING` and `DATA_DIRECTORY`---need to be set by the user"
+#     `DATA_DIRECTORY`: path to the data directory. (Copies of data are currently stored on external hard drive and high-performance cluster.)
+#     `GROUPING`:       determines whether the plots will break out tweet belief according to article veracity ("article_fc_rating") or the source of the article ("source_type").
+# 
+# Data In:
+# `<data storage location>/data_derived/tweets/tweets_labeled.csv`: article tweets with article and tweeter metadata.
+# `<data storage location>/data_derived/exposure/estimated_users_exposed_over_time.csv: estimated exposure to each article tweet.
+# 
+# Data Out: Plots written to output sub-folder depending on if we are comparing article veracity or news source type. 
+# `<data storage location>/output/exposure/veracity/`
+# `<data storage location>/output/exposure/source_type/`
+# 
+# Machine: Chris' laptop
 ########################################
+
 
 ####################
 # Load packages
@@ -15,23 +32,34 @@ library(RColorBrewer)
 library(scales)
 source("scripts/_plot_themes/theme_ctokita.R")
 
+
 ####################
-# Parameters for analysis: grouping of interest, paths to data, paths for output, and filename
+# Set parameters for analysis
 ####################
-# Choose grouping of interest. Options: 
+# Choose location of data
+DATA_DIRECTORY <- "/Volumes/CKT-DATA/news-belief-at-scale/"
+
+# Choose GROUPING of interest. Options: 
 #     (1) article veracity: "article_fc_rating"
 #     (2) source: "source_type"
-grouping <- "article_fc_rating"
+GROUPING <- "source_type"
 
-# Paths to files/directories
-tweet_path <- '/Volumes/CKT-DATA/news-belief-at-scale/data_derived/tweets/tweets_labeled.csv'
-if (grouping == "article_fc_rating") {
-  outpath <- 'output/exposure/veracity/'
-} else if(grouping == "source_type") {
-  outpath <- 'output/exposure/source_type/'
+
+####################
+# Prepare for analysis: set paths to data, paths for output, and color palettes for plotting
+####################
+# Set paths for data
+tweet_path <- paste0(DATA_DIRECTORY, "data_derived/tweets/tweets_labeled.csv") #tweets
+exposure_path <- paste0(DATA_DIRECTORY, "data_derived/exposure/estimated_users_exposed_over_time.csv") #estimated exposure per tweet
+
+# Set path for plots
+if (GROUPING == "article_fc_rating") {
+  outpath <- "output/exposure/veracity/"
+} else if(GROUPING == "source_type") {
+  outpath <- "output/exposure/source_type/"
 }
 
-# Color palette
+# Set color palette
 line_color <- "#495867"
 ideol_pal <- rev(brewer.pal(5, "RdBu"))
 ideol_pal[3] <- "#e0e0e0"
@@ -41,7 +69,7 @@ ideol_limit <- 3 #limit beyond which we squish the color palette
 
 
 ####################
-# Load and prep data 
+# Load and prepare data 
 ####################
 # Read in tweet data for article info
 article_data <- read.csv(tweet_path, header = TRUE, colClasses = c("user_id"="character", "tweet_id"="character")) %>% 
@@ -54,8 +82,7 @@ article_data <- read.csv(tweet_path, header = TRUE, colClasses = c("user_id"="ch
 # NOTE:
 # - for the raw count of exposure of followers we have ideology scores for user: users_exposed_over_time.csv
 # - for the estimated ideology of all exposed followers: estimated_users_exposed_over_time.csv
-exposure_data <- read.csv('/Volumes/CKT-DATA/news-belief-at-scale/data_derived/exposure/estimated_users_exposed_over_time.csv', 
-                          header = TRUE, colClasses = c("user_id"="character", "tweet_id"="character")) %>% 
+exposure_data <- read.csv(exposure_path, header = TRUE, colClasses = c("user_id"="character", "tweet_id"="character")) %>% 
   filter(total_article_number > 10) %>% #discard first 10 articles from analysis
   mutate(tweet_number = tweet_number+1) %>%  #python zero index
   rename(time = relative_time) %>% 
@@ -94,7 +121,7 @@ exposure_timeseries <- dummy_rows %>%
 rm(dummy_rows, article_data, exposure_data)
 
 # If analyzing by veracity, drop out non-True/False articles
-if (grouping == "article_fc_rating") {
+if (GROUPING == "article_fc_rating") {
   exposure_timeseries <- exposure_timeseries %>% 
     filter(article_fc_rating %in% c("T", "FM"))
 }
@@ -104,7 +131,7 @@ exposure_timeseries <- exposure_timeseries %>%
   mutate(article_fc_rating = ifelse(article_fc_rating == "T", "True news", ifelse(article_fc_rating == "FM", "False/Misleading news", 
                                                                                   ifelse(article_fc_rating == "CND", "Borderline", 
                                                                                          ifelse(article_fc_rating == "No Mode!", "No mode", article_fc_rating)))),
-         source_type = ifelse(source_type == "mainstream", "Mainstream", ifelse(source_type == "fringe", "Fringe", source_type)),
+         source_type = ifelse(source_type == "mainstream", "Mainstream outlet", ifelse(source_type == "fringe", "Fringe outlet", source_type)),
          article_lean = ifelse(article_lean == "C", "Conservative", ifelse(article_lean == "L", "Liberal",
                                                                            ifelse(article_lean == "N", "Neutral", 
                                                                                   ifelse(article_lean == "U", "Unclear", source_type)))) )
@@ -114,12 +141,11 @@ exposure_timeseries <- exposure_timeseries %>%
 ############################## Plot time series of article exposure ##############################
 
 ####################
-# Total cumulative exposed
+# PLOT: Total cumulative exposed per article (each line is an article)
 ####################
 gg_exposuretime <- exposure_timeseries %>% 
   ggplot(., aes(x = time/24, y = cumulative_exposed, group = total_article_number)) +
   geom_step(size = 0.3, alpha = 0.5, color = line_color) +
-  # scale_y_log10() +
   scale_x_continuous(breaks = seq(0, 14, 1),
                      limits = c(-0.1, 7)) +
   scale_y_continuous(breaks = c(10^seq(1, 8, 2)),
@@ -129,7 +155,7 @@ gg_exposuretime <- exposure_timeseries %>%
   ylab("Total users exposed") +
   theme_ctokita() +
   theme(aspect.ratio = NULL) +
-  facet_wrap(as.formula(paste("~", grouping)), 
+  facet_wrap(as.formula(paste("~", GROUPING)), 
              ncol = 1,
              strip.position = "top")
 gg_exposuretime
@@ -137,7 +163,7 @@ ggsave(gg_exposuretime, filename = paste0(outpath, "total_exposed_time.pdf"), wi
 
 
 ####################
-# Percentiage of tweets per story
+# PLOT: Cumulative relative exposure per article (i.e., % of users eventually exposed to the article)
 ####################
 gg_relexpostime <- exposure_timeseries %>% 
   ggplot(., aes(x = time/24, y = relative_cumulative_exposed, group = total_article_number)) +
@@ -146,18 +172,18 @@ gg_relexpostime <- exposure_timeseries %>%
   scale_x_continuous(breaks = seq(0, 14, 1),
                        limits = c(-0.1, 7)) +
   xlab("Time since first article share (days)") +
-  ylab("Proportion of total users exposed") +
+  ylab("Proportion of article exposures") +
   theme_ctokita() +
   theme(aspect.ratio = NULL) +
-  facet_wrap(as.formula(paste("~", grouping)), 
+  facet_wrap(as.formula(paste("~", GROUPING)), 
              ncol = 1,
              strip.position = "top")
 gg_relexpostime
-ggsave(gg_relexpostime, filename = paste0(outpath, "percentage_exposed_time.pdf"), width = 90, height = 45, units = "mm", dpi = 400)
+ggsave(gg_relexpostime, filename = paste0(outpath, "relative_exposure_time.pdf"), width = 90, height = 45, units = "mm", dpi = 400)
 
 
 ####################
-# Cumulative exposed by tweet number
+# PLOT: Cumulative users exposed by tweet number
 ####################
 gg_exposuretweet <- exposure_timeseries %>% 
   ggplot(., aes(x = tweet_number, y = cumulative_exposed, group = total_article_number)) +
@@ -172,26 +198,25 @@ gg_exposuretweet <- exposure_timeseries %>%
   ylab("Total users exposed") +
   theme_ctokita() +
   theme(aspect.ratio = NULL) +
-  facet_wrap(as.formula(paste(grouping, "~.")), 
+  facet_wrap(as.formula(paste(GROUPING, "~.")), 
              ncol = 2)
 gg_exposuretweet
 ggsave(gg_exposuretweet, filename = paste0(outpath, "total_exposed_tweetnumber.pdf"), width = 90, height = 45, units = "mm", dpi = 400)
 
 
 ####################
-# Relative tweet time tweet number vs exposure
+# PLOT: Proportion of article tweets X Proportion of total article exposure
 ####################
-# Plot
 gg_expVnum <- exposure_timeseries %>% 
   filter(tweet_number > -1) %>% 
   ggplot(., aes(x = relative_tweet_count, y = relative_cumulative_exposed, group = total_article_number, color = total_article_number)) +
   geom_abline(intercept = 0, slope = 1, color = "black", 
               linetype = "dashed", size = 0.3)+
   geom_line(size = 0.3, alpha = 0.5, color = line_color) +
-  xlab("Proportion of total tweets") +
-  ylab("Proportion of total users exposed") +
+  xlab("Proportion of article tweets") +
+  ylab("Proportion of article exposures") +
   theme_ctokita() +
-  facet_wrap(as.formula(paste("~", grouping)), 
+  facet_wrap(as.formula(paste("~", GROUPING)), 
              ncol = 1,
              strip.position = "top",
              scales = "free_x")
@@ -214,16 +239,16 @@ exposure_ideol <- exposure_timeseries %>%
   separate(ideology_bin, c("lower", "upper"), sep = "_", convert = TRUE) %>% 
   mutate(ideology_bin = (lower + upper) / 2) %>% 
   select(-lower, -upper) %>% 
-  # count number of articles per grouping (useful for average distributions)
-  group_by(!!sym(grouping)) %>% 
-  mutate(n_articles_in_grouping = length(unique(total_article_number)))
+  # count number of articles per GROUPING (useful for average distributions)
+  group_by(!!sym(GROUPING)) %>% 
+  mutate(n_articles_in_GROUPING = length(unique(total_article_number)))
 
 
 ####################
-# Total ideologies exposed to articles by type
+# PLOT: Ideology of exposed users
 ####################
 gg_ideol_total <- exposure_ideol %>% 
-  group_by(!!sym(grouping), ideology_bin) %>% 
+  group_by(!!sym(GROUPING), ideology_bin) %>% 
   summarise(count = sum(count, na.rm = TRUE),
             avg_count = sum(count, na.rm = TRUE) / length(unique(total_article_number))) %>% 
   ggplot(., aes(x = ideology_bin, y = count, fill = ideology_bin)) +
@@ -240,7 +265,7 @@ gg_ideol_total <- exposure_ideol %>%
   theme_ctokita() +
   theme(legend.position = "none",
         aspect.ratio = NULL) +
-  facet_wrap(as.formula(paste("~", grouping)), 
+  facet_wrap(as.formula(paste("~", GROUPING)), 
              ncol = 1,
              strip.position = "top",
              scales = "free")
@@ -248,10 +273,10 @@ gg_ideol_total
 ggsave(gg_ideol_total, filename = paste0(outpath, "ideol_total_exposed.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
 
 ####################
-# Avg ideologies exposed per article (by type)
+# PLOT: Average number of users exposed per article, broken out by user ideology
 ####################
 gg_ideol_avg <- exposure_ideol %>% 
-  group_by(!!sym(grouping), ideology_bin) %>% 
+  group_by(!!sym(GROUPING), ideology_bin) %>% 
   summarise(avg_count = sum(count, na.rm = TRUE) / length(unique(total_article_number))) %>% 
   ggplot(., aes(x = ideology_bin, y = avg_count, fill = ideology_bin)) +
   geom_bar(stat = "identity", width = 0.5, color = NA) +
@@ -267,7 +292,7 @@ gg_ideol_avg <- exposure_ideol %>%
   theme_ctokita() +
   theme(legend.position = "none",
         aspect.ratio = NULL) +
-  facet_wrap(as.formula(paste("~", grouping)), 
+  facet_wrap(as.formula(paste("~", GROUPING)), 
              ncol = 1,
              strip.position = "top",
              scales = "free")
@@ -276,20 +301,20 @@ ggsave(gg_ideol_avg, filename = paste0(outpath, "ideol_avg_exposed.pdf"), width 
 
 
 ####################
-# Ideological distributions of exposure
+# PLOT: Average ideological distribution of users exposed to an article
 ####################
 gg_ideol_dist <- exposure_ideol %>% 
   # filter(total_article_number == 28) %>%
   # For each article, determine proportion exposed by ideology bin
-  group_by(!!sym(grouping), ideology_bin, total_article_number, n_articles_in_grouping) %>% 
+  group_by(!!sym(GROUPING), ideology_bin, total_article_number, n_articles_in_GROUPING) %>% 
   summarise(count = sum(count)) %>% 
   ungroup() %>% 
-  group_by(total_article_number, n_articles_in_grouping) %>% 
+  group_by(total_article_number, n_articles_in_GROUPING) %>% 
   mutate(exposed_prop = count / sum(count),
          exposed_prop = ifelse( is.na(exposed_prop), 0, exposed_prop)) %>% 
-  # Now determine average distribution shape by article grouping
-  group_by(!!sym(grouping), ideology_bin, n_articles_in_grouping) %>% 
-  summarise(avg_exposed_prop = sum(exposed_prop) / unique(n_articles_in_grouping)) %>% 
+  # Now determine average distribution shape by article GROUPING
+  group_by(!!sym(GROUPING), ideology_bin, n_articles_in_GROUPING) %>% 
+  summarise(avg_exposed_prop = sum(exposed_prop) / unique(n_articles_in_GROUPING)) %>% 
   # Plot
   ggplot(., aes(x = ideology_bin, y = avg_exposed_prop, fill = ideology_bin)) +
   geom_bar(stat = "identity", width = 0.5, color = NA) +
@@ -308,7 +333,7 @@ gg_ideol_dist <- exposure_ideol %>%
   theme_ctokita() +
   theme(legend.position = "none",
         aspect.ratio = NULL) +
-  facet_wrap(as.formula(paste("~", grouping)), 
+  facet_wrap(as.formula(paste("~", GROUPING)), 
              ncol = 1,
              strip.position = "top",
              scales = "free_x")
@@ -318,11 +343,11 @@ ggsave(gg_ideol_dist, filename = paste0(outpath, "ideol_avg_exposure_distributio
 
 
 ####################
-# Exposure time series
+# PLOT: Proportion of newly exposed users (time series)
 ####################
 gg_ideoltime <- exposure_ideol %>% 
   filter(hour_bin >= 0) %>% 
-  group_by(!!sym(grouping), hour_bin, ideology_bin) %>% 
+  group_by(!!sym(GROUPING), hour_bin, ideology_bin) %>% 
   summarise(count = sum(count)) %>%
   ggplot(., aes(x = hour_bin, y = count, fill = ideology_bin, color = ideology_bin)) +
   geom_bar(position = "fill", stat = "identity", width = 1, size = 0.01) +
@@ -345,7 +370,7 @@ gg_ideoltime <- exposure_ideol %>%
         legend.box.margin = unit(c(0, 0, 0, 0), "mm"),
         panel.border = element_rect(size = 0.6, fill = NA),
         axis.line = element_blank()) +
-  facet_wrap(as.formula(paste("~", grouping)), 
+  facet_wrap(as.formula(paste("~", GROUPING)), 
              ncol = 1,
              strip.position = "top",
              scales = "free")
@@ -354,7 +379,7 @@ ggsave(gg_ideoltime, filename = paste0(outpath, "ideol_exposed_hourbin.pdf"), wi
 
 
 ####################
-# Find exposure to fake news
+# PLOT: Ideologies of users exposed to each of the false/misleading news articles
 ####################
 gg_fake_exposure_article <- exposure_ideol %>% 
   filter(article_fc_rating == "False/Misleading news") %>% 
@@ -368,16 +393,23 @@ gg_fake_exposure_article <- exposure_ideol %>%
   scale_color_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   xlab("User ideology") +
-  ylab("Avg. users exposed to article") +
+  ylab("Total users exposed to article") +
   theme_ctokita() +
   theme(legend.position = "none") +
-  facet_wrap(~total_article_number)
+  facet_wrap(~total_article_number,
+             scales = "free")
 gg_fake_exposure_article
-ggsave(gg_fake_exposure_article, filename = paste0(outpath, "fake_news_exposure_by_article.pdf"), width = 180, height = 180, units = "mm", dpi = 400)
+ggsave(gg_fake_exposure_article, filename = paste0("output/exposure/veracity/fake_news_exposure_by_article.pdf"), width = 180, height = 180, units = "mm", dpi = 400)
 
+
+
+############################## Plot cross-ideology exposure ##############################
+# Here, we are interested in assessing when conservatives tweeted/retweeted an article and exposed liberals, and vice versa.
+# Cross ideology exposure is an instance in which a user exposed another user with the opposite ideological sign (+/-).
+# In this analysis, liberals are users with ideology <0, while conservatives are users with ideology >0.
 
 ####################
-# Cross-ideology exposure vs. tweeter ideology
+# PLOT: Average cross-ideology exposure per tweet, broken out by tweeter ideology
 ####################
 # Re-load exposure data 
 exposure_data <- read.csv('/Volumes/CKT-DATA/news-belief-at-scale/data_derived/exposure/estimated_users_exposed_over_time.csv', 
@@ -415,8 +447,8 @@ cross_exposure_data <- exposure_by_ideology %>%
             cross_exposure_per_tweet = cross_exposure_sum / total_tweets,
             cross_exposure_percent_avg = mean(cross_exposure_percent, na.rm = TRUE))
 
-# Plot average cross-ideology exposure per tweet
-gg_crossexposure <- ggplot(cross_exposure_data, aes(x = user_ideology_bin, y = cross_exposure_per_tweet, fill = user_ideology_bin)) +
+# Plot
+gg_crossexposure <- ggplot(cross_exposure_data %>% filter(!is.na(user_ideology_bin)), aes(x = user_ideology_bin, y = cross_exposure_per_tweet, fill = user_ideology_bin)) +
   geom_bar(stat = "identity") +
   geom_vline(xintercept = 0, linetype = "dotted", size = 0.3) +
   scale_x_continuous(limits = c(-3, 5), 
@@ -435,7 +467,14 @@ gg_crossexposure
 ggsave(gg_crossexposure, filename = "output/exposure/avg_crossideology_exposure.pdf", width = 55, height = 45, units = "mm", dpi = 400)
 
 
-# Plot standard deviation of exposure
+####################
+# PLOT: Exposure diversity per tweet, broken out by tweeter ideology
+####################
+# 
+# The idea here is to see what types of users (in terms of ideology) had the most diverse audience.
+#
+
+# Calculate standard deviation of user ideologies exposed to each tweet
 exposure_diversity <- exposure_by_ideology %>% 
   select(user_ideology_bin, user_id, tweet_id, ideol_.3.0_.2.5:ideol_5.0_5.5) %>% 
   gather("bin", "count", -user_ideology_bin, -user_id, -tweet_id) %>% 
@@ -449,7 +488,9 @@ exposure_diversity <- exposure_by_ideology %>%
   summarise(exposure_mean = sum(weighted_ideol) / sum(count),
             exposure_sd = sqrt( sum((exposed_bin - exposure_mean)^2 * count) / sum(count) ) )
 
+# Plot
 gg_exposure_sd <- exposure_diversity %>% 
+  filter(!is.na(user_ideology_bin)) %>% 
   ggplot(., aes(x = user_ideology_bin, y = exposure_sd, fill = user_ideology_bin, group = user_ideology_bin)) +
   geom_violin(size = 0, color = NA) +
   stat_summary(fun.y = mean, geom = "point", size = 0.7, color = "white") +
