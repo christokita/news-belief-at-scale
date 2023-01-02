@@ -3,9 +3,10 @@
 # Author: Chris Tokita
 # Purpose: Plot estimated belief in news article tweets over time, comparing by article veracity or by news source type.
 # Details:
-#   (Copies of data are currently stored on external hard drive and high-performance cluster.)
-#   The Variables at the beginngin of the script that are in all caps---`GROUPING` and `DATA_DIRECTORY`---need to be set by the user"
-#     `DATA_DIRECTORY`: path to the data directory.
+#   (These R scripts assume the use of the `.Rproj` at top of the news-belief-at-scale/ repo. Otherwise, set the working directory to one level above this script.)
+#
+#   The Variables at the beginning of the script that are in all caps---`GROUPING` and `DATA_DIRECTORY`---need to be set by the user"
+#     `DATA_DIRECTORY`: path to the data directory. (Copies of data are currently stored on external hard drive and high-performance cluster.)
 #     `GROUPING`:       determines whether the plots will break out tweet belief according to article veracity ("article_fc_rating") or the source of the article ("source_type").
 # 
 # Data In:
