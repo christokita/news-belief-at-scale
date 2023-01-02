@@ -38,7 +38,7 @@ source("scripts/_plot_themes/theme_ctokita.R")
 # Set parameters for analysis
 ####################
 # Choose location of data
-DATA_DIRECTORY <- '/Volumes/CKT-DATA/news-belief-at-scale/'
+DATA_DIRECTORY <- "/Volumes/CKT-DATA/news-belief-at-scale/"
 
 # Choose GROUPING of interest. Options: 
 #     (1) article veracity: "article_fc_rating"
@@ -50,14 +50,14 @@ GROUPING <- "article_fc_rating"
 # Prepare for analysis: set paths to data, paths for output, and color palettes for plotting
 ####################
 # Set paths for data
-tweet_path <- paste0(DATA_DIRECTORY, 'data_derived/tweets/tweets_labeled.csv') #tweets
-belief_path <- paste0(DATA_DIRECTORY, 'data_derived/belief/estimated_belief_over_time.csv') #estimated belief per tweet
+tweet_path <- paste0(DATA_DIRECTORY, "data_derived/tweets/tweets_labeled.csv") #tweets
+belief_path <- paste0(DATA_DIRECTORY, "data_derived/belief/estimated_belief_over_time.csv") #estimated belief per tweet
 
 # Set path for plots
 if (GROUPING == "article_fc_rating") {
-  outpath <- 'output/belief/veracity/'
+  outpath <- "output/belief/veracity/"
 } else if(GROUPING == "source_type") {
-  outpath <- 'output/belief/source_type/'
+  outpath <- "output/belief/source_type/"
 }
 
 # Set color palette
