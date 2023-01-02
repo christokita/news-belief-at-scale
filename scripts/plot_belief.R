@@ -4,10 +4,9 @@
 # Purpose: Plot estimated belief in news article tweets over time, comparing by article veracity or by news source type.
 # Details:
 #   (Copies of data are currently stored on external hard drive and high-performance cluster.)
-#   At the beginning of this script, you can choose to analyze through the lens of 
-#     (a) article veracity ("article_fc_rating"), i.e., True or False/Misleading articles
-#     (b) news source type ("source_type"), i.e., mainstream news source vs. fringe news source
-#   This determines whether the plots will break out tweet belief according to the veracity of the content or the source of the article.
+#   The Variables at the beginngin of the script that are in all caps---`GROUPING` and `DATA_DIRECTORY`---need to be set by the user"
+#     `DATA_DIRECTORY`: path to the data directory.
+#     `GROUPING`:       determines whether the plots will break out tweet belief according to article veracity ("article_fc_rating") or the source of the article ("source_type").
 # 
 # Data In:
 # `<data storage location>/data_derived/tweets/tweets_labeled.csv`: article tweets with article and tweeter metadata.
@@ -19,6 +18,7 @@
 # 
 # Machine: Chris' laptop
 ########################################
+
 
 ####################
 # Load packages
@@ -32,23 +32,34 @@ library(scales)
 library(brms)
 source("scripts/_plot_themes/theme_ctokita.R")
 
+
 ####################
-# Parameters for analysis: grouping of interest, paths to data, paths for output, and file name
+# Set parameters for analysis
 ####################
+# Choose location of data
+DATA_DIRECTORY <- '/Volumes/CKT-DATA/news-belief-at-scale/'
+
 # Choose grouping of interest. Options: 
 #     (1) article veracity: "article_fc_rating"
 #     (2) source: "source_type"
-grouping <- "article_fc_rating"
+GROUPING <- "article_fc_rating"
 
-# Paths to files/directories
-tweet_path <- '/Volumes/CKT-DATA/news-belief-at-scale/data_derived/tweets/tweets_labeled.csv' #path to fitness cascade data
+
+####################
+# Prepare for analysis: set paths to data, paths for output, and color palettes for plotting
+####################
+# Set paths for data
+tweet_path <- paste0(DATA_DIRECTORY, 'data_derived/tweets/tweets_labeled.csv') #tweets
+belief_path <- paste0(DATA_DIRECTORY, 'data_derived/belief/estimated_belief_over_time.csv') #estimated belief per tweet
+
+# Set path for plots
 if (grouping == "article_fc_rating") {
   outpath <- 'output/belief/veracity/'
 } else if(grouping == "source_type") {
   outpath <- 'output/belief/source_type/'
 }
 
-# Color palette
+# Set color palette
 line_color <- "#495867"
 ideol_pal <- rev(brewer.pal(5, "RdBu"))
 ideol_pal[3] <- "#e0e0e0"
@@ -61,7 +72,7 @@ grouping_pal <- c("#F18805", plot_color)
 
 
 ####################
-# Load and prep data 
+# Load and prepare data 
 ####################
 # Read in tweet data for article info
 tweets <- read.csv(tweet_path, header = TRUE, colClasses = c("user_id"="character", "tweet_id"="character")) %>% 
@@ -80,8 +91,7 @@ article_data <- tweets %>%
   select(tweet_id, total_article_number, source_type, source_lean, article_fc_rating, article_lean, user_ideology) 
 
 # Load belief data 
-belief_data <- read.csv('/Volumes/CKT-DATA/news-belief-at-scale/data_derived/belief/estimated_belief_over_time.csv', 
-                          header = TRUE, colClasses = c("user_id"="character", "tweet_id"="character")) %>% 
+belief_data <- read.csv(belief_path, header = TRUE, colClasses = c("user_id"="character", "tweet_id"="character")) %>% 
   filter(total_article_number > 10) %>% #discard first 10 articles from analysis
   mutate(tweet_number = tweet_number+1) %>%  #python zero index
   rename(time = relative_time) %>% 
