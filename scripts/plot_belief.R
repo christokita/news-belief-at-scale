@@ -40,7 +40,7 @@ source("scripts/_plot_themes/theme_ctokita.R")
 # Choose location of data
 DATA_DIRECTORY <- '/Volumes/CKT-DATA/news-belief-at-scale/'
 
-# Choose grouping of interest. Options: 
+# Choose GROUPING of interest. Options: 
 #     (1) article veracity: "article_fc_rating"
 #     (2) source: "source_type"
 GROUPING <- "article_fc_rating"
@@ -54,9 +54,9 @@ tweet_path <- paste0(DATA_DIRECTORY, 'data_derived/tweets/tweets_labeled.csv') #
 belief_path <- paste0(DATA_DIRECTORY, 'data_derived/belief/estimated_belief_over_time.csv') #estimated belief per tweet
 
 # Set path for plots
-if (grouping == "article_fc_rating") {
+if (GROUPING == "article_fc_rating") {
   outpath <- 'output/belief/veracity/'
-} else if(grouping == "source_type") {
+} else if(GROUPING == "source_type") {
   outpath <- 'output/belief/source_type/'
 }
 
@@ -139,7 +139,7 @@ belief_timeseries <- dummy_rows %>%
 rm(dummy_rows, article_data, belief_data)
 
 # If analyzing by veracity, drop out non-True/False articles
-if (grouping == "article_fc_rating") {
+if (GROUPING == "article_fc_rating") {
   belief_timeseries <- belief_timeseries %>% 
     filter(article_fc_rating %in% c("T", "FM"))
 }
@@ -167,9 +167,9 @@ belief_ideol <- belief_timeseries %>%
   separate(ideology_bin, c("lower", "upper"), sep = "_", convert = TRUE) %>% 
   mutate(ideology_bin = (lower + upper) / 2) %>% 
   select(-lower, -upper) %>% 
-  # count number of articles per grouping (useful for average distributions)
-  group_by(!!sym(grouping)) %>% 
-  mutate(n_articles_in_grouping = length(unique(total_article_number)))
+  # count number of articles per GROUPING (useful for average distributions)
+  group_by(!!sym(GROUPING)) %>% 
+  mutate(n_articles_in_GROUPING = length(unique(total_article_number)))
 
 
 ####################
@@ -177,9 +177,9 @@ belief_ideol <- belief_timeseries %>%
 ####################
 gg_ideol_total <- belief_ideol %>% 
   # Calculate totals
-  group_by(!!sym(grouping), ideology_bin) %>% 
+  group_by(!!sym(GROUPING), ideology_bin) %>% 
   summarise(count = sum(count, na.rm = TRUE),
-            avg_count = sum(count, na.rm = TRUE) / unique(n_articles_in_grouping)) %>% 
+            avg_count = sum(count, na.rm = TRUE) / unique(n_articles_in_GROUPING)) %>% 
   # Plot
   ggplot(., aes(x = ideology_bin, y = count, fill = ideology_bin, color = ideology_bin)) +
   geom_bar(stat = "identity") +
@@ -195,7 +195,7 @@ gg_ideol_total <- belief_ideol %>%
   theme_ctokita() +
   theme(legend.position = "none",
         aspect.ratio = NULL) +
-  facet_wrap(as.formula(paste("~", grouping)), 
+  facet_wrap(as.formula(paste("~", GROUPING)), 
              ncol = 1,
              strip.position = "top",
              scales = "free")
@@ -207,8 +207,8 @@ ggsave(gg_ideol_total, filename = paste0(outpath, "ideol_total_belief.pdf"), wid
 ####################
 gg_ideol_avg <- belief_ideol %>% 
   # Calculate average exposed
-  group_by(!!sym(grouping), ideology_bin) %>% 
-  summarise(avg_count = sum(count, na.rm = TRUE) / unique(n_articles_in_grouping)) %>% 
+  group_by(!!sym(GROUPING), ideology_bin) %>% 
+  summarise(avg_count = sum(count, na.rm = TRUE) / unique(n_articles_in_GROUPING)) %>% 
   # Plot
   ggplot(., aes(x = ideology_bin, y = avg_count, fill = ideology_bin, color = ideology_bin)) +
   geom_bar(stat = "identity") +
@@ -224,7 +224,7 @@ gg_ideol_avg <- belief_ideol %>%
   theme_ctokita() +
   theme(legend.position = "none",
         aspect.ratio = NULL) +
-  facet_wrap(as.formula(paste("~", grouping)), 
+  facet_wrap(as.formula(paste("~", GROUPING)), 
              ncol = 1,
              strip.position = "top",
              scales = "free")
@@ -237,14 +237,14 @@ ggsave(gg_ideol_avg, filename = paste0(outpath, "ideol_avg_belief.pdf"), width =
 ####################
 gg_ideol_dist <- belief_ideol %>% 
   # Calculate average distribution of belief
-  group_by(!!sym(grouping), ideology_bin, total_article_number, n_articles_in_grouping) %>% 
+  group_by(!!sym(GROUPING), ideology_bin, total_article_number, n_articles_in_GROUPING) %>% 
   summarise(count = sum(count)) %>% 
   ungroup() %>% 
   group_by(total_article_number) %>% 
   mutate(belief_prop = count / sum(count),
          belief_prop = ifelse( is.na(belief_prop), 0, belief_prop)) %>% 
-  group_by(!!sym(grouping), ideology_bin) %>% 
-  summarise(avg_belief_prop = sum(belief_prop) / unique(n_articles_in_grouping)) %>% 
+  group_by(!!sym(GROUPING), ideology_bin) %>% 
+  summarise(avg_belief_prop = sum(belief_prop) / unique(n_articles_in_GROUPING)) %>% 
   # Plot
   ggplot(., aes(x = ideology_bin, y = avg_belief_prop, fill = ideology_bin, color = ideology_bin)) +
   geom_bar(stat = "identity") +
@@ -261,7 +261,7 @@ gg_ideol_dist <- belief_ideol %>%
   theme_ctokita() +
   theme(legend.position = "none",
         aspect.ratio = NULL) +
-  facet_wrap(as.formula(paste("~", grouping)), 
+  facet_wrap(as.formula(paste("~", GROUPING)), 
              ncol = 1,
              strip.position = "top",
              scales = "free_x")
@@ -274,10 +274,10 @@ ggsave(gg_ideol_dist, filename = paste0(outpath, "ideol_avg_belief_distribution.
 # PLOT: Belief time series
 ####################
 gg_ideoltime <- belief_ideol %>% 
-  group_by(!!sym(grouping), hour_bin, ideology_bin) %>% 
+  group_by(!!sym(GROUPING), hour_bin, ideology_bin) %>% 
   summarise(count = sum(count)) %>%
   ggplot(., aes(x = hour_bin, y = count, fill = ideology_bin, color = ideology_bin)) +
-  geom_bar(position = "fill", stat = "identity", width = 1, size = 0.05) +
+  geom_bar(position = "fill", stat = "identity", width = 1, linewidth = 0.05) +
   scale_fill_gradientn(colours = ideol_pal, 
                        name = "User\nideology",
                        limits = c(-2, 2), 
@@ -295,9 +295,9 @@ gg_ideoltime <- belief_ideol %>%
   theme_ctokita() +
   theme(aspect.ratio = NULL, 
         legend.box.margin = unit(c(0, 0, 0, 0), "mm"),
-        panel.border = element_rect(size = 0.6, fill = NA),
+        panel.border = element_rect(linewidth = 0.6, fill = NA),
         axis.line = element_blank()) +
-  facet_wrap(as.formula(paste("~", grouping)), 
+  facet_wrap(as.formula(paste("~", GROUPING)), 
              ncol = 1,
              strip.position = "top",
              scales = "free")
@@ -317,22 +317,22 @@ belief_per_exposure <- belief_timeseries %>%
 # Quick average for paper: belief-per-exposure upon publication
 belief_per_exposure %>% 
   filter(time < 1) %>% 
-  group_by(!!sym(grouping)) %>% 
+  group_by(!!sym(GROUPING)) %>% 
   summarise(mean_rate = mean(belief_per_exposure, na.rm = T))
 
 belief_per_exposure %>% 
   filter(time < 24) %>% 
   filter(time >= 23) %>% 
-  group_by(!!sym(grouping)) %>% 
+  group_by(!!sym(GROUPING)) %>% 
   summarise(mean_rate = mean(belief_per_exposure, na.rm = T))
 
 # Fit bayesian trend line of belief-per-exposure over time
-if (grouping == "article_fc_rating") {
+if (GROUPING == "article_fc_rating") {
   belief_split <- belief_per_exposure %>% 
     filter(!is.na(belief_per_exposure)) %>% 
     split(.$article_fc_rating)
   group_names <- unique(belief_timeseries$article_fc_rating)
-} else if (grouping == "source_type") {
+} else if (GROUPING == "source_type") {
   belief_split <- belief_per_exposure %>% 
     filter(!is.na(belief_per_exposure)) %>% 
     split(.$source_type)
@@ -377,14 +377,14 @@ gg_belief_rate_exposure <- belief_per_exposure %>%
   # Prep data
   mutate(binned_time = floor(time / (minutes_per_bin / 60)  ), #assign to bin
          binned_time = binned_time / (60 / minutes_per_bin)) %>% #translate bin into real time
-  group_by(!!sym(grouping), binned_time) %>% 
+  group_by(!!sym(GROUPING), binned_time) %>% 
   summarise(belief_per_exposure = mean(belief_per_exposure, na.rm = TRUE)) %>% 
-  rename(group = !!sym(grouping)) %>% 
+  rename(group = !!sym(GROUPING)) %>% 
   # Plot
   ggplot(., aes(x = binned_time, y = belief_per_exposure, color = group)) +
   geom_point(stroke = 0, alpha = 0.15, size = 1) +
   geom_line(data = fit_belief, aes(x = time, y = Estimate),
-            size = 0.6) +
+            linewidth = 0.6) +
   scale_x_continuous(breaks = seq(0, 48, 12),
                      limits = c(0, 48)) +
   scale_y_continuous(breaks = seq(0, 1, 0.1),
@@ -419,7 +419,7 @@ for (i in seq(1, length(regression_belief) ) ) {
 ####################
 # PLOT: Belief per exposure by article/source type
 #
-# NOTE: This hard-codes groupings and will be the same regardless of which `grouping` variable is selected at the top of the script
+# NOTE: This effectively hard-codes `GROUPING` and will be the same regardless of which `GROUPING` variable is selected at the top of the script
 #
 ####################
 # Prep data
@@ -473,7 +473,7 @@ gg_belief_rate_exposure_source <- belief_per_exposure %>%
   ggplot(., aes(x = binned_time, y = belief_per_exposure, color = article_fc_rating)) +
   geom_point(stroke = 0, alpha = 0.15, size = 1) +
   geom_line(data = fit_belief, aes(x = time, y = Estimate),
-            size = 0.6) +
+            linewidth = 0.6) +
   scale_x_continuous(breaks = seq(0, 48, 12),
                      limits = c(0, 48)) +
   scale_y_continuous(breaks = seq(0, 1, 0.1),
@@ -498,14 +498,14 @@ gg_belief_rate_exposure_source <- belief_per_exposure %>%
   # Prep data
   mutate(binned_time = floor(time / (minutes_per_bin / 60)  ), #assign to bin
          binned_time = binned_time / (60 / minutes_per_bin)) %>% #translate bin into real time
-  group_by(source_type, article_lean, !!sym(grouping), binned_time) %>% 
+  group_by(source_type, article_lean, !!sym(GROUPING), binned_time) %>% 
   summarise(belief_per_exposure = mean(belief_per_exposure, na.rm = TRUE)) %>% 
-  rename(group = !!sym(grouping)) %>% 
+  rename(group = !!sym(GROUPING)) %>% 
   # Plot
   ggplot(., aes(x = binned_time, y = belief_per_exposure, color = group)) +
   geom_point(stroke = 0, alpha = 0.15, size = 1) +
   # geom_line(data = fit_belief, aes(x = time, y = Estimate),
-  #           size = 0.6) +
+  #           linewidth = 0.6) +
   scale_x_continuous(breaks = seq(0, 48, 12),
                      limits = c(0, 48)) +
   scale_y_continuous(breaks = seq(0, 1, 0.2),
@@ -530,10 +530,10 @@ ggsave(gg_belief_rate_exposure_source, filename = "output/belief/veracity/belief
 # PLOT: Relative cumulative belief over first 48 hours
 ####################
 # Prep legend labels for plot
-if (grouping == "article_fc_rating") {
+if (GROUPING == "article_fc_rating") {
   legend_name <- "Article rating"
   legend_labels <- c("False/Misleading", "True")
-} else if (grouping == "source_type") {
+} else if (GROUPING == "source_type") {
   legend_name <- "News Source Type"
   legend_labels <- c("Fringe", "Mainstream")
 } 
@@ -548,20 +548,20 @@ gg_48hr_belief <- belief_timeseries %>%
   # Add in missing hour bins
   filter(time >= 0 & time <= 48) %>% 
   merge(missing_hour_bins, by = c("total_article_number", "hour_bin"), all = TRUE) %>% 
-  fill(relative_cumulative_belief, !!sym(grouping)) %>% 
+  fill(relative_cumulative_belief, !!sym(GROUPING)) %>% 
   # Prep data
-  group_by(!!sym(grouping), hour_bin, total_article_number) %>% 
+  group_by(!!sym(GROUPING), hour_bin, total_article_number) %>% 
   summarise(relative_cumulative_belief = max(relative_cumulative_belief, na.rm = TRUE)) %>% 
   ungroup() %>% 
-  group_by(!!sym(grouping), hour_bin) %>% 
+  group_by(!!sym(GROUPING), hour_bin) %>% 
   summarise(mean_relative_cumulative_belief = mean(relative_cumulative_belief, na.rm = TRUE),
             sd_belief = sd(relative_cumulative_belief, na.rm = TRUE)) %>% 
   mutate(lower = pmax(0, mean_relative_cumulative_belief - sd_belief),
          upper = pmin(1, mean_relative_cumulative_belief + sd_belief)) %>% #don't allow to go above 1 or below 0
   # Plot
-  ggplot(., aes(x = hour_bin, y = mean_relative_cumulative_belief, color = !!sym(grouping), fill = !!sym(grouping))) +
+  ggplot(., aes(x = hour_bin, y = mean_relative_cumulative_belief, color = !!sym(GROUPING), fill = !!sym(GROUPING))) +
   geom_ribbon(aes(ymin = lower, ymax = upper), color = NA, alpha = 0.2) +
-  geom_line(size = 0.6) +
+  geom_line(linewidth = 0.6) +
   xlab("Hours since first article share") +
   ylab("Relative cumulative belief") +
   scale_x_continuous(breaks = seq(0, 48, 12),
@@ -581,8 +581,8 @@ ggsave(gg_48hr_belief, filename = paste0(outpath, "relative_cumulative_belief.pd
 
 # Just raw article data
 gg_48hr_belief_raw <- belief_timeseries %>% 
-  ggplot(., aes(x = time, y = relative_cumulative_belief, color = !!sym(grouping), group = total_article_number)) +
-  geom_line(size = 0.6, alpha = 0.15) +
+  ggplot(., aes(x = time, y = relative_cumulative_belief, color = !!sym(GROUPING), group = total_article_number)) +
+  geom_line(linewidth = 0.6, alpha = 0.15) +
   xlab("Hours since first article share") +
   ylab("Relative cumulative belief over first 24 hrs.") +
   scale_x_continuous(breaks = seq(0, 24, 6),
@@ -592,7 +592,7 @@ gg_48hr_belief_raw <- belief_timeseries %>%
                      expand = c(0, 0), 
                      limits = c(0, 1)) +
   scale_color_manual(values = grouping_pal, name = "Article rating", labels = c("False/Misleading", "True")) +
-  facet_wrap(as.formula(paste("~", grouping)),
+  facet_wrap(as.formula(paste("~", GROUPING)),
              ncol = 1,
              strip.position = "top",
              scales = "free") +
