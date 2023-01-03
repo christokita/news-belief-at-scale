@@ -1,8 +1,24 @@
-########################################
+#########################################
+# Name: `plot_exposurebelief_fig.R`
+# Author: Chris Tokita
+# Purpose: Plot estimated exposure to and belief in news article for main figures for paper.
+# Details:
+#   (These R scripts assume the use of the `.Rproj` at top of the news-belief-at-scale/ repo. Otherwise, set the working directory to one level above this script.)
 #
-# PLOT: Estimated belief and exposure for paper figure
-#
+#   The Variables at the beginning of the script that are in all caps need to be set by the user:
+#     `DATA_DIRECTORY`: path to the data directory. (Copies of data are currently stored on external hard drive and high-performance cluster.)
+# 
+# Data In:
+# `<data storage location>/data_derived/tweets/tweets_labeled.csv`: article tweets with article and tweeter metadata.
+# `<data storage location>/data_derived/exposure/estimated_users_exposed_over_time.csv: estimated exposure to each article tweet.
+# `<data storage location>/data_derived/belief/estimated_belief_over_time.csv`: estimated belief in each article tweet.
+# 
+# Data Out: Plots written to output subfolder focusing on belief (since we are analyzing both belief and exposure combined here) broken out by article veracity. 
+# `<data storage location>/output/belief/veracity/`
+# 
+# Machine: Chris' laptop
 ########################################
+
 
 ####################
 # Load packages and set paths
@@ -15,7 +31,21 @@ library(RColorBrewer)
 library(scales)
 source("scripts/_plot_themes/theme_ctokita.R")
 
-tweet_path <- '/Volumes/CKT-DATA/news-belief-at-scale/data_derived/tweets/tweets_labeled.csv'
+
+####################
+# Set parameters for analysis
+####################
+# Choose location of data
+DATA_DIRECTORY <- "/Volumes/CKT-DATA/news-belief-at-scale/"
+
+
+####################
+# Prepare for analysis: set paths to data, paths for output, and color palettes for plotting
+####################
+# Set paths for data
+tweet_path <- paste0(DATA_DIRECTORY, "data_derived/tweets/tweets_labeled.csv") #tweets
+exposure_path <- paste0(DATA_DIRECTORY, "data_derived/exposure/estimated_users_exposed_over_time.csv") #estimated exposure per tweet
+belief_path <- paste0(DATA_DIRECTORY, "data_derived/belief/estimated_belief_over_time.csv") #estimated belief per tweet
 
 # Set plotting palettes
 ideol_pal <- rev(brewer.pal(5, "RdBu"))
@@ -46,8 +76,7 @@ article_data <- tweets %>%
   select(tweet_id, total_article_number, source_type, source_lean, article_fc_rating, article_lean, user_ideology) 
 
 # Load belief data 
-belief_data <- read.csv('/Volumes/CKT-DATA/news-belief-at-scale/data_derived/belief/estimated_belief_over_time.csv', 
-                        header = TRUE, colClasses = c("user_id"="character", "tweet_id"="character")) %>% 
+belief_data <- read.csv(belief_path, header = TRUE, colClasses = c("user_id"="character", "tweet_id"="character")) %>% 
   filter(total_article_number > 10) %>% #discard first 10 articles from analysis
   mutate(tweet_number = tweet_number+1) %>%  #python zero index
   rename(time = relative_time) %>% 
@@ -62,7 +91,6 @@ belief_timeseries <- merge(belief_data, article_data, by = c("tweet_id", "total_
          article_lean = ifelse(article_lean == "C", "Conservative", ifelse(article_lean == "L", "Liberal",
                                                                            ifelse(article_lean == "N", "Neutral", 
                                                                                   ifelse(article_lean == "U", "Unclear", source_type)))) )
-
 
 # Add ideological data (data is melted to make one ideological bin per tweet per row)
 belief_ideol <- belief_timeseries %>% 
@@ -82,13 +110,12 @@ rm(belief_data)
 
 
 ####################
-# Load expsoure data
+# Load exposure data
 ####################
 # NOTE:
 # - for the raw count of exposure of followers we have ideology scores for user: users_exposed_over_time.csv
 # - for the estimated ideology of all exposed followers: estimated_users_exposed_over_time.csv
-exposure_data <- read.csv('/Volumes/CKT-DATA/news-belief-at-scale/data_derived/exposure/estimated_users_exposed_over_time.csv', 
-                          header = TRUE, colClasses = c("user_id"="character", "tweet_id"="character")) %>% 
+exposure_data <- read.csv(exposure_path, header = TRUE, colClasses = c("user_id"="character", "tweet_id"="character")) %>% 
   filter(total_article_number > 10) %>% #discard first 10 articles from analysis
   mutate(tweet_number = tweet_number+1) %>%  #python zero index
   rename(time = relative_time) %>% 
@@ -125,7 +152,7 @@ rm(exposure_data, exposure_timeseries, tweets, article_data)
 ######################################## Total Exposure/Belief ########################################
 
 ####################
-# PLOT: Total exposure and belief
+# PLOT: Total exposure and belief, broken out by article veracity
 ####################
 # Prep data
 exposure_ideol_sum <- exposure_ideol %>% 
@@ -140,6 +167,7 @@ exposure_belief_data <- merge(exposure_ideol_sum, belief_ideol_sum, by = c("arti
   filter(article_fc_rating %in% c("False/Misleading news", "True news"))
 
 # Plot
+# NOTE: labels for "Exposed" and "Believing" are added later in vector art program during figure creation for paper
 gg_exposebelief_total <- ggplot(exposure_belief_data, aes(x = ideology_bin, fill = ideology_bin)) +
   # Data
   geom_step(aes(x = ideology_bin - 0.25, y = exposure_count,  color = ideology_bin - 0.25),
@@ -180,7 +208,7 @@ ggsave(gg_exposebelief_total, filename = "output/belief/veracity/combined_total_
 
 
 ####################
-# PLOT: Total exposure and belief, broken out by source lean
+# PLOT: Total exposure and belief, broken out by both (a) article veracity and (b) news source lean
 ####################
 # Prep data
 exposure_ideol_sum <- exposure_ideol %>% 
@@ -198,7 +226,10 @@ exposure_belief_data <- merge(exposure_ideol_sum, belief_ideol_sum, by = c("arti
                                      ifelse(source_lean == "U", "Unclear", "")))) %>% 
   mutate(source_lean = factor(source_lean, levels = c("Liberal", "Unclear", "Conservative")))
 
-# Plot: True news
+# Plot
+# NOTE:
+# - axis/facet label for "News Source Lean" and "Exposed"/"Believing" are added later in vector art program during figure creation for paper
+# - the "Exposed" count is the lighter histogram, while the "Believing" count is the darker histogram
 gg_exposebelief_total_source <- ggplot(exposure_belief_data, aes(x = ideology_bin, fill = ideology_bin)) +
   # Data
   geom_step(aes(x = ideology_bin - 0.25, y = exposure_count,  color = ideology_bin - 0.25),
@@ -237,7 +268,7 @@ ggsave(gg_exposebelief_total_source, filename = "output/belief/veracity/combined
 
 
 ####################
-# PLOT: Total exposure and belief, broken out by article lean
+# PLOT: Total exposure and belief, broken out by both (a) article veracity and (b) article lean
 ####################
 # Prep data
 exposure_ideol_sum <- exposure_ideol %>% 
@@ -256,6 +287,9 @@ exposure_belief_data <- merge(exposure_ideol_sum, belief_ideol_sum, by = c("arti
   filter(article_fc_rating %in% c("False/Misleading news", "True news"))
 
 # Plot
+# NOTE: 
+# - axis/facet label for "Article Lean" and "Exposed"/"Believing" are added later in vector art program during figure creation for paper
+# - the "Exposed" count is the lighter histogram, while the "Believing" count is the darker histogram
 gg_exposebelief_total_article <- ggplot(exposure_belief_data, aes(x = ideology_bin, fill = ideology_bin)) +
   # Data
   geom_step(aes(x = ideology_bin - 0.25, y = exposure_count,  color = ideology_bin - 0.25),
@@ -294,7 +328,7 @@ ggsave(gg_exposebelief_total_article, filename = "output/belief/veracity/combine
 
 
 ####################
-# PLOT: Difference in exposure and belief between T and F/M News
+# PLOT: Difference in ideological composition of exposure and belief, broken out by article veracity
 ####################
 # Prep data
 exposure_ideol_sum <- exposure_ideol %>% 
@@ -341,7 +375,7 @@ gg_pct_exposurebelief <- ggplot(exposure_belief_diff, aes(x = exposure_pct, y = 
   theme_ctokita() 
 
 gg_pct_exposurebelief
-ggsave(gg_pct_exposurebelief, filename = "output/belief/veracity/belief_vs_exosure/belief_vs_exposure.pdf", height = 90, width = 70, units = "mm", dpi = 400)
+ggsave(gg_pct_exposurebelief, filename = "output/belief/veracity/belief_vs_exposure/belief_vs_exposure.pdf", height = 90, width = 70, units = "mm", dpi = 400)
 
 # % of right-leaning users exposed to true news vs % believing
 exposure_belief_diff %>% 
@@ -351,7 +385,7 @@ exposure_belief_diff %>%
             pct_belief = sum(belief_pct))
 
 ####################
-# PLOT: Difference in exposure and belief between T and F/M News, broken out by article lean
+# PLOT: Difference in ideological composition of exposure and belief, broken out by (a) article veracity and (b) article lean
 ####################
 # Prep data
 exposure_ideol_sum <- exposure_ideol %>% 
@@ -401,7 +435,7 @@ gg_pct_exposurebelief_articlelean <- ggplot(exposure_belief_diff, aes(x = exposu
   theme(panel.spacing = unit(5, "mm"))
 
 gg_pct_exposurebelief_articlelean
-ggsave(gg_pct_exposurebelief_articlelean, filename = "output/belief/veracity/belief_vs_exosure/belief_vs_exposure_articlelean.pdf", height = 90, width = 180, units = "mm", dpi = 400)
+ggsave(gg_pct_exposurebelief_articlelean, filename = "output/belief/veracity/belief_vs_exposure/belief_vs_exposure_articlelean.pdf", height = 90, width = 180, units = "mm", dpi = 400)
 
 
   
@@ -477,6 +511,11 @@ ggsave(gg_exposebelief_total_timewindow, filename = "output/belief/veracity/comb
 ####################
 # PLOT: Time to 50 percent exposure/belief
 ####################
+# While this section of plots/analysis is not directly used in the paper,
+# it was an analysis to see if there was any difference with the rate at which True and False/Misleading news articles
+# accumulate user exposure and user belief. 
+# We find there is not a difference. We may opt to delete this after the review if it is not relevant.
+
 # Prep data
 majority_exposure <- belief_timeseries %>% 
   group_by(total_article_number) %>% 
