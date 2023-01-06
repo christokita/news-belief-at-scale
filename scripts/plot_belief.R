@@ -14,8 +14,8 @@
 # `<data storage location>/data_derived/belief/estimated_belief_over_time.csv`: estimated belief in each article tweet.
 # 
 # Data Out: Plots written to output sub-folder depending on if we are comparing article veracity or news source type. 
-# `<data storage location>/output/belief/veracity/`
-# `<data storage location>/output/belief/source_type/`
+# `output/belief/veracity/`
+# `output/belief/source_type/`
 # 
 # Machine: Chris' laptop
 ########################################
@@ -54,10 +54,11 @@ tweet_path <- paste0(DATA_DIRECTORY, "data_derived/tweets/tweets_labeled.csv") #
 belief_path <- paste0(DATA_DIRECTORY, "data_derived/belief/estimated_belief_over_time.csv") #estimated belief per tweet
 
 # Set path for plots
+outpath <- 'output/belief/'
 if (GROUPING == "article_fc_rating") {
-  outpath <- "output/belief/veracity/"
+  subdir_out <- 'veracity/'
 } else if(GROUPING == "source_type") {
-  outpath <- "output/belief/source_type/"
+  subdir_out <- 'source_type/'
 }
 
 # Set color palette
@@ -201,7 +202,7 @@ gg_ideol_total <- belief_ideol %>%
              scales = "free")
 
 gg_ideol_total
-ggsave(gg_ideol_total, filename = paste0(outpath, "ideol_total_belief.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideol_total, filename = paste0(outpath, subdir_out, "ideol_total_belief.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
 
 ####################
 # PLOT: Average number of users believing an article, broken out by user ideology
@@ -230,7 +231,7 @@ gg_ideol_avg <- belief_ideol %>%
              strip.position = "top",
              scales = "free")
 gg_ideol_avg
-ggsave(gg_ideol_avg, filename = paste0(outpath, "ideol_avg_belief.pdf"), width = 50, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideol_avg, filename = paste0(outpath, subdir_out, "ideol_avg_belief.pdf"), width = 50, height = 90, units = "mm", dpi = 400)
 
 
 ####################
@@ -268,7 +269,7 @@ gg_ideol_dist <- belief_ideol %>%
              scales = "free_x")
 
 gg_ideol_dist
-ggsave(gg_ideol_dist, filename = paste0(outpath, "ideol_avg_belief_distribution.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideol_dist, filename = paste0(outpath, subdir_out, "ideol_avg_belief_distribution.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
 
 
 ####################
@@ -304,7 +305,7 @@ gg_ideoltime <- belief_ideol %>%
              scales = "free")
 
 gg_ideoltime
-ggsave(gg_ideoltime, filename = paste0(outpath, "ideol_belief_hourbin.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideoltime, filename = paste0(outpath, subdir_out, "ideol_belief_hourbin.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
 
 
 
@@ -403,7 +404,7 @@ gg_belief_rate_exposure <- belief_per_exposure %>%
   theme(legend.position = "none")
 
 gg_belief_rate_exposure 
-ggsave(gg_belief_rate_exposure, filename = paste0(outpath, "beliefs_per_exposure.pdf"), width = 45, height = 45, units = "mm", dpi = 400)
+ggsave(gg_belief_rate_exposure, filename = paste0(outpath, subdir_out, "beliefs_per_exposure.pdf"), width = 45, height = 45, units = "mm", dpi = 400)
 
 
 # Slopes of bayesian regression
@@ -491,7 +492,7 @@ gg_belief_rate_exposure_source <- belief_per_exposure %>%
   theme(legend.position = "none")
 
 gg_belief_rate_exposure_source
-ggsave(gg_belief_rate_exposure_source, filename = "output/belief/veracity/beliefs_per_exposure_sourceandveracity.pdf", width = 90, height = 45, units = "mm", dpi = 400)
+ggsave(gg_belief_rate_exposure_source, filename = paste0(outpath, "veracity/beliefs_per_exposure_sourceandveracity.pdf"), width = 90, height = 45, units = "mm", dpi = 400)
 
 
 # Plot: Belief-per-exposure by source lean
@@ -526,7 +527,7 @@ gg_belief_rate_exposure_source <- belief_per_exposure %>%
         aspect.ratio = NULL)
 
 gg_belief_rate_exposure_source
-ggsave(gg_belief_rate_exposure_source, filename = "output/belief/veracity/beliefs_per_exposure_sourceandveracityandlean.pdf", width = 90, height = 120, units = "mm", dpi = 400)
+ggsave(gg_belief_rate_exposure_source, filename = paste0(outpath, "veracity/beliefs_per_exposure_sourceandveracityandlean.pdf"), width = 90, height = 120, units = "mm", dpi = 400)
 
 
 ####################
@@ -579,7 +580,7 @@ gg_48hr_belief <- belief_timeseries %>%
   theme(legend.position = c(0.75, 0.2))
   
 gg_48hr_belief
-ggsave(gg_48hr_belief, filename = paste0(outpath, "relative_cumulative_belief.pdf"), width = 45, height = 45, units = "mm", dpi = 400)
+ggsave(gg_48hr_belief, filename = paste0(outpath, subdir_out, "relative_cumulative_belief.pdf"), width = 45, height = 45, units = "mm", dpi = 400)
 
 
 # Just raw article data
@@ -603,5 +604,5 @@ gg_48hr_belief_raw <- belief_timeseries %>%
   theme(legend.position = "none")
 
 gg_48hr_belief_raw
-ggsave(gg_48hr_belief_raw, filename = paste0(outpath, "relative_cumulative_belief_rawdata.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
+ggsave(gg_48hr_belief_raw, filename = paste0(outpath, subdir_out, "relative_cumulative_belief_rawdata.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
 

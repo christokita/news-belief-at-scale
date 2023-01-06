@@ -14,8 +14,8 @@
 # `<data storage location>/data_derived/exposure/estimated_users_exposed_over_time.csv: estimated exposure to each article tweet.
 # 
 # Data Out: Plots written to output sub-folder depending on if we are comparing article veracity or news source type. 
-# `<data storage location>/output/exposure/veracity/`
-# `<data storage location>/output/exposure/source_type/`
+# `output/exposure/veracity/`
+# `output/exposure/source_type/`
 # 
 # Machine: Chris' laptop
 ########################################
@@ -53,10 +53,11 @@ tweet_path <- paste0(DATA_DIRECTORY, "data_derived/tweets/tweets_labeled.csv") #
 exposure_path <- paste0(DATA_DIRECTORY, "data_derived/exposure/estimated_users_exposed_over_time.csv") #estimated exposure per tweet
 
 # Set path for plots
+outpath <- 'output/exposure/'
 if (GROUPING == "article_fc_rating") {
-  outpath <- "output/exposure/veracity/"
+  subdir_out <- 'veracity/'
 } else if(GROUPING == "source_type") {
-  outpath <- "output/exposure/source_type/"
+  subdir_out <- 'source_type/'
 }
 
 # Set color palette
@@ -160,7 +161,7 @@ gg_exposuretime <- exposure_timeseries %>%
              strip.position = "top")
 
 gg_exposuretime
-ggsave(gg_exposuretime, filename = paste0(outpath, "total_exposed_time.pdf"), width = 90, height = 45, units = "mm", dpi = 400)
+ggsave(gg_exposuretime, filename = paste0(outpath, subdir_out, "total_exposed_time.pdf"), width = 90, height = 45, units = "mm", dpi = 400)
 
 
 ####################
@@ -181,7 +182,7 @@ gg_relexpostime <- exposure_timeseries %>%
              strip.position = "top")
 
 gg_relexpostime
-ggsave(gg_relexpostime, filename = paste0(outpath, "relative_exposure_time.pdf"), width = 90, height = 45, units = "mm", dpi = 400)
+ggsave(gg_relexpostime, filename = paste0(outpath, subdir_out, "relative_exposure_time.pdf"), width = 90, height = 45, units = "mm", dpi = 400)
 
 
 ####################
@@ -203,7 +204,7 @@ gg_exposuretweet <- exposure_timeseries %>%
   facet_wrap(as.formula(paste(GROUPING, "~.")), 
              ncol = 2)
 gg_exposuretweet
-ggsave(gg_exposuretweet, filename = paste0(outpath, "total_exposed_tweetnumber.pdf"), width = 90, height = 45, units = "mm", dpi = 400)
+ggsave(gg_exposuretweet, filename = paste0(outpath, subdir_out, "total_exposed_tweetnumber.pdf"), width = 90, height = 45, units = "mm", dpi = 400)
 
 
 ####################
@@ -224,7 +225,7 @@ gg_expVnum <- exposure_timeseries %>%
              scales = "free_x")
 
 gg_expVnum
-ggsave(gg_expVnum, filename = paste0(outpath, "relative_tweet_vs_exposure.pdf"), width = 50, height = 90, units = "mm", dpi = 400)
+ggsave(gg_expVnum, filename = paste0(outpath, subdir_out, "relative_tweet_vs_exposure.pdf"), width = 50, height = 90, units = "mm", dpi = 400)
 
 
 
@@ -274,7 +275,7 @@ gg_ideol_total <- exposure_ideol %>%
              scales = "free")
 
 gg_ideol_total
-ggsave(gg_ideol_total, filename = paste0(outpath, "ideol_total_exposed.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideol_total, filename = paste0(outpath, subdir_out, "ideol_total_exposed.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
 
 ####################
 # PLOT: Average number of users exposed per article, broken out by user ideology
@@ -302,7 +303,7 @@ gg_ideol_avg <- exposure_ideol %>%
              scales = "free")
 
 gg_ideol_avg
-ggsave(gg_ideol_avg, filename = paste0(outpath, "ideol_avg_exposed.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideol_avg, filename = paste0(outpath, subdir_out, "ideol_avg_exposed.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
 
 
 ####################
@@ -344,7 +345,7 @@ gg_ideol_dist <- exposure_ideol %>%
              scales = "free_x")
 
 gg_ideol_dist  
-ggsave(gg_ideol_dist, filename = paste0(outpath, "ideol_avg_exposure_distribution.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideol_dist, filename = paste0(outpath, subdir_out, "ideol_avg_exposure_distribution.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
 
 
 ####################
@@ -381,7 +382,7 @@ gg_ideoltime <- exposure_ideol %>%
              scales = "free")
 
 gg_ideoltime
-ggsave(gg_ideoltime, filename = paste0(outpath, "ideol_exposed_hourbin.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideoltime, filename = paste0(outpath, subdir_out, "ideol_exposed_hourbin.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
 
 
 ####################
@@ -406,7 +407,7 @@ gg_fake_exposure_article <- exposure_ideol %>%
              scales = "free")
 
 gg_fake_exposure_article
-ggsave(gg_fake_exposure_article, filename = paste0("output/exposure/veracity/fake_news_exposure_by_article.pdf"), width = 180, height = 180, units = "mm", dpi = 400)
+ggsave(gg_fake_exposure_article, filename = paste0(outpath, "veracity/fake_news_exposure_by_article.pdf"), width = 180, height = 180, units = "mm", dpi = 400)
 
 
 
@@ -471,7 +472,7 @@ gg_crossexposure <- ggplot(cross_exposure_data %>% filter(!is.na(user_ideology_b
   theme(legend.position = "none")
 
 gg_crossexposure
-ggsave(gg_crossexposure, filename = "output/exposure/avg_crossideology_exposure.pdf", width = 55, height = 45, units = "mm", dpi = 400)
+ggsave(gg_crossexposure, filename = paste0(outpath, "avg_crossideology_exposure.pdf"), width = 55, height = 45, units = "mm", dpi = 400)
 
 
 ####################
@@ -516,4 +517,4 @@ gg_exposure_sd <- exposure_diversity %>%
   theme(legend.position = "none")
 
 gg_exposure_sd
-ggsave(gg_exposure_sd, filename = "output/exposure/exposure_ideology_diversity.pdf", width = 55, height = 45, units = "mm", dpi = 400)
+ggsave(gg_exposure_sd, filename = paste0(outpath, "exposure_ideology_diversity.pdf"), width = 55, height = 45, units = "mm", dpi = 400)

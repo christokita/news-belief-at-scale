@@ -14,8 +14,8 @@
 # `<data storage location>/data_derived/ideological_scores/estimated_ideol_distributions/follower_ideology_distribution_shapes.csv`: estimated ideological distribution of each tweeter's followers.
 # 
 # Data Out: Plots written to output sub-folder depending on if we are comparing article veracity or news source type. 
-# `<data storage location>/output/tweeter_ideology/veracity/`
-# `<data storage location>/output/tweeter_ideology/source_type/`
+# `output/tweeter_ideology/veracity/`
+# `output/tweeter_ideology/source_type/`
 # 
 # Machine: Chris' laptop
 ########################################
@@ -52,11 +52,13 @@ tweet_path <- paste0(DATA_DIRECTORY, "data_derived/tweets/tweets_labeled.csv") #
 follower_ideology_path <- paste0(DATA_DIRECTORY, "data_derived/ideological_scores/estimated_ideol_distributions/follower_ideology_distribution_shapes.csv") #estimated ideological distribution of each tweeter's followers
 
 # Set path for plots
+outpath <- 'output/tweeter_ideology/'
 if (GROUPING == "article_fc_rating") {
-  outpath <- "output/tweeter_ideology/veracity/"
+  subdir_out <- 'veracity/'
 } else if(GROUPING == "source_type") {
-  outpath <- "output/tweeter_ideology/source_type/"
+  subdir_out <- 'source_type/'
 }
+
 
 # Set color palette
 plot_color <- "#495867"
@@ -111,7 +113,7 @@ stopifnot( length(unique(tweets$user_id)) == length(unique(follower_ideology_dis
 ############################## Summary of tweeter ideology ##############################
 
 ####################
-# Plot: Total tweets by ideology of tweeter
+# PLOT: Total tweets by ideology of tweeter
 ####################
 gg_ideoltweets <- tweets %>% 
   # Calculate tweets per ideology bin
@@ -139,12 +141,12 @@ gg_ideoltweets <- tweets %>%
              strip.position = "right")
 
 gg_ideoltweets
-ggsave(gg_ideoltweets, file = paste0(outpath, "total_tweets_by_ideology.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
-ggsave(gg_ideoltweets + theme(strip.text = element_blank()), file = paste0(outpath, "total_tweets_by_ideology_FIG.pdf"), width = 45, height = 45, units = "mm", dpi = 400) #facet labels removed and manually added back during figure creation in vector art program
+ggsave(gg_ideoltweets, file = paste0(outpath, subdir_out, "total_tweets_by_ideology.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideoltweets + theme(strip.text = element_blank()), file = paste0(outpath, subdir_out, "total_tweets_by_ideology_FIG.pdf"), width = 45, height = 45, units = "mm", dpi = 400) #facet labels removed and manually added back during figure creation in vector art program
 
 
 ####################
-# Plot: Average ideology distribution of tweeters
+# PLOT: Average ideology distribution of tweeters
 ####################
 gg_ideoldist_tweeters <- tweets %>% 
   # Calculate distribution of tweeter ideologies per article
@@ -180,11 +182,11 @@ gg_ideoldist_tweeters <- tweets %>%
              strip.position = "right")
 
 gg_ideoldist_tweeters
-ggsave(gg_ideoldist_tweeters, file = paste0(outpath, "average_tweeter_ideoldist.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideoldist_tweeters, file = paste0(outpath, subdir_out, "average_tweeter_ideoldist.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
 
 
 ####################
-# Plot: Average ideology distribution of retweets only
+# PLOT: Average ideology distribution of retweets only
 ####################
 gg_ideoldist_retweet <- tweets %>% 
   # Calculate distribution of tweeter ideologies per article
@@ -220,7 +222,7 @@ gg_ideoldist_retweet <- tweets %>%
              strip.position = "right")
 
 gg_ideoldist_retweet
-ggsave(gg_ideoldist_retweet, file = paste0(outpath, "average_retweeter_ideoldist.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
+ggsave(gg_ideoldist_retweet, file = paste0(outpath, subdir_out, "average_retweeter_ideoldist.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
 
 
 
@@ -243,7 +245,7 @@ gg_dist_follower_ideology_distributions <- follower_ideology_distributions %>%
         legend.position = "right")
 
 gg_dist_follower_ideology_distributions
-ggsave(gg_dist_follower_ideology_distributions, filename = "output/tweeter_ideology/follower_dist_follower_ideology_distributions.png", width = 90, height = 90, units = "mm", dpi = 400, bg = "transparent")
+ggsave(gg_dist_follower_ideology_distributions, filename = paste0(outpath, "follower_dist_follower_ideology_distributions.png"), width = 90, height = 90, units = "mm", dpi = 400, bg = "transparent")
 
 
 ####################
@@ -268,7 +270,7 @@ gg_ideology_comp <- follower_ideology_distributions %>%
         plot.background = element_blank())
 
 gg_ideology_comp
-ggsave(gg_ideology_comp, filename = "output/tweeter_ideology/ideology_comparison_user-follower.png", width = 45, height = 45, units = "mm", dpi = 400, bg = "transparent")
+ggsave(gg_ideology_comp, filename = paste0(outpath, "ideology_comparison_user-follower.png"), width = 45, height = 45, units = "mm", dpi = 400, bg = "transparent")
 
 
 

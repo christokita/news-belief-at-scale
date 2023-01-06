@@ -7,14 +7,17 @@
 #
 #   The Variables at the beginning of the script that are in all caps need to be set by the user:
 #     `DATA_DIRECTORY`: path to the data directory. (Copies of data are currently stored on external hard drive and high-performance cluster.)
+#     `GROUPING`:       determines whether the plots will break out tweet belief according to article veracity ("article_fc_rating") or the source of the article ("source_type").
 # 
 # Data In:
 # `<data storage location>/data_derived/tweets/tweets_labeled.csv`: article tweets with article and tweeter metadata.
-# `<data storage location>/data_derived/ideological_scores/estimated_ideol_distributions/follower_ideology_distribution_shapes.csv`: estimated ideological distribution of each tweeter's followers.
+# `<data storage location>/data_derived/exposure/estimated_users_exposed_over_time.csv: estimated exposure to each article tweet.
+# `<data storage location>/data_derived/networks/article_network_metrics.csv: network-level metrics of each article's retweet network.
+# `<data storage location>/data_derived/networks/`: directory containing individual retweet network edge and node lists.
 # 
 # Data Out: Plots written to output sub-folder depending on if we are comparing article veracity or news source type. 
-# `<data storage location>/output/tweeter_ideology/veracity/`
-# `<data storage location>/output/tweeter_ideology/source_type/`
+# `output/networks/veracity/`
+# `output/networks/source_type/`
 # 
 # Machine: Chris' laptop
 ########################################
@@ -115,7 +118,7 @@ if (GROUPING == "article_fc_rating") {
 ############################## Basic Summary Statistics ##############################
 
 ####################
-# Plot: Tweet types
+# PLOT: Tweet types
 ####################
 # Breakdown of tweet types
 gg_tweettypes <- 
@@ -168,7 +171,7 @@ ggsave(gg_RTtypes, filename = paste0(outpath, "RT_type.pdf"), width = 45, heigh 
 
 
 ####################
-# Plot: Degree distribution, RAW
+# PLOT: Degree distribution, RAW
 ####################
 # Degree frequency data
 degree_data <- exposure_data %>% 
@@ -208,7 +211,7 @@ ggsave(gg_degree_dist, filename = paste0(outpath, subdir_out, "degreedistributio
 
                 
 ####################
-# Plot:Retweet distribution, RAW
+# PLOT:Retweet distribution, RAW
 ####################
 # Retweet frequency data
 if (GROUPING == "article_fc_rating") {
@@ -258,7 +261,7 @@ ggsave(gg_retweetfreq_dist, filename = paste0(outpath, subdir_out, "retweetdistr
 ############################## Ideology in networks ##############################
 
 ####################
-# Plot: Ideological diversity by article veracity
+# PLOT: Ideological diversity by article veracity
 ####################
 # Bayesian point estimate
 # Note: we assume equal variances. Both an eye check and running this with unequal variances confirm they cannot be distinguished.
@@ -322,7 +325,7 @@ ggsave(gg_ideodiversity, filename = paste0(outpath, "ideodiversity_byveracity.pd
 ############################## Network structure ##############################
 
 ####################
-# Plot: Network density by article veracity
+# PLOT: Network density by article veracity
 ####################
 gg_veracitydensity <- network_metrics %>% 
   filter(article_fc_rating %in% c("FM", "T")) %>% 

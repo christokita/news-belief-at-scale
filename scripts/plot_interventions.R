@@ -13,7 +13,7 @@
 # `<data storage location>/data_derived/interventions/`: subdirectory containing results (simulated exposure and belief in different articles) for individual intervention types.
 # 
 # Data Out: Plots written to output sub-folder depending on if we are comparing article veracity or news source type. 
-# `<data storage location>/output/interventions/`
+# `output/interventions/`
 # 
 # Machine: Chris' laptop
 ########################################
@@ -144,7 +144,7 @@ relative_effect <- relative_effect %>%
 
 
 ####################
-# Plot relative user exposure by intervention
+# PLOT: Relative user exposure by intervention
 ####################
 # Bar plot of mean
 gg_exposure_decrease <- ggplot(relative_effect, aes(x = intervention_time, y = mean_exposure, fill = intervention_type)) +
@@ -219,7 +219,7 @@ ggsave(gg_exposure_decrease_point, filename = paste0(outpath, "interventions_rel
 
 
 ####################
-# Plot relative user belief by intervention
+# PLOT: Relative user belief by intervention
 ####################
 # Bar plot of mean
 gg_belief_decrease <- ggplot(relative_effect, aes(x = intervention_time, y = mean_belief, fill = intervention_type)) +
@@ -292,7 +292,7 @@ ggsave(gg_belief_decrease_point, filename = paste0(outpath, "interventions_relat
 
 
 ####################
-# Plot example intervention time series
+# PLOT: Example intervention time series
 ####################
 intervention_pal <- scales::viridis_pal(begin = 0, end = 0.9, direction = -1, option = "plasma")
 intervention_pal <- intervention_pal(7)

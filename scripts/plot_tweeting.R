@@ -13,8 +13,8 @@
 # `<data storage location>/data_derived/tweets/tweets_labeled.csv`: article tweets with article and tweeter metadata.
 # 
 # Data Out: Plots written to output sub-folder depending on if we are comparing article veracity or news source type. 
-# `<data storage location>/output/tweeting/veracity/`
-# `<data storage location>/output/tweeting/source_type/`
+# `output/tweeting/veracity/`
+# `<output/tweeting/source_type/`
 # 
 # Machine: Chris' laptop
 ########################################

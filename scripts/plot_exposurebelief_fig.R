@@ -14,7 +14,7 @@
 # `<data storage location>/data_derived/belief/estimated_belief_over_time.csv`: estimated belief in each article tweet.
 # 
 # Data Out: Plots written to output subfolder focusing on belief (since we are analyzing both belief and exposure combined here) broken out by article veracity. 
-# `<data storage location>/output/belief/veracity/`
+# `output/belief/veracity/`
 # 
 # Machine: Chris' laptop
 ########################################
@@ -46,6 +46,9 @@ DATA_DIRECTORY <- "/Volumes/CKT-DATA/news-belief-at-scale/"
 tweet_path <- paste0(DATA_DIRECTORY, "data_derived/tweets/tweets_labeled.csv") #tweets
 exposure_path <- paste0(DATA_DIRECTORY, "data_derived/exposure/estimated_users_exposed_over_time.csv") #estimated exposure per tweet
 belief_path <- paste0(DATA_DIRECTORY, "data_derived/belief/estimated_belief_over_time.csv") #estimated belief per tweet
+
+# Set path for plots
+outpath <- 'output/belief/veracity/'
 
 # Set plotting palettes
 ideol_pal <- rev(brewer.pal(5, "RdBu"))
@@ -204,7 +207,7 @@ gg_exposebelief_total <- ggplot(exposure_belief_data, aes(x = ideology_bin, fill
              scales = "free")
 
 gg_exposebelief_total
-ggsave(gg_exposebelief_total, filename = "output/belief/veracity/combined_total_beliefANDexposure.pdf", width = 45, height = 90, units = "mm", dpi = 400)
+ggsave(gg_exposebelief_total, filename = paste0(outpath, "combined_total_beliefANDexposure.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
 
 
 ####################
@@ -264,7 +267,7 @@ gg_exposebelief_total_source <- ggplot(exposure_belief_data, aes(x = ideology_bi
   facet_grid(article_fc_rating~source_lean, scale = 'free')
 
 gg_exposebelief_total_source
-ggsave(gg_exposebelief_total_source, filename = "output/belief/veracity/combined_total_beliefANDexposure_bysourcelean.pdf", width = 90, height = 80, units = "mm", dpi = 400)
+ggsave(gg_exposebelief_total_source, filename = paste0(outpath, "combined_total_beliefANDexposure_bysourcelean.pdf"), width = 90, height = 80, units = "mm", dpi = 400)
 
 
 ####################
@@ -324,7 +327,7 @@ gg_exposebelief_total_article <- ggplot(exposure_belief_data, aes(x = ideology_b
   facet_grid(article_fc_rating~article_lean, scale = 'free_y')
 
 gg_exposebelief_total_article
-ggsave(gg_exposebelief_total_article, filename = "output/belief/veracity/combined_total_beliefANDexposure_byarticlelean.pdf", width = 90, height = 90, units = "mm", dpi = 400)
+ggsave(gg_exposebelief_total_article, filename = paste0(outpath, "combined_total_beliefANDexposure_byarticlelean.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
 
 
 ####################
@@ -375,7 +378,7 @@ gg_pct_exposurebelief <- ggplot(exposure_belief_diff, aes(x = exposure_pct, y = 
   theme_ctokita() 
 
 gg_pct_exposurebelief
-ggsave(gg_pct_exposurebelief, filename = "output/belief/veracity/belief_vs_exposure/belief_vs_exposure.pdf", height = 90, width = 70, units = "mm", dpi = 400)
+ggsave(gg_pct_exposurebelief, filename = paste0(outpath, "belief_vs_exposure/belief_vs_exposure.pdf"), height = 90, width = 70, units = "mm", dpi = 400)
 
 # % of right-leaning users exposed to true news vs % believing
 exposure_belief_diff %>% 
@@ -435,7 +438,7 @@ gg_pct_exposurebelief_articlelean <- ggplot(exposure_belief_diff, aes(x = exposu
   theme(panel.spacing = unit(5, "mm"))
 
 gg_pct_exposurebelief_articlelean
-ggsave(gg_pct_exposurebelief_articlelean, filename = "output/belief/veracity/belief_vs_exposure/belief_vs_exposure_articlelean.pdf", height = 90, width = 180, units = "mm", dpi = 400)
+ggsave(gg_pct_exposurebelief_articlelean, filename = paste0(outpath, "belief_vs_exposure/belief_vs_exposure_articlelean.pdf"), height = 90, width = 180, units = "mm", dpi = 400)
 
 
   
@@ -505,7 +508,7 @@ gg_exposebelief_total_timewindow <- ggplot(exposure_belief_data, aes(x = ideolog
   facet_grid(article_fc_rating~time_window, scale = "free")
 
 gg_exposebelief_total_timewindow
-ggsave(gg_exposebelief_total_timewindow, filename = "output/belief/veracity/combined_total_beliefANDexposure_timewindow.pdf", width = 90, height = 90, units = "mm", dpi = 400)
+ggsave(gg_exposebelief_total_timewindow, filename = paste0(outpath, "combined_total_beliefANDexposure_timewindow.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
 
 
 ####################
@@ -590,4 +593,4 @@ gg_majority_point <- ggplot(data = majority_point, aes(x = time, y = ..density..
         legend.position = "top")
 
 gg_majority_point
-ggsave(gg_majority_point, filename = "output/belief/veracity/combined_time_to_majority.pdf", width = 90, height = 100, units = "mm", dpi = 400)
+ggsave(gg_majority_point, filename = paste0(outpath, "combined_time_to_majority.pdf"), width = 90, height = 100, units = "mm", dpi = 400)
