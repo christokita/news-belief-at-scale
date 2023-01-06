@@ -15,7 +15,7 @@ theme_ctokita <- function(base_font_size = 6, base_font_color = "black", base_fo
       # Axis settings
       axis.text       = element_text(size = base_font_size, color = base_font_color, family = base_font_family),
       axis.title      = element_text(size = base_font_size+1, color = base_font_color, family = base_font_family),
-      axis.ticks      = element_line(size = 0.3, color = base_font_color),
+      axis.ticks      = element_line(linewidth = 0.3, color = base_font_color),
       axis.line       = element_line(linewidth = 0.3),
       # Legend settings
       legend.title    = element_text(size = base_font_size+1, family = base_font_family),
