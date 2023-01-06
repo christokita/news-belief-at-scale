@@ -41,7 +41,7 @@ DATA_DIRECTORY <- "/Volumes/CKT-DATA/news-belief-at-scale/"
 # Choose GROUPING of interest. Options: 
 #     (1) article veracity: "article_fc_rating"
 #     (2) source: "source_type"
-GROUPING <- "source_type"
+GROUPING <- "article_fc_rating"
 
 
 ####################
@@ -165,7 +165,9 @@ gg_ideoldist_tweeters <- tweets %>%
   scale_x_continuous(limits = c(-6, 6), 
                      expand = c(0, 0), 
                      breaks = seq(-6, 6, 2)) +
-  scale_y_continuous(expand = c(0, 0),
+  scale_y_continuous(limits = c(0, 0.25),
+                     expand = c(0, 0),
+                     breaks = seq(0, 0.3, 0.05),
                      label = scales::comma) +
   scale_fill_gradientn(colors = ideol_pal, limits = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   scale_color_gradientn(colors = ideol_pal, limits = c(-ideol_limit, ideol_limit), oob = scales::squish) +
@@ -199,8 +201,8 @@ gg_ideoldist_retweet <- tweets %>%
   # Plot
   ggplot(., aes(x = ideology_bin, y = avg_tweeter_prop, fill = ideology_bin, color = ideology_bin)) +
   geom_bar(stat = "identity") +
-  xlab("Tweeter ideology") +
-  ylab("Avg. proportion of article re-tweeters") +
+  xlab("Retweeter ideology") +
+  ylab("Avg. proportion of article retweeters") +
   scale_x_continuous(limits = c(-6, 6), 
                      expand = c(0, 0), 
                      breaks = seq(-6, 6, 2)) +
