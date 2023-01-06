@@ -1,8 +1,23 @@
-########################################
+#########################################
+# Name: `plot_interventions.R`
+# Author: Chris Tokita
+# Purpose: Plot platform-level interventions attempting to limit the impact of misinformation (articles rated as False/Misleading).
+# Details:
+#   (These R scripts assume the use of the `.Rproj` at top of the news-belief-at-scale/ repo. Otherwise, set the working directory to one level above this script.)
 #
-# PLOT: Interventions for decreasing fake news spread
-#
+#   The Variables at the beginning of the script that are in all caps need to be set by the user:
+#     `DATA_DIRECTORY`: path to the data directory. (Copies of data are currently stored on external hard drive and high-performance cluster.)
+#     `GROUPING`:       determines whether the plots will break out tweet belief according to article veracity ("article_fc_rating") or the source of the article ("source_type").
+# 
+# Data In:
+# `<data storage location>/data_derived/interventions/`: subdirectory containing results (simulated exposure and belief in different articles) for individual intervention types.
+# 
+# Data Out: Plots written to output sub-folder depending on if we are comparing article veracity or news source type. 
+# `<data storage location>/output/interventions/`
+# 
+# Machine: Chris' laptop
 ########################################
+
 
 ####################
 # Load packages
@@ -13,21 +28,27 @@ source("scripts/_plot_themes/theme_ctokita.R")
 
 
 ####################
-# Paramters for analysis: gpaths to data, paths for output, and filename
+# Set parameters for analysis
 ####################
-# Paths to files/directories
-path_to_interventions <- '/Volumes/CKT-DATA/news-belief-at-scale/data_derived/interventions/'
+# Choose location of data
+DATA_DIRECTORY <- "/Volumes/CKT-DATA/news-belief-at-scale/"
+
+
+####################
+# Prepare for analysis: set paths to data, paths for output, and color palettes for plotting
+####################
+# Set paths for data
+path_to_interventions <- paste0(DATA_DIRECTORY, 'data_derived/interventions/')
 intervention_dirs <- list.dirs(path_to_interventions)
 intervention_dirs <- intervention_dirs[grepl('.*/reduce_', intervention_dirs)]
+
+# Set path for plots
 outpath <- 'output/interventions/'
 
 
 ####################
 # Load data
 ####################
-
-#################### Exposure data ####################
-
 # Function to pre-first share dummy rows of pre-first share for plotting purposes
 add_dummy_time_points <- function(exposure_data) {
   # (1) Create dummy rows that make two "non tweets" in at two time points leading up to the first real tweet
@@ -49,23 +70,23 @@ add_dummy_time_points <- function(exposure_data) {
   return(exposure_data)
 }
 
-# Load data
-intervention_exposure <- data.frame()
+# Load data (this will take some time)
+intervention_simulation_results <- data.frame()
 for (dir in intervention_dirs) {
   intervention_files <- list.files(dir, full.names = TRUE)
   exposure_file <- intervention_files[grepl("_exposetime.csv", intervention_files)]
   for (file in exposure_file) {
     exposure <- read.csv(file)
     exposure <- add_dummy_time_points(exposure_data = exposure)
-    intervention_exposure <- rbind(intervention_exposure, exposure)
+    intervention_simulation_results <- rbind(intervention_simulation_results, exposure)
     rm(exposure)
   }
   
 }
 
 # Create measure of relative exposure (relative to actual tweet data)
-max_time_of_expsoure <-  max(intervention_exposure$time[intervention_exposure$new_exposed_users > 0]) # find where new users are no longer being exposed. 55hrs
-intervention_exposure <- intervention_exposure %>% 
+max_time_of_expsoure <-  max(intervention_simulation_results$time[intervention_simulation_results$new_exposed_users > 0]) # find where new users are no longer being exposed. 55hrs
+intervention_simulation_results <- intervention_simulation_results %>% 
   group_by(total_article_number) %>% 
   mutate(max_article_exposure = max(cumulative_exposed),
          max_article_believing = max(cumulative_believing),
@@ -84,7 +105,7 @@ intervention_exposure <- intervention_exposure %>%
 # Prep data on relative effect of interventions
 ####################
 # Filter to final exposure/belief values for total impact
-relative_effect <- intervention_exposure %>% 
+relative_effect <- intervention_simulation_results %>% 
   filter(time == max_time_of_expsoure,
          replicate != -1) %>% 
   mutate(intervention_amount = paste0("visibility", visibility_reduction, "-", "sharing", sharing_reduction)) %>% 
@@ -121,8 +142,9 @@ relative_effect <- relative_effect %>%
                                                                   "Visibility reduction (light)",
                                                                   "Visibility reduction (heavy)")))
 
+
 ####################
-# Plot relative exposure by intervention
+# Plot relative user exposure by intervention
 ####################
 # Bar plot of mean
 gg_exposure_decrease <- ggplot(relative_effect, aes(x = intervention_time, y = mean_exposure, fill = intervention_type)) +
@@ -145,13 +167,13 @@ gg_exposure_decrease <- ggplot(relative_effect, aes(x = intervention_time, y = m
   ylab("Relative user exposure to misinformation") +
   theme_ctokita() +
   theme(axis.line = element_blank(),
-        panel.border = element_rect(size = 0.5, fill = NA),
+        panel.border = element_rect(linewidth = 0.5, fill = NA),
         legend.position = "none",
         strip.text = element_text(vjust = -0.5)) +
   facet_wrap(~intervention_type,
              ncol = 2)
-gg_exposure_decrease
 
+gg_exposure_decrease
 ggsave(gg_exposure_decrease, filename = paste0(outpath, "interventions_relativeexposure.pdf"), width = 85, height = 100, units = "mm", dpi = 400)
 
 
@@ -185,19 +207,19 @@ gg_exposure_decrease_point <- ggplot(relative_effect, aes(x = intervention_time,
   coord_cartesian(clip = 'off') + #prevent clipping of po9ints on axis line
   theme_ctokita() +
   theme(axis.line = element_blank(),
-        panel.border = element_rect(size = 0.5, fill = NA),
+        panel.border = element_rect(linewidth = 0.5, fill = NA),
         panel.spacing = unit(0.25, "cm"),
         legend.position = "none",
         strip.text = element_text(vjust = -0.5)) +
   facet_wrap(~intervention_type,
              ncol = 2)
-gg_exposure_decrease_point
 
+gg_exposure_decrease_point
 ggsave(gg_exposure_decrease_point, filename = paste0(outpath, "interventions_relativeexposure_detailed.pdf"), width = 85, height = 100, units = "mm", dpi = 400)
 
 
 ####################
-# Plot relative belief by intervention
+# Plot relative user belief by intervention
 ####################
 # Bar plot of mean
 gg_belief_decrease <- ggplot(relative_effect, aes(x = intervention_time, y = mean_belief, fill = intervention_type)) +
@@ -220,13 +242,13 @@ gg_belief_decrease <- ggplot(relative_effect, aes(x = intervention_time, y = mea
   ylab("Relative user belief of misinformation") +
   theme_ctokita() +
   theme(axis.line = element_blank(),
-        panel.border = element_rect(size = 0.5, fill = NA),
+        panel.border = element_rect(linewidth = 0.5, fill = NA),
         legend.position = "none",
         strip.text = element_text(vjust = -0.5)) +
   facet_wrap(~intervention_type,
              ncol = 2)
-gg_belief_decrease
 
+gg_belief_decrease
 ggsave(gg_belief_decrease, filename = paste0(outpath, "interventions_relativebelief.pdf"), width = 85, height = 100, units = "mm", dpi = 400)
 
 # Point plot of mean and quantiles
@@ -259,13 +281,13 @@ gg_belief_decrease_point <- ggplot(relative_effect, aes(x = intervention_time, y
   coord_cartesian(clip = 'off') + #prevent clipping of po9ints on axis line
   theme_ctokita() +
   theme(axis.line = element_blank(),
-        panel.border = element_rect(size = 0.5, fill = NA),
+        panel.border = element_rect(linewidth = 0.5, fill = NA),
         legend.position = "none",
         strip.text = element_text(vjust = -0.5)) +
   facet_wrap(~intervention_type,
              ncol = 2)
-gg_belief_decrease_point
 
+gg_belief_decrease_point
 ggsave(gg_belief_decrease_point, filename = paste0(outpath, "interventions_relativebelief_detailed.pdf"), width = 85, height = 100, units = "mm", dpi = 400)
 
 
@@ -276,7 +298,7 @@ intervention_pal <- scales::viridis_pal(begin = 0, end = 0.9, direction = -1, op
 intervention_pal <- intervention_pal(7)
 
 # Exposure
-gg_example_timeseries_exposure <- intervention_exposure %>% 
+gg_example_timeseries_exposure <- intervention_simulation_results %>% 
   filter(total_article_number == 28, 
          sharing_reduction == 0.75,
          visibility_reduction == 0,
@@ -284,7 +306,7 @@ gg_example_timeseries_exposure <- intervention_exposure %>%
   mutate(intervention_time = ifelse(simulation_type == "no intervention", "No intervention", paste(intervention_time, "hr."))) %>%
   mutate(intervention_time = factor(intervention_time, levels = c("No intervention", paste(seq(0, 12, 2) , "hr.")) )) %>%
   ggplot(., aes(x = time, y = cumulative_exposed, color = intervention_time, group = simulation_number, alpha = simulation_type)) +
-  geom_line(size = 0.3) +
+  geom_line(linewidth = 0.3) +
   scale_y_continuous(breaks = seq(0, 20000000, 2000000), 
                      limits = c(0, 12000000),
                      # expand = c(0, 0),
@@ -303,12 +325,13 @@ gg_example_timeseries_exposure <- intervention_exposure %>%
         legend.key.height = unit(0.5, 'mm'),
         legend.spacing = unit(0, 'mm'),
         legend.title = element_text(vjust = -1))
+
 gg_example_timeseries_exposure
-ggsave(gg_example_timeseries_exposure, filename = paste0(outpath, "exampleintervention_exposure_article28.pdf"), width = 120, height = 45, units = "mm", dpi = 400)
+ggsave(gg_example_timeseries_exposure, filename = paste0(outpath, "exampleintervention_simulation_results_article28.pdf"), width = 120, height = 45, units = "mm", dpi = 400)
 
 
 # Belief
-gg_example_timeseries_belief <- intervention_exposure %>% 
+gg_example_timeseries_belief <- intervention_simulation_results %>% 
   filter(total_article_number == 28, 
          sharing_reduction == 0.75,
          visibility_reduction == 0,
