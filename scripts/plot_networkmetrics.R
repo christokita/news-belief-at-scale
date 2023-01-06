@@ -84,7 +84,7 @@ tweets <- read.csv(tweet_path, header = TRUE, colClasses = c("user_id"="characte
   mutate(article_fc_rating = ifelse(article_fc_rating == "T", "True news", ifelse(article_fc_rating == "FM", "False/Misleading news", 
                                                                                   ifelse(article_fc_rating == "CND", "Borderline", 
                                                                                          ifelse(article_fc_rating == "No Mode!", "No mode", article_fc_rating)))),
-         source_type = ifelse(source_type == "mainstream", "Mainstream", ifelse(source_type == "fringe", "Fringe", source_type)),
+         source_type = ifelse(source_type == "mainstream", "Mainstream outlet", ifelse(source_type == "fringe", "Fringe outlet", source_type)),
          article_lean = ifelse(article_lean == "C", "Conservative", ifelse(article_lean == "L", "Liberal",
                                                                            ifelse(article_lean == "N", "Neutral", 
                                                                                   ifelse(article_lean == "U", "Unclear", source_type)))) )
@@ -217,6 +217,8 @@ ggsave(gg_degree_dist, filename = paste0(outpath, subdir_out, "degreedistributio
 if (GROUPING == "article_fc_rating") {
   filtered_tweets <- tweets %>% 
     filter(article_fc_rating %in% c("True news", "False/Misleading news"))
+} else {
+  filtered_tweets <- tweets
 }
 
 RT_freq_data <- filtered_tweets %>% 
