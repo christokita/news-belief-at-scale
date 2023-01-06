@@ -1,8 +1,24 @@
-########################################
+#########################################
+# Name: `plot_networkmetrics.R`
+# Author: Chris Tokita
+# Purpose: Plot network metrics of all article retweet networks.
+# Details:
+#   (These R scripts assume the use of the `.Rproj` at top of the news-belief-at-scale/ repo. Otherwise, set the working directory to one level above this script.)
 #
-# PLOT: Network metrics of articles
-#
+#   The Variables at the beginning of the script that are in all caps need to be set by the user:
+#     `DATA_DIRECTORY`: path to the data directory. (Copies of data are currently stored on external hard drive and high-performance cluster.)
+# 
+# Data In:
+# `<data storage location>/data_derived/tweets/tweets_labeled.csv`: article tweets with article and tweeter metadata.
+# `<data storage location>/data_derived/ideological_scores/estimated_ideol_distributions/follower_ideology_distribution_shapes.csv`: estimated ideological distribution of each tweeter's followers.
+# 
+# Data Out: Plots written to output sub-folder depending on if we are comparing article veracity or news source type. 
+# `<data storage location>/output/tweeter_ideology/veracity/`
+# `<data storage location>/output/tweeter_ideology/source_type/`
+# 
+# Machine: Chris' laptop
 ########################################
+
 
 ####################
 # Load packages
@@ -14,32 +30,40 @@ library(RColorBrewer)
 library(brms)
 source("scripts/_plot_themes/theme_ctokita.R")
 
+
 ####################
-# Paramters for analysis: paths to data, paths for output, and filename
+# Set parameters for analysis
 ####################
-# Choose grouping of interest. Options: 
+# Choose location of data
+DATA_DIRECTORY <- "/Volumes/CKT-DATA/news-belief-at-scale/"
+
+# Choose GROUPING of interest. Options: 
 #     (1) article veracity: "article_fc_rating"
 #     (2) source: "source_type"
-grouping <- "article_fc_rating"
+GROUPING <- "article_fc_rating"
 
-# Paths
-tweet_path <- '/Volumes/CKT-DATA/news-belief-at-scale/data_derived/tweets/tweets_labeled.csv'
-exposure_path <- '/Volumes/CKT-DATA/news-belief-at-scale/data_derived/exposure/estimated_users_exposed_over_time.csv'
-network_metric_path <- '/Volumes/CKT-DATA/news-belief-at-scale/data_derived/networks/article_network_metrics.csv'
-retweet_network_path <- '/Volumes/CKT-DATA/news-belief-at-scale/data_derived/networks/'
+
+####################
+# Prepare for analysis: set paths to data, paths for output, and color palettes for plotting
+####################
+# Set paths for data
+tweet_path <- paste0(DATA_DIRECTORY, "data_derived/tweets/tweets_labeled.csv") #tweets
+exposure_path <- paste0(DATA_DIRECTORY, "data_derived/exposure/estimated_users_exposed_over_time.csv") #estimated exposure per tweet
+network_metric_path <- paste0(DATA_DIRECTORY, "data_derived/networks/article_network_metrics.csv") #article retweet network metrics
+retweet_network_path <- paste0(DATA_DIRECTORY, "data_derived/networks/")
+
+# Set path for plots
 outpath <- 'output/networks/'
-
-# Path to specific subdirectory for grouping specific resultes
-if (grouping == "article_fc_rating") {
+if (GROUPING == "article_fc_rating") {
   subdir_out <- 'veracity/'
-} else if(grouping == "source_type") {
+} else if(GROUPING == "source_type") {
   subdir_out <- 'source_type/'
 }
 
-
-# Color palette
+# Set color palette
 plot_color <- "#495867"
 grouping_pal <- c("#F18805", plot_color)
+
 
 ####################
 # Load data 
@@ -50,7 +74,7 @@ network_metrics <- read.csv(network_metric_path, header = TRUE)
 # Read in network data
 rt_edges <- read.csv(paste0(retweet_network_path, 'rtnetwork_edges.csv'), colClasses = c("Source"="character", "Target"="character"))
 
-# Load tweets for article metadata
+# Load tweets and articles for article metadata
 tweets <- read.csv(tweet_path, header = TRUE, colClasses = c("user_id"="character", "tweet_id"="character")) %>% 
   filter(total_article_number > 10) %>%  #discard first 10 articles from analysis
   # clean up metadata
@@ -76,24 +100,24 @@ exposure_data <- read.csv(exposure_path,
   mutate(article_fc_rating = ifelse(article_fc_rating == "T", "True news", ifelse(article_fc_rating == "FM", "False/Misleading news", 
                                                                                   ifelse(article_fc_rating == "CND", "Borderline", 
                                                                                          ifelse(article_fc_rating == "No Mode!", "No mode", article_fc_rating)))),
-         source_type = ifelse(source_type == "mainstream", "Mainstream", ifelse(source_type == "fringe", "Fringe", source_type)),
+         source_type = ifelse(source_type == "mainstream", "Mainstream outlet", ifelse(source_type == "fringe", "Fringe outlet", source_type)),
          article_lean = ifelse(article_lean == "C", "Conservative", ifelse(article_lean == "L", "Liberal",
                                                                            ifelse(article_lean == "N", "Neutral", 
                                                                                   ifelse(article_lean == "U", "Unclear", source_type)))) )
 # If analyzing by veracity, drop out non-True/False articles
-if (grouping == "article_fc_rating") {
+if (GROUPING == "article_fc_rating") {
   exposure_data <- exposure_data %>% 
     filter(article_fc_rating %in% c("True news", "False/Misleading news"))
 }
 
 
 
-############################## Basics ##############################
+############################## Basic Summary Statistics ##############################
 
 ####################
 # Plot: Tweet types
 ####################
-# All tweets
+# Breakdown of tweet types
 gg_tweettypes <- 
   # Prep data
   tweets %>% 
@@ -113,11 +137,13 @@ gg_tweettypes <-
   ylab("Count") +
   theme_ctokita() +
   theme(legend.position = "none")
+
 gg_tweettypes
 ggsave(gg_tweettypes, filename = paste0(outpath, "tweet_type.pdf"), width = 45, heigh = 45, units = "mm", dpi = 400)
   
 
-# Retweets
+# Breakdown of retweet types
+# NOTE: users can (a) retweet someone directly, (b) retweet someone indirectly, by retweeting a retweet, (c) retweet themself, or (d) retweet by quote tweeting a tweet
 gg_RTtypes <- 
   # Prep data
   rt_edges %>% 
@@ -136,6 +162,7 @@ gg_RTtypes <-
   ylab("Count") +
   theme_ctokita() +
   theme(legend.position = "none")
+
 gg_RTtypes
 ggsave(gg_RTtypes, filename = paste0(outpath, "RT_type.pdf"), width = 45, heigh = 45, units = "mm", dpi = 400)
 
@@ -145,20 +172,20 @@ ggsave(gg_RTtypes, filename = paste0(outpath, "RT_type.pdf"), width = 45, heigh 
 ####################
 # Degree frequency data
 degree_data <- exposure_data %>% 
-  select(user_id, !!sym(grouping), follower_count) %>% 
+  select(user_id, !!sym(GROUPING), follower_count) %>% 
   distinct() %>%
-  group_by(!!sym(grouping), follower_count) %>% 
+  group_by(!!sym(GROUPING), follower_count) %>% 
   summarise(count = n()) %>% 
   arrange(desc(follower_count)) %>% 
   mutate(prob = count / sum(count),
          cdf = cumsum(count) / sum(count)) %>%
   rename(degree = follower_count) %>% 
-  arrange(!!sym(grouping), degree)
+  arrange(!!sym(GROUPING), degree)
 
 # Plot
 gg_degree_dist <- degree_data %>% 
   filter(degree > 0) %>% 
-  ggplot(aes(x = degree, y = prob, color = !!sym(grouping))) +
+  ggplot(aes(x = degree, y = prob, color = !!sym(GROUPING))) +
   geom_point(size = 0.8, alpha = 0.3, stroke = 0) +
   scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
                 labels = scales::trans_format("log10", scales::math_format(10^.x))) +
@@ -175,6 +202,7 @@ gg_degree_dist <- degree_data %>%
         legend.key.height = unit(0, 'mm'),
         legend.background = element_blank()) +
   guides(color = guide_legend(override.aes = list(size = 1.25)))
+
 gg_degree_dist
 ggsave(gg_degree_dist, filename = paste0(outpath, subdir_out, "degreedistribution.pdf"), width = 45, height = 45, units = "mm")
 
@@ -183,28 +211,28 @@ ggsave(gg_degree_dist, filename = paste0(outpath, subdir_out, "degreedistributio
 # Plot:Retweet distribution, RAW
 ####################
 # Retweet frequency data
-if (grouping == "article_fc_rating") {
+if (GROUPING == "article_fc_rating") {
   filtered_tweets <- tweets %>% 
     filter(article_fc_rating %in% c("True news", "False/Misleading news"))
 }
 
 RT_freq_data <- filtered_tweets %>% 
-  select(total_article_number, !!sym(grouping)) %>% 
+  select(total_article_number, !!sym(GROUPING)) %>% 
   distinct() %>% 
   merge(rt_edges, by = "total_article_number") %>% 
-  group_by(!!sym(grouping), total_article_number, Source) %>% 
+  group_by(!!sym(GROUPING), total_article_number, Source) %>% 
   summarise(n_retweets = n()) %>%  #count number of retweets each user has
   ungroup() %>% 
-  group_by(!!sym(grouping), n_retweets) %>% 
+  group_by(!!sym(GROUPING), n_retweets) %>% 
   summarise(count = n()) %>% 
   arrange(desc(n_retweets)) %>% 
   mutate(prob = count / sum(count),
          cdf = cumsum(count) / sum(count)) %>%
-  arrange(!!sym(grouping), n_retweets)
+  arrange(!!sym(GROUPING), n_retweets)
 
 # Plot
 gg_retweetfreq_dist <- RT_freq_data %>% 
-  ggplot(aes(x = n_retweets, y = prob, color = !!sym(grouping))) +
+  ggplot(aes(x = n_retweets, y = prob, color = !!sym(GROUPING))) +
   geom_point(size = 0.8, alpha = 0.5, stroke = 0) +
   scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
                 labels = scales::trans_format("log10", scales::math_format(10^.x))) +
@@ -221,8 +249,10 @@ gg_retweetfreq_dist <- RT_freq_data %>%
         legend.key.height = unit(0, 'mm'),
         legend.background = element_blank()) +
   guides(color = guide_legend(override.aes = list(size = 1.25)))
+
 gg_retweetfreq_dist
 ggsave(gg_retweetfreq_dist, filename = paste0(outpath, subdir_out, "retweetdistribution.pdf"), width = 45, height = 45, units = "mm")
+
 
 
 ############################## Ideology in networks ##############################
@@ -240,7 +270,7 @@ blm_ideoldiversity <- brm(bf(ideology_sd ~ 0 + article_fc_rating),
                           iter = 3500)
 
 ideoldiversity_estimates <- as.data.frame( posterior_summary(blm_ideoldiversity, 
-                                                           pars = c("article_fc_ratingFM", "article_fc_ratingT")) ) %>% 
+                                                           variables = c("article_fc_ratingFM", "article_fc_ratingT")) ) %>% 
   tibble::rownames_to_column() %>% 
   rename(article_fc_rating = rowname) %>%
   mutate(article_fc_rating = gsub("b_article_fc_rating", "", article_fc_rating)) %>% 
@@ -284,6 +314,7 @@ gg_ideodiversity <- network_metrics %>%
   xlab("Article veracity") +
   theme_ctokita() +
   theme(legend.position = "none")
+
 gg_ideodiversity
 ggsave(gg_ideodiversity, filename = paste0(outpath, "ideodiversity_byveracity.pdf"), width = 45, height = 45, units = "mm")
 
@@ -303,5 +334,6 @@ gg_veracitydensity <- network_metrics %>%
   ylab("Network density") +
   xlab("Article veracity") +
   theme_ctokita()
+
 gg_veracitydensity
 ggsave(gg_veracitydensity, filename = paste0(outpath, "networkdensity_byveracity.pdf"), width = 45, height = 45, units = "mm", dpi = 400)
