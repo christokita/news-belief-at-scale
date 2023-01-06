@@ -1,8 +1,24 @@
-########################################
+#########################################
+# Name: `plot_tweeting`
+# Author: Chris Tokita
+# Purpose: Plot article tweets over time, comparing by article veracity or by news source type
+# Details:
+#   (These R scripts assume the use of the `.Rproj` at top of the news-belief-at-scale/ repo. Otherwise, set the working directory to one level above this script.)
 #
-# PLOT: Tweets over time, comparing by article veracity or by news source type
-#
+#   The Variables at the beginning of the script that are in all caps need to be set by the user:
+#     `DATA_DIRECTORY`: path to the data directory. (Copies of data are currently stored on external hard drive and high-performance cluster.)
+#     `GROUPING`:       determines whether the plots will break out tweet belief according to article veracity ("article_fc_rating") or the source of the article ("source_type").
+# 
+# Data In:
+# `<data storage location>/data_derived/tweets/tweets_labeled.csv`: article tweets with article and tweeter metadata.
+# 
+# Data Out: Plots written to output sub-folder depending on if we are comparing article veracity or news source type. 
+# `<data storage location>/output/tweeting/veracity/`
+# `<data storage location>/output/tweeting/source_type/`
+# 
+# Machine: Chris' laptop
 ########################################
+
 
 ####################
 # Load packages
@@ -15,23 +31,32 @@ library(RColorBrewer)
 library(scales)
 source("scripts/_plot_themes/theme_ctokita.R")
 
+
 ####################
-# Paramters for analysis: grouping of interest, paths to data, paths for output, and filename
+# Set parameters for analysis
 ####################
-# Choose grouping of interest. Options: 
+# Choose location of data
+DATA_DIRECTORY <- "/Volumes/CKT-DATA/news-belief-at-scale/"
+
+# Choose GROUPING of interest. Options: 
 #     (1) article veracity: "article_fc_rating"
 #     (2) source: "source_type"
-grouping <- "article_fc_rating"
+GROUPING <- "article_fc_rating"
 
-# Paths to files/directories
-tweet_path <- '/Volumes/CKT-DATA/news-belief-at-scale/data_derived/tweets/tweets_labeled.csv' #path to fitness cascade data
-if (grouping == "article_fc_rating") {
+####################
+# Prepare for analysis: set paths to data, paths for output, and color palettes for plotting
+####################
+# Set paths for data
+tweet_path <- paste0(DATA_DIRECTORY, "data_derived/tweets/tweets_labeled.csv") #tweets
+
+# Set path for plots
+if (GROUPING == "article_fc_rating") {
   outpath <- 'output/tweeting/veracity/'
-} else if(grouping == "source_type") {
+} else if(GROUPING == "source_type") {
   outpath <- 'output/tweeting/source_type/'
 }
 
-# Color palette
+# Set color palette
 line_color <- "#495867"
 ideol_pal <- rev(brewer.pal(5, "RdBu"))
 ideol_pal[3] <- "#e0e0e0"
@@ -77,24 +102,24 @@ tweets <- dummy_rows %>%
   mutate(hour_bin = as.numeric(as.character(hour_bin))) #convert from factor to plain number
 
 # If analyzing by veracity, drop out non-True/False articles
-if (grouping == "article_fc_rating") {
+if (GROUPING == "article_fc_rating") {
   tweets <- tweets %>% 
     filter(article_fc_rating %in% c("T", "FM"))
 }
 
 # Clean up some labels
 tweets <- tweets %>% 
-  mutate(article_fc_rating = ifelse(article_fc_rating == "T", "True news", ifelse(article_fc_rating == "FM", "Fake news", 
+  mutate(article_fc_rating = ifelse(article_fc_rating == "T", "True news", ifelse(article_fc_rating == "FM", "False/Misleading news", 
                                                                                   ifelse(article_fc_rating == "CND", "Borderline", 
                                                                                          ifelse(article_fc_rating == "No Mode!", "No mode", article_fc_rating)))),
-         source_type = ifelse(source_type == "mainstream", "Mainstream", ifelse(source_type == "fringe", "Fringe", source_type)),
+         source_type = ifelse(source_type == "mainstream", "Mainstream outlet", ifelse(source_type == "fringe", "Fringe outlet", source_type)),
          article_lean = ifelse(article_lean == "C", "Conservative", ifelse(article_lean == "L", "Liberal",
                                                                            ifelse(article_lean == "N", "Neutral", 
                                                                                   ifelse(article_lean == "U", "Unclear", source_type)))) )
 
 # Calculate new tweets per hour
 tweet_perhour <- tweets %>% 
-  group_by(!!sym(grouping), total_article_number, hour_bin) %>% 
+  group_by(!!sym(GROUPING), total_article_number, hour_bin) %>% 
   count(.)
 tweet_perhour$n[tweet_perhour$hour_bin %in% c(-2, -1)] <- 0 #zero out the count of dummy rows
 
@@ -103,19 +128,20 @@ tweet_perhour$n[tweet_perhour$hour_bin %in% c(-2, -1)] <- 0 #zero out the count 
 ############################## Plot simple time series of tweet count ##############################
 
 ####################
-# New tweets per hour over time
+# PLOT: New tweets per hour over time
 ####################
 gg_tweettime <- tweet_perhour %>% 
   ggplot(., aes(x = hour_bin, y = n, group = total_article_number)) +
-  geom_line(size = 0.2, alpha = 0.5, color = line_color) +
+  geom_line(linewidth = 0.2, alpha = 0.5, color = line_color) +
   xlab("Time since first article share (hrs)") +
   ylab("Tweets") +
   scale_y_log10() +
   theme_ctokita() +
   theme(aspect.ratio = NULL) +
-  facet_wrap(as.formula(paste("~", grouping)), 
+  facet_wrap(as.formula(paste("~", GROUPING)), 
              ncol = 1,
              strip.position = "right")
+
 gg_tweettime
 
 
@@ -128,7 +154,7 @@ gg_totaltweets <- tweets %>%
              linetype = "dotted",
              size = 0.3,
              color = "grey60") +
-  geom_step(size = 0.2, alpha = 0.5, color = line_color) +
+  geom_step(linewidth = 0.2, alpha = 0.5, color = line_color) +
   scale_y_continuous(breaks = c(10^seq(1, 5)),
                      labels = scales::trans_format("log10", scales::math_format(10^.x)),
                      trans = scales::pseudo_log_trans(base = 10)) +
@@ -138,27 +164,29 @@ gg_totaltweets <- tweets %>%
   ylab("Log total tweets") +
   theme_ctokita() +
   theme(aspect.ratio = NULL) +
-  facet_wrap(as.formula(paste("~", grouping)), 
+  facet_wrap(as.formula(paste("~", GROUPING)), 
              ncol = 1,
              strip.position = "right")
+
 gg_totaltweets
 ggsave(gg_totaltweets, filename = paste0(outpath,"total_tweets_time.pdf"), width = 90, height = 45, units = "mm", dpi = 400)
 
 # Color by other factor
-if (grouping == "article_fc_rating") {
+if (GROUPING == "article_fc_rating") {
   other_grouping <- "source_type"
   plot_tag <- "sourcetype"
-} else if (grouping == "source_type") {
+} else if (GROUPING == "source_type") {
   other_grouping <- "article_fc_rating"
   plot_tag <- "veracity"
 }
+
 gg_totaltweets_color <- tweets %>% 
   ggplot(., aes(x = relative_tweet_time/24, y = tweet_number, group = total_article_number, color = !!sym(other_grouping))) +
   geom_vline(aes(xintercept = 1), 
              linetype = "dotted",
-             size = 0.3,
+             linewidth = 0.3,
              color = "grey60") +
-  geom_step(size = 0.2, alpha = 0.5) +
+  geom_step(linewidth = 0.2, alpha = 0.5) +
   scale_y_continuous(breaks = c(10^seq(1, 5)),
                      labels = scales::trans_format("log10", scales::math_format(10^.x)),
                      trans = scales::pseudo_log_trans(base = 10)) +
@@ -170,14 +198,15 @@ gg_totaltweets_color <- tweets %>%
   ylab("Log total tweets") +
   theme_ctokita() +
   theme(aspect.ratio = NULL) +
-  facet_wrap(as.formula(paste("~", grouping)), 
+  facet_wrap(as.formula(paste("~", GROUPING)), 
              ncol = 1,
              strip.position = "right")
+
 gg_totaltweets_color
 ggsave(gg_totaltweets_color, filename = paste0(outpath,"total_tweets_time_", plot_tag, ".pdf"), width = 90, height = 45, units = "mm", dpi = 400)
 
 ####################
-# Percentiage of tweets per story
+# Percentage of tweets per story
 ####################
 gg_perctweets <- tweets %>% 
   ggplot(., aes(x = relative_tweet_time, y = relative_tweet_count, group = total_article_number)) +
@@ -185,16 +214,17 @@ gg_perctweets <- tweets %>%
              linetype = "dotted",
              size = 0.3,
              color = "grey60") +
-  geom_step(size = 0.2, alpha = 0.5, color = line_color) +
+  geom_step(linewidth = 0.2, alpha = 0.5, color = line_color) +
   scale_x_continuous(breaks = seq(0, 48, 6),
                      limits = c(0, 48)) +
   xlab("Time since first article share (hrs)") +
   ylab("Proportion of story stweets") +
   theme_ctokita() +
   theme(aspect.ratio = NULL) +
-  facet_wrap(as.formula(paste("~", grouping)), 
+  facet_wrap(as.formula(paste("~", GROUPING)), 
              ncol = 1,
              strip.position = "right")
+
 gg_perctweets
 ggsave(gg_perctweets, filename = paste0(outpath, "relative_tweets_time.pdf"), width = 90, height = 45, units = "mm", dpi = 400)
 
@@ -211,12 +241,13 @@ for (percentile in percentiles) {
     filter(relative_tweet_count == min(relative_tweet_count)) 
   
   gg_saturationcount <- ggplot(percentile_data, aes(x = relative_tweet_time)) +
-    geom_histogram(aes(y = stat(density)), binwidth = 2, color = NA, fill = line_color) +
+    geom_histogram(aes(y = after_stat(density)), binwidth = 2, color = NA, fill = line_color) +
     xlab(paste0("Time to ", percentile*100, "% sharing saturation (hrs.)")) +
     theme_ctokita() +
-    facet_wrap(as.formula(paste("~", grouping)), 
+    facet_wrap(as.formula(paste("~", GROUPING)), 
                ncol = 1,
                strip.position = "right")
+  
   gg_saturationcount
   ggsave(gg_saturationcount, filename = paste0(outpath, "story_saturation", percentile*100, ".pdf"), width = 55, height = 90, units = "mm", dpi = 400)
   
@@ -230,11 +261,11 @@ for (percentile in percentiles) {
 gg_retweets <- tweets %>% 
   # data processing
   filter(hour_bin >= 0) %>% 
-  group_by(!!sym(grouping), total_article_number, hour_bin) %>% 
+  group_by(!!sym(GROUPING), total_article_number, hour_bin) %>% 
   summarize(RTs = sum(as.logical(is_retweet)),
             total_tweets = length(is_retweet)) %>% 
   mutate(perc_RTs = RTs / total_tweets) %>% 
-  group_by(!!sym(grouping), hour_bin) %>% 
+  group_by(!!sym(GROUPING), hour_bin) %>% 
   summarise(mean_perc_RTs = mean(perc_RTs),
             sd_perc_RTs = sd(perc_RTs)) %>% 
   # graph
@@ -252,9 +283,10 @@ gg_retweets <- tweets %>%
   theme_ctokita() +
   theme(aspect.ratio = NULL, 
         legend.box.margin = unit(c(0, 0, 0, 0), "mm")) +
-  facet_wrap(as.formula(paste("~", grouping)), 
+  facet_wrap(as.formula(paste("~", GROUPING)), 
              ncol = 1,
              strip.position = "right")
+
 gg_retweets
 ggsave(gg_retweets, filename = paste0(outpath, "RTpercentage.pdf"), width = 55, height = 45, units = "mm", dpi = 400)
   
@@ -273,10 +305,10 @@ gg_ideoldisttime <- tweets %>%
   mutate(article_ideol_category = ifelse(article_lean == "L", -1, ifelse(article_lean == "C", 1, 0))) %>% 
   mutate(ideol_diff = user_ideol_category - article_ideol_category) %>% 
   mutate(ideol_distance = sign(user_ideol_category - article_ideol_category)) %>%
-  group_by(!!sym(grouping), total_article_number, hour_bin) %>% 
+  group_by(!!sym(GROUPING), total_article_number, hour_bin) %>% 
   count(ideol_distance) %>% 
   mutate(freq_ideol_distance = n / sum(n)) %>% 
-  group_by(!!sym(grouping), hour_bin, ideol_distance) %>% 
+  group_by(!!sym(GROUPING), hour_bin, ideol_distance) %>% 
   summarise(freq_ideol_distance = mean(freq_ideol_distance)) %>% 
   filter(hour_bin >= 0) %>%
   #graph
@@ -295,9 +327,10 @@ gg_ideoldisttime <- tweets %>%
   theme_ctokita() +
   theme(aspect.ratio = NULL, 
         legend.box.margin = unit(c(0, 0, 0, 0), "mm")) +
-  facet_wrap(as.formula(paste("~", grouping)), 
+  facet_wrap(as.formula(paste("~", GROUPING)), 
              strip.position = "right",
              ncol = 1)
+
 gg_ideoldisttime
 ggsave(gg_ideoldisttime, filename = paste0(outpath, "relative_ideology_dist.pdf"), width = 100, height = 45, units = "mm", dpi = 400)
 
@@ -311,10 +344,10 @@ gg_ideoltime <- tweets %>%
   #data processing
   filter(!is.na(user_ideology)) %>% 
   mutate(ideol_bin = cut(user_ideology, breaks = c(-6, -1, 1, 6), labels = c(-1, 0, 1), right = FALSE, include.lowest = TRUE)) %>%
-  group_by(!!sym(grouping), total_article_number, hour_bin) %>% 
+  group_by(!!sym(GROUPING), total_article_number, hour_bin) %>% 
   count(ideol_bin) %>% 
   mutate(freq_ideol_bin = n / sum(n)) %>% 
-  group_by(!!sym(grouping), hour_bin, ideol_bin) %>% 
+  group_by(!!sym(GROUPING), hour_bin, ideol_bin) %>% 
   summarise(freq_ideol_bin = mean(freq_ideol_bin)) %>% 
   # graph
   ggplot(., aes(x = hour_bin, y = freq_ideol_bin, fill = factor(ideol_bin, levels = c(1, 0, -1)))) +
@@ -330,9 +363,10 @@ gg_ideoltime <- tweets %>%
   theme_ctokita() +
   theme(aspect.ratio = NULL, 
         legend.box.margin = unit(c(0, 0, 0, 0), "mm")) +
-  facet_wrap(as.formula(paste("~", grouping)),
+  facet_wrap(as.formula(paste("~", GROUPING)),
              ncol = 1,
              strip.position = "right")
+
 gg_ideoltime
 ggsave(gg_ideoltime, filename = paste0(outpath,"ideology_dist.pdf"), width = 90, height = 45, units = "mm", dpi = 400)
 
@@ -341,10 +375,10 @@ gg_ideoltime_fine <- tweets %>%
   #data processing
   filter(!is.na(user_ideology)) %>% 
   mutate(ideol_bin = cut(user_ideology, breaks = c(-6, -1, 1, 6), labels = c(-1, 0, 1), right = FALSE, include.lowest = TRUE)) %>%
-  group_by(!!sym(grouping), article_lean, total_article_number, hour_bin) %>% 
+  group_by(!!sym(GROUPING), article_lean, total_article_number, hour_bin) %>% 
   count(ideol_bin) %>% 
   mutate(freq_ideol_bin = n / sum(n)) %>% 
-  group_by(!!sym(grouping), article_lean, hour_bin, ideol_bin) %>% 
+  group_by(!!sym(GROUPING), article_lean, hour_bin, ideol_bin) %>% 
   summarise(freq_ideol_bin = mean(freq_ideol_bin)) %>% 
   # graph
   ggplot(., aes(x = hour_bin, y = freq_ideol_bin, fill = factor(ideol_bin, levels = c(1, 0, -1)))) +
@@ -360,7 +394,8 @@ gg_ideoltime_fine <- tweets %>%
   theme_ctokita() +
   theme(aspect.ratio = NULL, 
         legend.box.margin = unit(c(0, 0, 0, 0), "mm")) +
-  facet_grid(as.formula(paste(grouping, "~", "article_lean")))
+  facet_grid(as.formula(paste(GROUPING, "~", "article_lean")))
+
 gg_ideoltime_fine
 ggsave(gg_ideoltime_fine, filename = paste0(outpath,"ideology_dist_articlelean.pdf"), width = 120, height = 45, units = "mm", dpi = 400)
 
@@ -382,9 +417,10 @@ gg_ideoltime_raw <- tweets %>%
   theme_ctokita() +
   theme(aspect.ratio = NULL, 
         legend.position = "none") +
-  facet_wrap(as.formula(paste("~", grouping)),
+  facet_wrap(as.formula(paste("~", GROUPING)),
              ncol = 1,
              strip.position = "right")
+
 gg_ideoltime_raw
 ggsave(gg_ideoltime_raw, filename = paste0(outpath, "ideology_raw.pdf"), width = 90, height = 45, units = "mm", dpi = 400)
 
@@ -403,7 +439,8 @@ gg_ideoltime_raw <- tweets %>%
   theme_ctokita() +
   theme(aspect.ratio = NULL, 
         legend.position = "none") +
-  facet_grid(as.formula(paste(grouping, "~", "article_lean")))
+  facet_grid(as.formula(paste(GROUPING, "~", "article_lean")))
+
 gg_ideoltime_raw
 ggsave(gg_ideoltime_raw, filename = paste0(outpath, "ideology_raw_articlelean.pdf"), width = 90, height = 45, units = "mm", dpi = 400)
 
@@ -436,6 +473,7 @@ gg_ideoltimesource <- tweets %>%
   theme(aspect.ratio = NULL, 
         legend.box.margin = unit(c(0, 0, 0, 0), "mm")) +
   facet_grid(article_fc_rating~source_type)
+
 gg_ideoltimesource
 ggsave(gg_ideoltimesource, filename = paste0(outpath, "ideology_dist_bysourceandveracity.pdf"), width = 90, height = 45, units = "mm", dpi = 400)
 
