@@ -206,8 +206,9 @@ gg_ideoldist_retweet <- tweets %>%
   scale_x_continuous(limits = c(-6, 6), 
                      expand = c(0, 0), 
                      breaks = seq(-6, 6, 2)) +
-  scale_y_continuous(expand = c(0, 0),
-                     label = scales::comma) +
+  scale_y_continuous(limits = c(0, 0.25),
+                     expand = c(0, 0),
+                     breaks = seq(0, 0.3, 0.05)) +
   scale_fill_gradientn(colors = ideol_pal, limits = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   scale_color_gradientn(colors = ideol_pal, limits = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   theme_ctokita() +
