@@ -202,8 +202,8 @@ gg_exposebelief_total <- ggplot(exposure_belief_data, aes(x = ideology_bin, fill
              ncol = 1,
              strip.position = "top",
              scales = "free")
-gg_exposebelief_total
 
+gg_exposebelief_total
 ggsave(gg_exposebelief_total, filename = "output/belief/veracity/combined_total_beliefANDexposure.pdf", width = 45, height = 90, units = "mm", dpi = 400)
 
 
@@ -262,8 +262,8 @@ gg_exposebelief_total_source <- ggplot(exposure_belief_data, aes(x = ideology_bi
         aspect.ratio = NULL,
         panel.spacing = unit(5, "mm")) +
   facet_grid(article_fc_rating~source_lean, scale = 'free')
-gg_exposebelief_total_source
 
+gg_exposebelief_total_source
 ggsave(gg_exposebelief_total_source, filename = "output/belief/veracity/combined_total_beliefANDexposure_bysourcelean.pdf", width = 90, height = 80, units = "mm", dpi = 400)
 
 
@@ -322,8 +322,8 @@ gg_exposebelief_total_article <- ggplot(exposure_belief_data, aes(x = ideology_b
         aspect.ratio = NULL,
         panel.spacing = unit(5, "mm")) +
   facet_grid(article_fc_rating~article_lean, scale = 'free_y')
-gg_exposebelief_total_article
 
+gg_exposebelief_total_article
 ggsave(gg_exposebelief_total_article, filename = "output/belief/veracity/combined_total_beliefANDexposure_byarticlelean.pdf", width = 90, height = 90, units = "mm", dpi = 400)
 
 
@@ -503,8 +503,8 @@ gg_exposebelief_total_timewindow <- ggplot(exposure_belief_data, aes(x = ideolog
         aspect.ratio = NULL,
         panel.spacing.x = unit(0.4, "lines")) +
   facet_grid(article_fc_rating~time_window, scale = "free")
-gg_exposebelief_total_timewindow
 
+gg_exposebelief_total_timewindow
 ggsave(gg_exposebelief_total_timewindow, filename = "output/belief/veracity/combined_total_beliefANDexposure_timewindow.pdf", width = 90, height = 90, units = "mm", dpi = 400)
 
 
@@ -590,5 +590,4 @@ gg_majority_point <- ggplot(data = majority_point, aes(x = time, y = ..density..
         legend.position = "top")
 
 gg_majority_point
-
 ggsave(gg_majority_point, filename = "output/belief/veracity/combined_time_to_majority.pdf", width = 90, height = 100, units = "mm", dpi = 400)

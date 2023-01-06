@@ -199,6 +199,7 @@ gg_ideol_total <- belief_ideol %>%
              ncol = 1,
              strip.position = "top",
              scales = "free")
+
 gg_ideol_total
 ggsave(gg_ideol_total, filename = paste0(outpath, "ideol_total_belief.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
 
@@ -265,8 +266,8 @@ gg_ideol_dist <- belief_ideol %>%
              ncol = 1,
              strip.position = "top",
              scales = "free_x")
-gg_ideol_dist
 
+gg_ideol_dist
 ggsave(gg_ideol_dist, filename = paste0(outpath, "ideol_avg_belief_distribution.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
 
 
@@ -301,6 +302,7 @@ gg_ideoltime <- belief_ideol %>%
              ncol = 1,
              strip.position = "top",
              scales = "free")
+
 gg_ideoltime
 ggsave(gg_ideoltime, filename = paste0(outpath, "ideol_belief_hourbin.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
 
@@ -399,6 +401,7 @@ gg_belief_rate_exposure <- belief_per_exposure %>%
   #            scales = "free_y") +
   theme_ctokita() +
   theme(legend.position = "none")
+
 gg_belief_rate_exposure 
 ggsave(gg_belief_rate_exposure, filename = paste0(outpath, "beliefs_per_exposure.pdf"), width = 45, height = 45, units = "mm", dpi = 400)
 

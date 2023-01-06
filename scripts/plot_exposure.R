@@ -158,6 +158,7 @@ gg_exposuretime <- exposure_timeseries %>%
   facet_wrap(as.formula(paste("~", GROUPING)), 
              ncol = 1,
              strip.position = "top")
+
 gg_exposuretime
 ggsave(gg_exposuretime, filename = paste0(outpath, "total_exposed_time.pdf"), width = 90, height = 45, units = "mm", dpi = 400)
 
@@ -178,6 +179,7 @@ gg_relexpostime <- exposure_timeseries %>%
   facet_wrap(as.formula(paste("~", GROUPING)), 
              ncol = 1,
              strip.position = "top")
+
 gg_relexpostime
 ggsave(gg_relexpostime, filename = paste0(outpath, "relative_exposure_time.pdf"), width = 90, height = 45, units = "mm", dpi = 400)
 
@@ -220,6 +222,7 @@ gg_expVnum <- exposure_timeseries %>%
              ncol = 1,
              strip.position = "top",
              scales = "free_x")
+
 gg_expVnum
 ggsave(gg_expVnum, filename = paste0(outpath, "relative_tweet_vs_exposure.pdf"), width = 50, height = 90, units = "mm", dpi = 400)
 
@@ -269,6 +272,7 @@ gg_ideol_total <- exposure_ideol %>%
              ncol = 1,
              strip.position = "top",
              scales = "free")
+
 gg_ideol_total
 ggsave(gg_ideol_total, filename = paste0(outpath, "ideol_total_exposed.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
 
@@ -296,6 +300,7 @@ gg_ideol_avg <- exposure_ideol %>%
              ncol = 1,
              strip.position = "top",
              scales = "free")
+
 gg_ideol_avg
 ggsave(gg_ideol_avg, filename = paste0(outpath, "ideol_avg_exposed.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
 
@@ -337,8 +342,8 @@ gg_ideol_dist <- exposure_ideol %>%
              ncol = 1,
              strip.position = "top",
              scales = "free_x")
+
 gg_ideol_dist  
-  
 ggsave(gg_ideol_dist, filename = paste0(outpath, "ideol_avg_exposure_distribution.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
 
 
@@ -374,6 +379,7 @@ gg_ideoltime <- exposure_ideol %>%
              ncol = 1,
              strip.position = "top",
              scales = "free")
+
 gg_ideoltime
 ggsave(gg_ideoltime, filename = paste0(outpath, "ideol_exposed_hourbin.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
 
@@ -398,6 +404,7 @@ gg_fake_exposure_article <- exposure_ideol %>%
   theme(legend.position = "none") +
   facet_wrap(~total_article_number,
              scales = "free")
+
 gg_fake_exposure_article
 ggsave(gg_fake_exposure_article, filename = paste0("output/exposure/veracity/fake_news_exposure_by_article.pdf"), width = 180, height = 180, units = "mm", dpi = 400)
 
