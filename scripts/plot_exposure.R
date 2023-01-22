@@ -245,7 +245,7 @@ exposure_ideol <- exposure_timeseries %>%
   select(-lower, -upper) %>% 
   # count number of articles per GROUPING (useful for average distributions)
   group_by(!!sym(GROUPING)) %>% 
-  mutate(n_articles_in_GROUPING = length(unique(total_article_number)))
+  mutate(n_articles_in_grouping = length(unique(total_article_number)))
 
 
 ####################
@@ -264,8 +264,8 @@ gg_ideol_total <- exposure_ideol %>%
                      labels = comma) +
   scale_color_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
-  xlab("Exposed user ideology") +
-  ylab("Total number of users") +
+  xlab("User ideology") +
+  ylab("Total number of exposed users") +
   theme_ctokita() +
   theme(legend.position = "none",
         aspect.ratio = NULL) +
@@ -292,8 +292,8 @@ gg_ideol_avg <- exposure_ideol %>%
                      labels = comma) +
   scale_color_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
-  xlab("Exposed user ideology") +
-  ylab("Avg. number of users") +
+  xlab("User ideology") +
+  ylab("Avg. number of exposed users per article") +
   theme_ctokita() +
   theme(legend.position = "none",
         aspect.ratio = NULL) +
@@ -312,15 +312,15 @@ ggsave(gg_ideol_avg, filename = paste0(outpath, subdir_out, "ideol_avg_exposed.p
 gg_ideol_dist <- exposure_ideol %>% 
   # filter(total_article_number == 28) %>%
   # For each article, determine proportion exposed by ideology bin
-  group_by(!!sym(GROUPING), ideology_bin, total_article_number, n_articles_in_GROUPING) %>% 
+  group_by(!!sym(GROUPING), ideology_bin, total_article_number, n_articles_in_grouping) %>% 
   summarise(count = sum(count)) %>% 
   ungroup() %>% 
-  group_by(total_article_number, n_articles_in_GROUPING) %>% 
+  group_by(total_article_number, n_articles_in_grouping) %>% 
   mutate(exposed_prop = count / sum(count),
          exposed_prop = ifelse( is.na(exposed_prop), 0, exposed_prop)) %>% 
   # Now determine average distribution shape by article GROUPING
-  group_by(!!sym(GROUPING), ideology_bin, n_articles_in_GROUPING) %>% 
-  summarise(avg_exposed_prop = sum(exposed_prop) / unique(n_articles_in_GROUPING)) %>% 
+  group_by(!!sym(GROUPING), ideology_bin, n_articles_in_grouping) %>% 
+  summarise(avg_exposed_prop = sum(exposed_prop) / unique(n_articles_in_grouping)) %>% 
   # Plot
   ggplot(., aes(x = ideology_bin, y = avg_exposed_prop, fill = ideology_bin)) +
   geom_bar(stat = "identity", width = 0.5, color = NA) +
@@ -335,7 +335,7 @@ gg_ideol_dist <- exposure_ideol %>%
   scale_fill_gradientn(colours = ideol_pal, 
                        limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   xlab("Exposed user ideology") +
-  ylab("Avg. proportion of article exposure") +
+  ylab("Avg. proportion of article exposure per article") +
   theme_ctokita() +
   theme(legend.position = "none",
         aspect.ratio = NULL) +

@@ -174,14 +174,14 @@ exposure_belief_data <- merge(exposure_ideol_sum, belief_ideol_sum, by = c("arti
 gg_exposebelief_total <- ggplot(exposure_belief_data, aes(x = ideology_bin, fill = ideology_bin)) +
   # Data
   geom_step(aes(x = ideology_bin - 0.25, y = exposure_count,  color = ideology_bin - 0.25),
-           size = 0.3,
-           alpha = 0.8) +
+            linewidth = 0.3,
+            alpha = 0.8) +
   geom_bar(aes(y = exposure_count),
            stat = "identity",
            alpha = 0.5,
            width = 0.5) +
   geom_step(aes(x = ideology_bin - 0.25, y = belief_count),
-            size = 0.6,
+            linewidth = 0.6,
             color = "white",
             alpha = 0.7) +
   geom_bar(aes(y = belief_count),
@@ -236,14 +236,14 @@ exposure_belief_data <- merge(exposure_ideol_sum, belief_ideol_sum, by = c("arti
 gg_exposebelief_total_source <- ggplot(exposure_belief_data, aes(x = ideology_bin, fill = ideology_bin)) +
   # Data
   geom_step(aes(x = ideology_bin - 0.25, y = exposure_count,  color = ideology_bin - 0.25),
-            size = 0.3,
+            linewidth = 0.3,
             alpha = 0.8) +
   geom_bar(aes(y = exposure_count),
            stat = "identity",
            alpha = 0.5,
            width = 0.5) +
   geom_step(aes(x = ideology_bin - 0.25, y = belief_count),
-            size = 0.6,
+            linewidth = 0.6,
             color = "white",
             alpha = 0.7) +
   geom_bar(aes(y = belief_count),
@@ -296,14 +296,14 @@ exposure_belief_data <- merge(exposure_ideol_sum, belief_ideol_sum, by = c("arti
 gg_exposebelief_total_article <- ggplot(exposure_belief_data, aes(x = ideology_bin, fill = ideology_bin)) +
   # Data
   geom_step(aes(x = ideology_bin - 0.25, y = exposure_count,  color = ideology_bin - 0.25),
-            size = 0.3,
+            linewidth = 0.3,
             alpha = 0.8) +
   geom_bar(aes(y = exposure_count),
            stat = "identity",
            alpha = 0.5,
            width = 0.5) +
   geom_step(aes(x = ideology_bin - 0.25, y = belief_count),
-            size = 0.6,
+            linewidth = 0.6,
             color = "white",
             alpha = 0.7) +
   geom_bar(aes(y = belief_count),
@@ -365,7 +365,7 @@ exposure_belief_diff <- exposure_belief_data %>%
 
 # Plot ideology bin % of exposure vs % of belief
 gg_pct_exposurebelief <- ggplot(exposure_belief_diff, aes(x = exposure_pct, y = belief_pct, color = ideology_bin)) +
-  geom_abline(aes(slope = 1, intercept = 0), size = 0.3, linetype = "dotted") +
+  geom_abline(aes(slope = 1, intercept = 0), linewidth = 0.3, linetype = "dotted") +
   geom_point(size = 3, stroke = 0) +
   # scale_color_manual(values = grouping_pal) +
   scale_x_continuous(breaks = seq(0, 0.2, 0.1), limits = c(0, 0.21)) +
@@ -425,7 +425,7 @@ exposure_belief_diff <- exposure_belief_data %>%
 
 # Plot ideology bin % of exposure vs % of belief
 gg_pct_exposurebelief_articlelean <- ggplot(exposure_belief_diff, aes(x = exposure_pct, y = belief_pct, color = ideology_bin)) +
-  geom_abline(aes(slope = 1, intercept = 0), size = 0.3, linetype = "dotted") +
+  geom_abline(aes(slope = 1, intercept = 0), linewidth = 0.3, linetype = "dotted") +
   geom_point(size = 3, stroke = 0) +
   scale_x_continuous(breaks = seq(0, 0.3, 0.1), limits = c(0, 0.31), trans = scales::pseudo_log_trans(base = 10)) +
   scale_y_continuous(breaks = seq(0, 0.3, 0.1), limits = c(0, 0.31), trans = scales::pseudo_log_trans(base = 10)) +
@@ -439,6 +439,65 @@ gg_pct_exposurebelief_articlelean <- ggplot(exposure_belief_diff, aes(x = exposu
 
 gg_pct_exposurebelief_articlelean
 ggsave(gg_pct_exposurebelief_articlelean, filename = paste0(outpath, "belief_vs_exposure/belief_vs_exposure_articlelean.pdf"), height = 90, width = 180, units = "mm", dpi = 400)
+
+
+
+######################################## Average Exposure/Belief per Article ########################################
+
+####################
+# PLOT: Average exposure and belief per article, broken out by article veracity
+####################
+# Prep data
+exposure_ideol_avg <- exposure_ideol %>% 
+  group_by(article_fc_rating, ideology_bin) %>% 
+  summarise(avg_exposure_count = sum(count, na.rm = TRUE) / unique(n_articles_in_grouping))
+
+belief_ideol_avg <- belief_ideol %>% 
+  group_by(article_fc_rating, ideology_bin) %>% 
+  summarise(avg_belief_count = sum(count, na.rm = TRUE) / unique(n_articles_in_grouping))
+
+exposure_belief_avg_data <- merge(exposure_ideol_avg, belief_ideol_avg, by = c("article_fc_rating", "ideology_bin")) %>% 
+  filter(article_fc_rating %in% c("False/Misleading news", "True news"))
+
+# Plot
+# NOTE: labels for "Exposed" and "Believing" are added later in vector art program during figure creation for paper
+gg_exposebelief_avg <- ggplot(exposure_belief_avg_data, aes(x = ideology_bin, fill = ideology_bin)) +
+  # Data
+  geom_step(aes(x = ideology_bin - 0.25, y = avg_exposure_count,  color = ideology_bin - 0.25),
+            linewidth = 0.3,
+            alpha = 0.8) +
+  geom_bar(aes(y = avg_exposure_count),
+           stat = "identity",
+           alpha = 0.5,
+           width = 0.5) +
+  geom_step(aes(x = ideology_bin - 0.25, y = avg_belief_count),
+            linewidth = 0.6,
+            color = "white",
+            alpha = 0.7) +
+  geom_bar(aes(y = avg_belief_count),
+           stat = "identity",
+           alpha = 1,
+           width = 0.5) +
+  #Plot params
+  scale_x_continuous(limits = c(-6, 6), 
+                     expand = c(0, 0), 
+                     breaks = seq(-6, 6, 2)) +
+  scale_y_continuous(expand = c(0, 0), 
+                     labels = comma) +
+  scale_fill_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
+  scale_color_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
+  xlab("User ideology") +
+  ylab("Avg. number of users per article") +
+  theme_ctokita() +
+  theme(legend.position = "none",
+        aspect.ratio = NULL) +
+  facet_wrap(~article_fc_rating, 
+             ncol = 1,
+             strip.position = "top",
+             scales = "free")
+
+gg_exposebelief_avg
+ggsave(gg_exposebelief_avg, filename = paste0(outpath, "combined_avg_beliefANDexposure.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
 
 
   
@@ -476,14 +535,14 @@ exposure_belief_data <- merge(exposure_ideol_sum, belief_ideol_sum, by = c("arti
 gg_exposebelief_total_timewindow <- ggplot(exposure_belief_data, aes(x = ideology_bin, fill = ideology_bin)) +
   # Data
   geom_step(aes(x = ideology_bin - 0.25, y = exposure_count,  color = ideology_bin - 0.25),
-            size = 0.3,
+            linewidth = 0.3,
             alpha = 0.8) +
   geom_bar(aes(y = exposure_count),
            stat = "identity",
            alpha = 0.5,
            width = 0.5) +
   geom_step(aes(x = ideology_bin - 0.25, y = belief_count),
-            size = 0.6,
+            linewidth = 0.6,
             color = "white",
             alpha = 0.7) +
   geom_bar(aes(y = belief_count),
@@ -575,7 +634,7 @@ gg_majority_point <- ggplot(data = majority_point, aes(x = time, y = ..density..
                  alpha = 0.7,
                  position = "identity") +
   geom_vline(data = mean_majority_point, aes(xintercept = mean_time, color = article_fc_rating),
-             size = 0.75, linetype = "dotted") +
+             linewidth = 0.75, linetype = "dotted") +
   scale_x_continuous(trans = scales::pseudo_log_trans(base = 10),
                      breaks = c(1, 10, 100, 1000),
                      labels = scales::comma_format(accuracy = 1)) +

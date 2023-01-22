@@ -170,7 +170,7 @@ belief_ideol <- belief_timeseries %>%
   select(-lower, -upper) %>% 
   # count number of articles per GROUPING (useful for average distributions)
   group_by(!!sym(GROUPING)) %>% 
-  mutate(n_articles_in_GROUPING = length(unique(total_article_number)))
+  mutate(n_articles_in_grouping = length(unique(total_article_number)))
 
 
 ####################
@@ -180,7 +180,7 @@ gg_ideol_total <- belief_ideol %>%
   # Calculate totals
   group_by(!!sym(GROUPING), ideology_bin) %>% 
   summarise(count = sum(count, na.rm = TRUE),
-            avg_count = sum(count, na.rm = TRUE) / unique(n_articles_in_GROUPING)) %>% 
+            avg_count = sum(count, na.rm = TRUE) / unique(n_articles_in_grouping)) %>% 
   # Plot
   ggplot(., aes(x = ideology_bin, y = count, fill = ideology_bin, color = ideology_bin)) +
   geom_bar(stat = "identity") +
@@ -191,8 +191,8 @@ gg_ideol_total <- belief_ideol %>%
                      expand = c(0, 0)) +
   scale_color_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
-  xlab("Believing user ideology") +
-  ylab("Total users") +
+  xlab("User ideology") +
+  ylab("Total number of believing users") +
   theme_ctokita() +
   theme(legend.position = "none",
         aspect.ratio = NULL) +
@@ -210,7 +210,7 @@ ggsave(gg_ideol_total, filename = paste0(outpath, subdir_out, "ideol_total_belie
 gg_ideol_avg <- belief_ideol %>% 
   # Calculate average exposed
   group_by(!!sym(GROUPING), ideology_bin) %>% 
-  summarise(avg_count = sum(count, na.rm = TRUE) / unique(n_articles_in_GROUPING)) %>% 
+  summarise(avg_count = sum(count, na.rm = TRUE) / unique(n_articles_in_grouping)) %>% 
   # Plot
   ggplot(., aes(x = ideology_bin, y = avg_count, fill = ideology_bin, color = ideology_bin)) +
   geom_bar(stat = "identity") +
@@ -221,8 +221,8 @@ gg_ideol_avg <- belief_ideol %>%
                      expand = c(0, 0)) +
   scale_color_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +  
-  xlab("Believing user ideology") +
-  ylab("Avg. number of users") +
+  xlab("User ideology") +
+  ylab("Avg. number of believing users per article") +
   theme_ctokita() +
   theme(legend.position = "none",
         aspect.ratio = NULL) +
@@ -239,14 +239,14 @@ ggsave(gg_ideol_avg, filename = paste0(outpath, subdir_out, "ideol_avg_belief.pd
 ####################
 gg_ideol_dist <- belief_ideol %>% 
   # Calculate average distribution of belief
-  group_by(!!sym(GROUPING), ideology_bin, total_article_number, n_articles_in_GROUPING) %>% 
+  group_by(!!sym(GROUPING), ideology_bin, total_article_number, n_articles_in_grouping) %>% 
   summarise(count = sum(count)) %>% 
   ungroup() %>% 
   group_by(total_article_number) %>% 
   mutate(belief_prop = count / sum(count),
          belief_prop = ifelse( is.na(belief_prop), 0, belief_prop)) %>% 
   group_by(!!sym(GROUPING), ideology_bin) %>% 
-  summarise(avg_belief_prop = sum(belief_prop) / unique(n_articles_in_GROUPING)) %>% 
+  summarise(avg_belief_prop = sum(belief_prop) / unique(n_articles_in_grouping)) %>% 
   # Plot
   ggplot(., aes(x = ideology_bin, y = avg_belief_prop, fill = ideology_bin, color = ideology_bin)) +
   geom_bar(stat = "identity") +
@@ -259,7 +259,7 @@ gg_ideol_dist <- belief_ideol %>%
   scale_color_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   xlab("Believing user ideology") +
-  ylab("Avg. proportion of article beliefs") +
+  ylab("Avg. proportion of article beliefs per article") +
   theme_ctokita() +
   theme(legend.position = "none",
         aspect.ratio = NULL) +
