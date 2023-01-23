@@ -12,7 +12,9 @@
 # Data In:
 # `<data storage location>/data_derived/tweets/tweets_labeled.csv`: article tweets with article and tweeter metadata.
 # `<data storage location>/data_derived/exposure/estimated_users_exposed_over_time.csv: estimated exposure to each article tweet.
-# 
+# `<data storage location>/data/articles/evaluations.csv`: article fact-check ratings for each unique news article.
+# `<data storage location>/data/articles/daily_articles.csv`: article source information for each unique news article.
+#
 # Data Out: Plots written to output sub-folder depending on if we are comparing article veracity or news source type. 
 # `output/exposure/veracity/`
 # `output/exposure/source_type/`
@@ -51,6 +53,8 @@ GROUPING <- "article_fc_rating"
 # Set paths for data
 tweet_path <- paste0(DATA_DIRECTORY, "data_derived/tweets/tweets_labeled.csv") #tweets
 exposure_path <- paste0(DATA_DIRECTORY, "data_derived/exposure/estimated_users_exposed_over_time.csv") #estimated exposure per tweet
+article_evaluation_path <- paste0(DATA_DIRECTORY, "data/articles/evaluations.csv") #article fact-check rating
+article_source_path <- paste0(DATA_DIRECTORY, "data/articles/daily_articles.csv") #article source type
 
 # Set path for plots
 outpath <- 'output/exposure/'
@@ -78,6 +82,32 @@ article_data <- read.csv(tweet_path, header = TRUE, colClasses = c("user_id"="ch
   mutate(article_ideology = article_con_feel - article_lib_feel) %>% 
   select(tweet_id, total_article_number, source_type, source_lean, article_fc_rating, article_lean, user_ideology) 
 
+# Count number of articles per GROUPING (useful for average distributions) and add to article info
+ if (GROUPING == "article_fc_rating") {
+  article_group_counts <- read.csv(article_evaluation_path, header = TRUE) %>% 
+    select(article_num, mode.of.FC) %>% 
+    filter(article_num > 10) %>% 
+    group_by(mode.of.FC) %>% 
+    count() %>% 
+    as.data.frame() %>% 
+    rename(article_fc_rating = mode.of.FC,
+           n_articles_in_grouping = n)
+} else if(GROUPING == "source_type") {
+  article_group_counts <-  read.csv(article_source_path, header = TRUE) %>% 
+    select(total.article.number, source) %>% 
+    mutate(source = gsub("_con|_lib|_unclear", "", source),
+           source = gsub("ct", "mainstream", source),
+           source = gsub("rss", "fringe", source)) %>% 
+    filter(total.article.number > 10) %>% 
+    group_by(source) %>% 
+    count() %>% 
+    as.data.frame() %>% 
+    rename(source_type = source,
+           n_articles_in_grouping = n)
+}
+
+article_data <- merge(article_data, article_group_counts, by = GROUPING)
+
 # Load exposure data 
 #
 # NOTE:
@@ -94,6 +124,7 @@ exposure_data <- read.csv(exposure_path, header = TRUE, colClasses = c("user_id"
 exposure_timeseries <- merge(exposure_data, article_data, by = c("tweet_id", "total_article_number"), all = TRUE) 
 
 # Add dummy rows of pre-first share for plotting purposes
+# NOTE: This will add rows to the dataframe---two extra rows per article---but it will not effect user counts
 # (1) Create empty dataframe for dummy rows
 n_articles <- length(unique(exposure_timeseries$total_article_number)) #number of unique articles
 dummy_rows <- data.frame(matrix(NA, ncol = ncol(exposure_timeseries), nrow = 2*n_articles))  #create empty dataframe
@@ -236,16 +267,13 @@ exposure_ideol <- exposure_timeseries %>%
   filter(hour_bin >= 0) %>% 
   select(-source_lean, -relative_cumulative_exposed, -relative_tweet_count) %>% 
   gather(key = "ideology_bin", value = "count", 
-         -time, -tweet_number, -tweet_id, -user_id, -user_ideology, -follower_count, -new_exposed_users, -cumulative_exposed, -total_article_number, -hour_bin, -source_type, -article_fc_rating, -article_lean) %>% 
+         -time, -tweet_number, -tweet_id, -user_id, -user_ideology, -follower_count, -new_exposed_users, -cumulative_exposed, -total_article_number, -hour_bin, -source_type, -article_fc_rating, -article_lean, -n_articles_in_grouping) %>% 
   mutate(ideology_bin = gsub("ideol_", "", ideology_bin)) %>% 
   mutate(ideology_bin = gsub("^\\.", "-", ideology_bin)) %>% 
   mutate(ideology_bin = gsub("_\\.", "_-", ideology_bin)) %>% 
   separate(ideology_bin, c("lower", "upper"), sep = "_", convert = TRUE) %>% 
   mutate(ideology_bin = (lower + upper) / 2) %>% 
-  select(-lower, -upper) %>% 
-  # count number of articles per GROUPING (useful for average distributions)
-  group_by(!!sym(GROUPING)) %>% 
-  mutate(n_articles_in_grouping = length(unique(total_article_number)))
+  select(-lower, -upper)
 
 
 ####################
@@ -282,7 +310,7 @@ ggsave(gg_ideol_total, filename = paste0(outpath, subdir_out, "ideol_total_expos
 ####################
 gg_ideol_avg <- exposure_ideol %>% 
   group_by(!!sym(GROUPING), ideology_bin) %>% 
-  summarise(avg_count = sum(count, na.rm = TRUE) / length(unique(total_article_number))) %>% 
+  summarise(avg_count = sum(count, na.rm = TRUE) / unique(n_articles_in_grouping)) %>% 
   ggplot(., aes(x = ideology_bin, y = avg_count, fill = ideology_bin)) +
   geom_bar(stat = "identity", width = 0.5, color = NA) +
   scale_x_continuous(limits = c(-6, 6), 
@@ -312,7 +340,7 @@ ggsave(gg_ideol_avg, filename = paste0(outpath, subdir_out, "ideol_avg_exposed.p
 gg_ideol_dist <- exposure_ideol %>% 
   # filter(total_article_number == 28) %>%
   # For each article, determine proportion exposed by ideology bin
-  group_by(!!sym(GROUPING), ideology_bin, total_article_number, n_articles_in_grouping) %>% 
+  group_by(!!sym(GROUPING), ideology_bin, total_article_number) %>% 
   summarise(count = sum(count)) %>% 
   ungroup() %>% 
   group_by(total_article_number, n_articles_in_grouping) %>% 
@@ -320,7 +348,7 @@ gg_ideol_dist <- exposure_ideol %>%
          exposed_prop = ifelse( is.na(exposed_prop), 0, exposed_prop)) %>% 
   # Now determine average distribution shape by article GROUPING
   group_by(!!sym(GROUPING), ideology_bin, n_articles_in_grouping) %>% 
-  summarise(avg_exposed_prop = sum(exposed_prop) / unique(n_articles_in_grouping)) %>% 
+  summarise(avg_exposed_prop = sum(exposed_prop) / length(unique(total_article_number))) %>% 
   # Plot
   ggplot(., aes(x = ideology_bin, y = avg_exposed_prop, fill = ideology_bin)) +
   geom_bar(stat = "identity", width = 0.5, color = NA) +

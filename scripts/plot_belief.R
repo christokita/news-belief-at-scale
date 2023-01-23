@@ -12,6 +12,8 @@
 # Data In:
 # `<data storage location>/data_derived/tweets/tweets_labeled.csv`: article tweets with article and tweeter metadata.
 # `<data storage location>/data_derived/belief/estimated_belief_over_time.csv`: estimated belief in each article tweet.
+# `<data storage location>/data/articles/evaluations.csv`: article fact-check ratings for each unique news article.
+# `<data storage location>/data/articles/daily_articles.csv`: article source information for each unique news article.
 # 
 # Data Out: Plots written to output sub-folder depending on if we are comparing article veracity or news source type. 
 # `output/belief/veracity/`
@@ -52,6 +54,8 @@ GROUPING <- "article_fc_rating"
 # Set paths for data
 tweet_path <- paste0(DATA_DIRECTORY, "data_derived/tweets/tweets_labeled.csv") #tweets
 belief_path <- paste0(DATA_DIRECTORY, "data_derived/belief/estimated_belief_over_time.csv") #estimated belief per tweet
+article_evaluation_path <- paste0(DATA_DIRECTORY, "data/articles/evaluations.csv") #article fact-check rating
+article_source_path <- paste0(DATA_DIRECTORY, "data/articles/daily_articles.csv") #article source type
 
 # Set path for plots
 outpath <- 'output/belief/'
@@ -89,9 +93,35 @@ tweets <- read.csv(tweet_path, header = TRUE, colClasses = c("user_id"="characte
          relative_tweet_time = as.numeric( (tweet_time - article_first_time) / (60*60) ) ) %>%  #time diff is in seconds, so convert to hours
   mutate(relative_tweet_count = tweet_number / max(tweet_number))
 
+# Get article metadata and count number of articles per GROUPING (useful for average distributions)
 article_data <- tweets %>% 
   select(tweet_id, total_article_number, source_type, source_lean, article_fc_rating, article_lean, user_ideology) 
 
+if (GROUPING == "article_fc_rating") {
+  article_group_counts <- read.csv(article_evaluation_path, header = TRUE) %>% 
+    select(article_num, mode.of.FC) %>% 
+    filter(article_num > 10) %>% 
+    group_by(mode.of.FC) %>% 
+    count() %>% 
+    as.data.frame() %>% 
+    rename(article_fc_rating = mode.of.FC,
+           n_articles_in_grouping = n)
+} else if(GROUPING == "source_type") {
+  article_group_counts <-  read.csv(article_source_path, header = TRUE) %>% 
+    select(total.article.number, source) %>% 
+    mutate(source = gsub("_con|_lib|_unclear", "", source),
+           source = gsub("ct", "mainstream", source),
+           source = gsub("rss", "fringe", source)) %>% 
+    filter(total.article.number > 10) %>% 
+    group_by(source) %>% 
+    count() %>% 
+    as.data.frame() %>% 
+    rename(source_type = source,
+           n_articles_in_grouping = n)
+}
+
+article_data <- merge(article_data, article_group_counts, by = GROUPING)
+  
 # Load belief data 
 belief_data <- read.csv(belief_path, header = TRUE, colClasses = c("user_id"="character", "tweet_id"="character")) %>% 
   filter(total_article_number > 10) %>% #discard first 10 articles from analysis
@@ -108,6 +138,7 @@ belief_data$new_believing_users[belief_data$new_believing_users > belief_data$ne
 belief_timeseries <- merge(belief_data, article_data, by = c("tweet_id", "total_article_number"), all = TRUE) 
 
 # Add dummy rows of pre-first share for plotting purposes
+# NOTE: This will add rows to the dataframe---two extra rows per article---but it will not effect user counts
 # (1) Create empty dataframe for dummy rows
 n_articles <- length(unique(belief_timeseries$total_article_number)) #number of unique articles
 dummy_rows <- data.frame(matrix(NA, ncol = ncol(belief_timeseries), nrow = 2*n_articles))  #create empty dataframe
@@ -137,7 +168,7 @@ belief_timeseries <- dummy_rows %>%
   arrange(total_article_number, tweet_number) %>% 
   ungroup()
 
-rm(dummy_rows, article_data, belief_data)
+rm(dummy_rows, article_data, belief_data, article_group_counts)
 
 # If analyzing by veracity, drop out non-True/False articles
 if (GROUPING == "article_fc_rating") {
@@ -161,16 +192,13 @@ belief_ideol <- belief_timeseries %>%
   filter(hour_bin >= 0) %>% 
   select(-source_lean, -relative_cumulative_exposed, -relative_cumulative_belief, -relative_tweet_count, -follower_count) %>% 
   gather(key = "ideology_bin", value = "count", 
-         -time, -tweet_number, -tweet_id, -user_id, -user_ideology, -new_exposed_users, -cumulative_exposed, -new_believing_users, -cumulative_believing, -total_article_number, -hour_bin, -source_type, -article_fc_rating, -article_lean) %>% 
+         -time, -tweet_number, -tweet_id, -user_id, -user_ideology, -new_exposed_users, -cumulative_exposed, -new_believing_users, -cumulative_believing, -total_article_number, -hour_bin, -source_type, -article_fc_rating, -article_lean, -n_articles_in_grouping) %>% 
   mutate(ideology_bin = gsub("ideol_", "", ideology_bin)) %>% 
   mutate(ideology_bin = gsub("^\\.", "-", ideology_bin)) %>% 
   mutate(ideology_bin = gsub("_\\.", "_-", ideology_bin)) %>% 
   separate(ideology_bin, c("lower", "upper"), sep = "_", convert = TRUE) %>% 
   mutate(ideology_bin = (lower + upper) / 2) %>% 
-  select(-lower, -upper) %>% 
-  # count number of articles per GROUPING (useful for average distributions)
-  group_by(!!sym(GROUPING)) %>% 
-  mutate(n_articles_in_grouping = length(unique(total_article_number)))
+  select(-lower, -upper)
 
 
 ####################
@@ -239,14 +267,14 @@ ggsave(gg_ideol_avg, filename = paste0(outpath, subdir_out, "ideol_avg_belief.pd
 ####################
 gg_ideol_dist <- belief_ideol %>% 
   # Calculate average distribution of belief
-  group_by(!!sym(GROUPING), ideology_bin, total_article_number, n_articles_in_grouping) %>% 
+  group_by(!!sym(GROUPING), ideology_bin, total_article_number) %>% 
   summarise(count = sum(count)) %>% 
   ungroup() %>% 
   group_by(total_article_number) %>% 
   mutate(belief_prop = count / sum(count),
          belief_prop = ifelse( is.na(belief_prop), 0, belief_prop)) %>% 
   group_by(!!sym(GROUPING), ideology_bin) %>% 
-  summarise(avg_belief_prop = sum(belief_prop) / unique(n_articles_in_grouping)) %>% 
+  summarise(avg_exposed_prop = sum(exposed_prop) / length(unique(total_article_number))) %>% 
   # Plot
   ggplot(., aes(x = ideology_bin, y = avg_belief_prop, fill = ideology_bin, color = ideology_bin)) +
   geom_bar(stat = "identity") +

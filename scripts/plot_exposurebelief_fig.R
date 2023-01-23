@@ -12,7 +12,9 @@
 # `<data storage location>/data_derived/tweets/tweets_labeled.csv`: article tweets with article and tweeter metadata.
 # `<data storage location>/data_derived/exposure/estimated_users_exposed_over_time.csv: estimated exposure to each article tweet.
 # `<data storage location>/data_derived/belief/estimated_belief_over_time.csv`: estimated belief in each article tweet.
-# 
+# `<data storage location>/data/articles/evaluations.csv`: article fact-check ratings for each unique news article.
+# `<data storage location>/data/articles/daily_articles.csv`: article source information for each unique news article.
+#
 # Data Out: Plots written to output subfolder focusing on belief (since we are analyzing both belief and exposure combined here) broken out by article veracity. 
 # `output/belief/veracity/`
 # 
@@ -46,6 +48,8 @@ DATA_DIRECTORY <- "/Volumes/CKT-DATA/news-belief-at-scale/"
 tweet_path <- paste0(DATA_DIRECTORY, "data_derived/tweets/tweets_labeled.csv") #tweets
 exposure_path <- paste0(DATA_DIRECTORY, "data_derived/exposure/estimated_users_exposed_over_time.csv") #estimated exposure per tweet
 belief_path <- paste0(DATA_DIRECTORY, "data_derived/belief/estimated_belief_over_time.csv") #estimated belief per tweet
+article_evaluation_path <- paste0(DATA_DIRECTORY, "data/articles/evaluations.csv") #article fact-check rating
+article_source_path <- paste0(DATA_DIRECTORY, "data/articles/daily_articles.csv") #article source type
 
 # Set path for plots
 outpath <- 'output/belief/veracity/'
@@ -105,10 +109,7 @@ belief_ideol <- belief_timeseries %>%
   mutate(ideology_bin = gsub("_\\.", "_-", ideology_bin)) %>% 
   separate(ideology_bin, c("lower", "upper"), sep = "_", convert = TRUE) %>% 
   mutate(ideology_bin = (lower + upper) / 2) %>% 
-  select(-lower, -upper) %>% 
-  # count number of articles per grouping (useful for average distributions)
-  group_by(article_fc_rating) %>% 
-  mutate(n_articles_in_grouping = length(unique(total_article_number)))
+  select(-lower, -upper)
 rm(belief_data)
 
 
@@ -144,10 +145,7 @@ exposure_ideol <- exposure_timeseries %>%
   mutate(ideology_bin = gsub("_\\.", "_-", ideology_bin)) %>% 
   separate(ideology_bin, c("lower", "upper"), sep = "_", convert = TRUE) %>% 
   mutate(ideology_bin = (lower + upper) / 2) %>% 
-  select(-lower, -upper) %>% 
-  # count number of articles per grouping (useful for average distributions)
-  group_by(article_fc_rating) %>% 
-  mutate(n_articles_in_grouping = length(unique(total_article_number)))
+  select(-lower, -upper)
 rm(exposure_data, exposure_timeseries, tweets, article_data)
 
 
@@ -444,6 +442,23 @@ ggsave(gg_pct_exposurebelief_articlelean, filename = paste0(outpath, "belief_vs_
 
 ######################################## Average Exposure/Belief per Article ########################################
 
+# Count number of articles per GROUPING (useful for average distributions) and add to article info
+article_group_counts <- read.csv(article_evaluation_path, header = TRUE) %>% 
+  select(article_num, mode.of.FC) %>% 
+  filter(article_num > 10) %>% 
+  group_by(mode.of.FC) %>% 
+  count() %>% 
+  as.data.frame() %>% 
+  rename(article_fc_rating = mode.of.FC,
+         n_articles_in_grouping = n) %>% 
+  mutate(article_fc_rating = ifelse(article_fc_rating == "T", "True news", ifelse(article_fc_rating == "FM", "False/Misleading news", 
+                                                                                  ifelse(article_fc_rating == "CND", "Borderline", 
+                                                                                         ifelse(article_fc_rating == "No Mode!", "No mode", article_fc_rating)))))
+         
+
+exposure_ideol <- merge(exposure_ideol, article_group_counts, by = "article_fc_rating")
+belief_ideol <- merge(belief_ideol, article_group_counts, by = "article_fc_rating")
+
 ####################
 # PLOT: Average exposure and belief per article, broken out by article veracity
 ####################
@@ -482,7 +497,7 @@ gg_exposebelief_avg <- ggplot(exposure_belief_avg_data, aes(x = ideology_bin, fi
   scale_x_continuous(limits = c(-6, 6), 
                      expand = c(0, 0), 
                      breaks = seq(-6, 6, 2)) +
-  scale_y_continuous(expand = c(0, 0), 
+  scale_y_continuous(expand = expansion(mult = c(0, 0.01)),
                      labels = comma) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   scale_color_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
