@@ -274,7 +274,7 @@ gg_ideol_dist <- belief_ideol %>%
   mutate(belief_prop = count / sum(count),
          belief_prop = ifelse( is.na(belief_prop), 0, belief_prop)) %>% 
   group_by(!!sym(GROUPING), ideology_bin) %>% 
-  summarise(avg_exposed_prop = sum(exposed_prop) / length(unique(total_article_number))) %>% 
+  summarise(avg_belief_prop = sum(belief_prop) / length(unique(total_article_number))) %>% 
   # Plot
   ggplot(., aes(x = ideology_bin, y = avg_belief_prop, fill = ideology_bin, color = ideology_bin)) +
   geom_bar(stat = "identity") +
@@ -334,6 +334,83 @@ gg_ideoltime <- belief_ideol %>%
 
 gg_ideoltime
 ggsave(gg_ideoltime, filename = paste0(outpath, subdir_out, "ideol_belief_hourbin.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
+
+
+####################
+# PLOT: Relative cumulative belief over first 48 hours
+####################
+# Prep legend labels for plot
+if (GROUPING == "article_fc_rating") {
+  legend_name <- "Article rating"
+  legend_labels <- c("False/Misleading", "True")
+} else if (GROUPING == "source_type") {
+  legend_name <- "News Source Type"
+  legend_labels <- c("Fringe", "Mainstream")
+} 
+
+# Plot
+missing_hour_bins <- expand_grid(total_article_number = unique(belief_timeseries$total_article_number), 
+                                 hour_bin = seq(0, 48, 1))
+
+gg_48hr_belief <- belief_timeseries %>% 
+  # Remove articles that didn't expose anyone
+  filter(!is.na(relative_cumulative_belief)) %>% 
+  # Add in missing hour bins
+  filter(time >= 0 & time <= 48) %>% 
+  merge(missing_hour_bins, by = c("total_article_number", "hour_bin"), all = TRUE) %>% 
+  fill(relative_cumulative_belief, !!sym(GROUPING)) %>% 
+  # Prep data
+  group_by(!!sym(GROUPING), hour_bin, total_article_number) %>% 
+  summarise(relative_cumulative_belief = max(relative_cumulative_belief, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  group_by(!!sym(GROUPING), hour_bin) %>% 
+  summarise(mean_relative_cumulative_belief = mean(relative_cumulative_belief, na.rm = TRUE),
+            sd_belief = sd(relative_cumulative_belief, na.rm = TRUE)) %>% 
+  mutate(lower = pmax(0, mean_relative_cumulative_belief - sd_belief),
+         upper = pmin(1, mean_relative_cumulative_belief + sd_belief)) %>% #don't allow to go above 1 or below 0
+  # Plot
+  ggplot(., aes(x = hour_bin, y = mean_relative_cumulative_belief, color = !!sym(GROUPING), fill = !!sym(GROUPING))) +
+  geom_ribbon(aes(ymin = lower, ymax = upper), color = NA, alpha = 0.2) +
+  geom_line(linewidth = 0.6) +
+  xlab("Hours since first article share") +
+  ylab("Relative cumulative belief") +
+  scale_x_continuous(breaks = seq(0, 48, 12),
+                     limits = c(0, 48)) +
+  scale_y_continuous(breaks = seq(0, 1, 0.25), 
+                     labels = c("0.0", "", "0.5", "", "1.0"),
+                     expand = c(0, 0), 
+                     limits = c(0, 1)) +
+  scale_color_manual(values = grouping_pal, name = legend_name, labels = legend_labels) +
+  scale_fill_manual(values = grouping_pal, name = legend_name, labels = legend_labels) +
+  theme_ctokita() +
+  theme(legend.position = c(0.75, 0.2))
+
+gg_48hr_belief
+ggsave(gg_48hr_belief, filename = paste0(outpath, subdir_out, "relative_cumulative_belief.pdf"), width = 45, height = 45, units = "mm", dpi = 400)
+
+
+# Just raw article data
+gg_48hr_belief_raw <- belief_timeseries %>% 
+  ggplot(., aes(x = time, y = relative_cumulative_belief, color = !!sym(GROUPING), group = total_article_number)) +
+  geom_line(linewidth = 0.6, alpha = 0.15) +
+  xlab("Hours since first article share") +
+  ylab("Relative cumulative belief over first 24 hrs.") +
+  scale_x_continuous(breaks = seq(0, 24, 6),
+                     limits = c(0, 24)) +
+  scale_y_continuous(breaks = seq(0, 1, 0.25), 
+                     labels = c("0.0", "", "0.5", "", "1.0"),
+                     expand = c(0, 0), 
+                     limits = c(0, 1)) +
+  scale_color_manual(values = grouping_pal, name = "Article rating", labels = c("False/Misleading", "True")) +
+  facet_wrap(as.formula(paste("~", GROUPING)),
+             ncol = 1,
+             strip.position = "top",
+             scales = "free") +
+  theme_ctokita() +
+  theme(legend.position = "none")
+
+gg_48hr_belief_raw
+ggsave(gg_48hr_belief_raw, filename = paste0(outpath, subdir_out, "relative_cumulative_belief_rawdata.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
 
 
 
@@ -451,7 +528,8 @@ for (i in seq(1, length(regression_belief) ) ) {
 ####################
 # PLOT: Belief per exposure by article/source type
 #
-# NOTE: This effectively hard-codes `GROUPING` and will be the same regardless of which `GROUPING` variable is selected at the top of the script
+# NOTE: This effectively hard-codes `GROUPING` and will be the same regardless of which `GROUPING` variable is selected at the top of the script.
+#       This will cause an error when GROUPING == 'source_type'. Just skip these.
 #
 ####################
 # Prep data
@@ -504,7 +582,7 @@ gg_belief_rate_exposure_source <- belief_per_exposure %>%
   # Plot
   ggplot(., aes(x = binned_time, y = belief_per_exposure, color = article_fc_rating)) +
   geom_point(stroke = 0, alpha = 0.15, size = 1) +
-  geom_line(data = fit_belief, aes(x = time, y = Estimate),
+  geom_line(data = fit_belief , aes(x = time, y = Estimate),
             linewidth = 0.6) +
   scale_x_continuous(breaks = seq(0, 48, 12),
                      limits = c(0, 48)) +
@@ -556,81 +634,4 @@ gg_belief_rate_exposure_source <- belief_per_exposure %>%
 
 gg_belief_rate_exposure_source
 ggsave(gg_belief_rate_exposure_source, filename = paste0(outpath, "veracity/beliefs_per_exposure_sourceandveracityandlean.pdf"), width = 90, height = 120, units = "mm", dpi = 400)
-
-
-####################
-# PLOT: Relative cumulative belief over first 48 hours
-####################
-# Prep legend labels for plot
-if (GROUPING == "article_fc_rating") {
-  legend_name <- "Article rating"
-  legend_labels <- c("False/Misleading", "True")
-} else if (GROUPING == "source_type") {
-  legend_name <- "News Source Type"
-  legend_labels <- c("Fringe", "Mainstream")
-} 
-
-# Plot
-missing_hour_bins <- expand_grid(total_article_number = unique(belief_timeseries$total_article_number), 
-                                 hour_bin = seq(0, 48, 1))
-
-gg_48hr_belief <- belief_timeseries %>% 
-  # Remove articles that didn't expose anyone
-  filter(!is.na(relative_cumulative_belief)) %>% 
-  # Add in missing hour bins
-  filter(time >= 0 & time <= 48) %>% 
-  merge(missing_hour_bins, by = c("total_article_number", "hour_bin"), all = TRUE) %>% 
-  fill(relative_cumulative_belief, !!sym(GROUPING)) %>% 
-  # Prep data
-  group_by(!!sym(GROUPING), hour_bin, total_article_number) %>% 
-  summarise(relative_cumulative_belief = max(relative_cumulative_belief, na.rm = TRUE)) %>% 
-  ungroup() %>% 
-  group_by(!!sym(GROUPING), hour_bin) %>% 
-  summarise(mean_relative_cumulative_belief = mean(relative_cumulative_belief, na.rm = TRUE),
-            sd_belief = sd(relative_cumulative_belief, na.rm = TRUE)) %>% 
-  mutate(lower = pmax(0, mean_relative_cumulative_belief - sd_belief),
-         upper = pmin(1, mean_relative_cumulative_belief + sd_belief)) %>% #don't allow to go above 1 or below 0
-  # Plot
-  ggplot(., aes(x = hour_bin, y = mean_relative_cumulative_belief, color = !!sym(GROUPING), fill = !!sym(GROUPING))) +
-  geom_ribbon(aes(ymin = lower, ymax = upper), color = NA, alpha = 0.2) +
-  geom_line(linewidth = 0.6) +
-  xlab("Hours since first article share") +
-  ylab("Relative cumulative belief") +
-  scale_x_continuous(breaks = seq(0, 48, 12),
-                     limits = c(0, 48)) +
-  scale_y_continuous(breaks = seq(0, 1, 0.25), 
-                     labels = c("0.0", "", "0.5", "", "1.0"),
-                     expand = c(0, 0), 
-                     limits = c(0, 1)) +
-  scale_color_manual(values = grouping_pal, name = legend_name, labels = legend_labels) +
-  scale_fill_manual(values = grouping_pal, name = legend_name, labels = legend_labels) +
-  theme_ctokita() +
-  theme(legend.position = c(0.75, 0.2))
-  
-gg_48hr_belief
-ggsave(gg_48hr_belief, filename = paste0(outpath, subdir_out, "relative_cumulative_belief.pdf"), width = 45, height = 45, units = "mm", dpi = 400)
-
-
-# Just raw article data
-gg_48hr_belief_raw <- belief_timeseries %>% 
-  ggplot(., aes(x = time, y = relative_cumulative_belief, color = !!sym(GROUPING), group = total_article_number)) +
-  geom_line(linewidth = 0.6, alpha = 0.15) +
-  xlab("Hours since first article share") +
-  ylab("Relative cumulative belief over first 24 hrs.") +
-  scale_x_continuous(breaks = seq(0, 24, 6),
-                     limits = c(0, 24)) +
-  scale_y_continuous(breaks = seq(0, 1, 0.25), 
-                     labels = c("0.0", "", "0.5", "", "1.0"),
-                     expand = c(0, 0), 
-                     limits = c(0, 1)) +
-  scale_color_manual(values = grouping_pal, name = "Article rating", labels = c("False/Misleading", "True")) +
-  facet_wrap(as.formula(paste("~", GROUPING)),
-             ncol = 1,
-             strip.position = "top",
-             scales = "free") +
-  theme_ctokita() +
-  theme(legend.position = "none")
-
-gg_48hr_belief_raw
-ggsave(gg_48hr_belief_raw, filename = paste0(outpath, subdir_out, "relative_cumulative_belief_rawdata.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
 
