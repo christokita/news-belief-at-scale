@@ -94,7 +94,7 @@ belief_timeseries <- merge(belief_data, article_data, by = c("tweet_id", "total_
   mutate(article_fc_rating = ifelse(article_fc_rating == "T", "True news", ifelse(article_fc_rating == "FM", "False/Misleading news", 
                                                                                   ifelse(article_fc_rating == "CND", "Borderline", 
                                                                                          ifelse(article_fc_rating == "No Mode!", "No mode", article_fc_rating)))),
-         source_type = ifelse(source_type == "mainstream", "Mainstream", ifelse(source_type == "fringe", "Fringe", source_type)),
+         source_type = ifelse(source_type == "mainstream", "Mainstream outlet", ifelse(source_type == "fringe", "Fringe outlet", source_type)),
          article_lean = ifelse(article_lean == "C", "Conservative", ifelse(article_lean == "L", "Liberal",
                                                                            ifelse(article_lean == "N", "Neutral", 
                                                                                   ifelse(article_lean == "U", "Unclear", source_type)))) )
@@ -131,7 +131,7 @@ exposure_timeseries <- merge(exposure_data, article_data, by = c("tweet_id", "to
   mutate(article_fc_rating = ifelse(article_fc_rating == "T", "True news", ifelse(article_fc_rating == "FM", "False/Misleading news", 
                                                                                   ifelse(article_fc_rating == "CND", "Borderline", 
                                                                                          ifelse(article_fc_rating == "No Mode!", "No mode", article_fc_rating)))),
-         source_type = ifelse(source_type == "mainstream", "Mainstream", ifelse(source_type == "fringe", "Fringe", source_type)),
+         source_type = ifelse(source_type == "mainstream", "Mainstream outlet", ifelse(source_type == "fringe", "Fringe outlet", source_type)),
          article_lean = ifelse(article_lean == "C", "Conservative", ifelse(article_lean == "L", "Liberal",
                                                                            ifelse(article_lean == "N", "Neutral", 
                                                                                   ifelse(article_lean == "U", "Unclear", source_type)))) )
@@ -231,7 +231,7 @@ exposure_belief_data <- merge(exposure_ideol_sum, belief_ideol_sum, by = c("arti
 # NOTE:
 # - axis/facet label for "News Source Lean" and "Exposed"/"Believing" are added later in vector art program during figure creation for paper
 # - the "Exposed" count is the lighter histogram, while the "Believing" count is the darker histogram
-gg_exposebelief_total_source <- ggplot(exposure_belief_data, aes(x = ideology_bin, fill = ideology_bin)) +
+gg_exposebelief_total_sourcelean <- ggplot(exposure_belief_data, aes(x = ideology_bin, fill = ideology_bin)) +
   # Data
   geom_step(aes(x = ideology_bin - 0.25, y = exposure_count,  color = ideology_bin - 0.25),
             linewidth = 0.3,
@@ -264,8 +264,8 @@ gg_exposebelief_total_source <- ggplot(exposure_belief_data, aes(x = ideology_bi
         panel.spacing = unit(5, "mm")) +
   facet_grid(article_fc_rating~source_lean, scale = 'free')
 
-gg_exposebelief_total_source
-ggsave(gg_exposebelief_total_source, filename = paste0(outpath, "combined_total_beliefANDexposure_bysourcelean.pdf"), width = 90, height = 80, units = "mm", dpi = 400)
+gg_exposebelief_total_sourcelean
+ggsave(gg_exposebelief_total_sourcelean, filename = paste0(outpath, "combined_total_beliefANDexposure_bysourcelean.pdf"), width = 90, height = 80, units = "mm", dpi = 400)
 
 
 ####################
@@ -326,6 +326,62 @@ gg_exposebelief_total_article <- ggplot(exposure_belief_data, aes(x = ideology_b
 
 gg_exposebelief_total_article
 ggsave(gg_exposebelief_total_article, filename = paste0(outpath, "combined_total_beliefANDexposure_byarticlelean.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
+
+
+####################
+# PLOT: Total exposure and belief, broken out by both (a) article veracity and (b) news source type
+####################
+# Prep data
+exposure_ideol_sum <- exposure_ideol %>% 
+  group_by(article_fc_rating, source_type, ideology_bin) %>% 
+  summarise(exposure_count = sum(count, na.rm = TRUE))
+
+belief_ideol_sum <- belief_ideol %>% 
+  group_by(article_fc_rating, source_type, ideology_bin) %>% 
+  summarise(belief_count = sum(count, na.rm = TRUE))
+
+exposure_belief_data <- merge(exposure_ideol_sum, belief_ideol_sum, by = c("article_fc_rating", "source_type", "ideology_bin")) %>% 
+  filter(article_fc_rating %in% c("False/Misleading news", "True news"))
+
+# Plot
+# NOTE: 
+# - axis/facet label for "Article Lean" and "Exposed"/"Believing" are added later in vector art program during figure creation for paper
+# - the "Exposed" count is the lighter histogram, while the "Believing" count is the darker histogram
+gg_exposebelief_total_sourcetype <- ggplot(exposure_belief_data, aes(x = ideology_bin, fill = ideology_bin)) +
+  # Data
+  geom_step(aes(x = ideology_bin - 0.25, y = exposure_count,  color = ideology_bin - 0.25),
+            linewidth = 0.3,
+            alpha = 0.8) +
+  geom_bar(aes(y = exposure_count),
+           stat = "identity",
+           alpha = 0.5,
+           width = 0.5) +
+  geom_step(aes(x = ideology_bin - 0.25, y = belief_count),
+            linewidth = 0.6,
+            color = "white",
+            alpha = 0.7) +
+  geom_bar(aes(y = belief_count),
+           stat = "identity",
+           alpha = 1,
+           width = 0.5) +
+  #Plot params
+  scale_x_continuous(limits = c(-6, 6), 
+                     expand = c(0, 0), 
+                     breaks = seq(-6, 6, 3)) +
+  scale_y_continuous(expand = c(0, 0),
+                     labels = comma) +
+  scale_fill_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
+  scale_color_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
+  xlab("User ideology") +
+  ylab("Total number of users") +
+  theme_ctokita() +
+  theme(legend.position = "none",
+        aspect.ratio = NULL,
+        panel.spacing = unit(5, "mm")) +
+  facet_grid(article_fc_rating~source_type, scale = 'free_y')
+
+gg_exposebelief_total_sourcetype
+ggsave(gg_exposebelief_total_sourcetype, filename = paste0(outpath, "combined_total_beliefANDexposure_bysourcetype.pdf"), width = 90, height = 90, units = "mm", dpi = 400)
 
 
 ####################
