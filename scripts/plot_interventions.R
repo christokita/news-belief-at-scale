@@ -203,7 +203,7 @@ gg_exposure_decrease_point <- ggplot(relative_effect, aes(x = intervention_time,
                                "Visibility reduction (light)",
                                "Visibility reduction (heavy)")) +
   xlab(expression( paste("Intervention delay ", italic(t[int]), " (hr)") )) + 
-  ylab("Relative user exposure to misinformation") +
+  ylab("Relative exposure of receptive users to misinformation") +
   coord_cartesian(clip = 'off') + #prevent clipping of po9ints on axis line
   theme_ctokita() +
   theme(axis.line = element_blank(),
@@ -239,7 +239,7 @@ gg_belief_decrease <- ggplot(relative_effect, aes(x = intervention_time, y = mea
                                "Visibility reduction (light)",
                                "Visibility reduction (heavy)")) +
   xlab(expression( paste("Intervention delay ", italic(t[int]), " (hr)") )) + 
-  ylab("Relative user belief of misinformation") +
+  ylab("Relative exposure of receptive users to misinformation") +
   theme_ctokita() +
   theme(axis.line = element_blank(),
         panel.border = element_rect(linewidth = 0.5, fill = NA),
@@ -277,7 +277,7 @@ gg_belief_decrease_point <- ggplot(relative_effect, aes(x = intervention_time, y
                                "Visibility reduction (light)",
                                "Visibility reduction (heavy)")) +
   xlab(expression( paste("Intervention delay ", italic(t[int]), " (hr)") )) + 
-  ylab("Relative user belief of misinformation") +
+  ylab("Relative exposure of receptive users to misinformation") +
   coord_cartesian(clip = 'off') + #prevent clipping of po9ints on axis line
   theme_ctokita() +
   theme(axis.line = element_blank(),
@@ -318,7 +318,7 @@ gg_example_timeseries_exposure <- intervention_simulation_results %>%
   scale_alpha_manual(values = c(1, 0.2), 
                     guide = NULL) +
   xlab("Time since first article share (hrs)") +
-  ylab("Total users exposed") +
+  ylab("Total exposed users") +
   theme_ctokita() +
   theme(legend.position = "right",
         aspect.ratio = 0.5,
@@ -351,7 +351,7 @@ gg_example_timeseries_belief <- intervention_simulation_results %>%
   scale_alpha_manual(values = c(1, 0.2), 
                      guide = NULL) +
   xlab("Time since first article share (hrs)") +
-  ylab("Total users believing") +
+  ylab("Total exposed receptive users") +
   theme_ctokita() +
   theme(legend.position = "right",
         aspect.ratio = 0.5,

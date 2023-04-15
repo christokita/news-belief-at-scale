@@ -426,8 +426,8 @@ gg_pct_exposurebelief <- ggplot(exposure_belief_diff, aes(x = exposure_pct, y = 
   scale_y_continuous(breaks = seq(0, 0.2, 0.1), limits = c(0, 0.21)) +
   scale_color_gradientn(colors = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish, name = "User ideology") +
   scale_shape_manual(values = c(19, 0)) +
-  xlab("Proportion of total exposed users") +
-  ylab("Propotion of total believing users") +
+  xlab("Proportion of all exposed users") +
+  ylab("Propotion of exposed receptive users") +
   facet_wrap(~article_fc_rating, ncol = 1, scales = "free") +
   theme_ctokita() 
 
@@ -485,8 +485,8 @@ gg_pct_exposurebelief_articlelean <- ggplot(exposure_belief_diff, aes(x = exposu
   scale_y_continuous(breaks = seq(0, 0.3, 0.1), limits = c(0, 0.31), trans = scales::pseudo_log_trans(base = 10)) +
   scale_color_gradientn(colors = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish, name = "User ideology") +
   scale_shape_manual(values = c(19, 0)) +
-  xlab("Proportion of total exposed users") +
-  ylab("Propotion of total believing users") +
+  xlab("Proportion of all exposed users") +
+  ylab("Propotion of exposed receptive users") +
   facet_grid(article_fc_rating~article_lean, scales = "free") +
   theme_ctokita() +
   theme(panel.spacing = unit(5, "mm"))
@@ -682,8 +682,8 @@ majority_point <- merge(majority_exposure, majority_belief, by = c("total_articl
   filter(article_fc_rating %in% c("False/Misleading news", "True news")) %>% 
   mutate(article_fc_rating = factor(article_fc_rating, levels = c("True news", "False/Misleading news")),
          type = ifelse(type == "time_majority_exposure", "Exposure",
-                       ifelse(type == "time_majority_believing", "Belief", NA)),
-         type = factor(type, levels = c("Exposure", "Belief")))
+                       ifelse(type == "time_majority_believing", "Receptivity", NA)),
+         type = factor(type, levels = c("Exposure", "Receptivity")))
 
 # Calculate mean
 mean_majority_point <- majority_point %>% 
@@ -713,7 +713,7 @@ gg_majority_point <- ggplot(data = majority_point, aes(x = time, y = ..density..
                     values = grouping_pal[c(2, 1)]) +
   scale_color_manual(name = "Article rating", labels = c("True", "False/Misleading"),
                     values = grouping_pal[c(2, 1)]) +
-  xlab("Time to majority article exposure/belief (hrs.)") +
+  xlab("Time to majority article exposure/receptivity (hrs.)") +
   ylab("Density") +
   facet_wrap(type~.,
              ncol = 2,

@@ -220,7 +220,7 @@ gg_ideol_total <- belief_ideol %>%
   scale_color_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   xlab("User ideology") +
-  ylab("Total number of believing users") +
+  ylab("Total number of exposed receptive users") +
   theme_ctokita() +
   theme(legend.position = "none",
         aspect.ratio = NULL) +
@@ -250,7 +250,7 @@ gg_ideol_avg <- belief_ideol %>%
   scale_color_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +  
   xlab("User ideology") +
-  ylab("Avg. number of believing users per article") +
+  ylab("Avg. number of exposed receptive users per article") +
   theme_ctokita() +
   theme(legend.position = "none",
         aspect.ratio = NULL) +
@@ -287,7 +287,7 @@ gg_ideol_dist <- belief_ideol %>%
   scale_color_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   xlab("Believing user ideology") +
-  ylab("Avg. proportion of article beliefs per article") +
+  ylab("Avg. proportion of exposed receptive users per article") +
   theme_ctokita() +
   theme(legend.position = "none",
         aspect.ratio = NULL) +
@@ -321,7 +321,7 @@ gg_ideoltime <- belief_ideol %>%
                      limits = c(-0.5, 72.5)) +
   scale_y_continuous(expand = c(0, 0)) +
   xlab("Time since first article share (hrs)") +
-  ylab("Proportion of newly believing users") +
+  ylab("Proportion of newly exposed receptive users") +
   theme_ctokita() +
   theme(aspect.ratio = NULL, 
         legend.box.margin = unit(c(0, 0, 0, 0), "mm"),
@@ -373,7 +373,7 @@ gg_48hr_belief <- belief_timeseries %>%
   geom_ribbon(aes(ymin = lower, ymax = upper), color = NA, alpha = 0.2) +
   geom_line(linewidth = 0.6) +
   xlab("Hours since first article share") +
-  ylab("Relative cumulative belief") +
+  ylab("Relative cumulative receptivity") +
   scale_x_continuous(breaks = seq(0, 48, 12),
                      limits = c(0, 48)) +
   scale_y_continuous(breaks = seq(0, 1, 0.25), 
@@ -394,7 +394,7 @@ gg_48hr_belief_raw <- belief_timeseries %>%
   ggplot(., aes(x = time, y = relative_cumulative_belief, color = !!sym(GROUPING), group = total_article_number)) +
   geom_line(linewidth = 0.6, alpha = 0.15) +
   xlab("Hours since first article share") +
-  ylab("Relative cumulative belief over first 24 hrs.") +
+  ylab("Relative cumulative receptivity over first 24 hrs.") +
   scale_x_continuous(breaks = seq(0, 24, 6),
                      limits = c(0, 24)) +
   scale_y_continuous(breaks = seq(0, 1, 0.25), 
@@ -500,7 +500,7 @@ gg_belief_rate_exposure <- belief_per_exposure %>%
                      expand = c(0, 0)) +
   scale_color_manual(values = grouping_pal) +
   xlab("Time since first article share (hrs.)") +
-  ylab("Beliefs per exposure") +
+  ylab("Receptive users per exposure") +
   # facet_wrap(~group,
   #            ncol = 1,
   #            strip.position = "top",
@@ -591,7 +591,7 @@ gg_belief_rate_exposure_source <- belief_per_exposure %>%
                      expand = c(0, 0)) +
   scale_color_manual(values = grouping_pal) +
   xlab("Time since first article share (hrs.)") +
-  ylab("Beliefs per exposure") +
+  ylab("Receptive users per exposure") +
   facet_grid(~source_type,
              scales = "free_y") +
   theme_ctokita() +
@@ -625,7 +625,7 @@ gg_belief_rate_exposure_source <- belief_per_exposure %>%
                      name = "Article rating", 
                      labels = c("False/Misleading", "True")) +
   xlab("Time since first article share (hrs.)") +
-  ylab("Beliefs per exposure") +
+  ylab("Receptive users per exposure") +
   facet_grid(article_lean~source_type,
              scales = "free_y") +
   theme_ctokita() +
