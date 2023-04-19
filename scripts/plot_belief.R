@@ -500,7 +500,7 @@ gg_belief_rate_exposure <- belief_per_exposure %>%
                      expand = c(0, 0)) +
   scale_color_manual(values = grouping_pal) +
   xlab("Time since first article share (hrs.)") +
-  ylab("Receptive users per exposure") +
+  ylab("Prop. of exposed users that are receptive") +
   # facet_wrap(~group,
   #            ncol = 1,
   #            strip.position = "top",
@@ -591,7 +591,7 @@ gg_belief_rate_exposure_source <- belief_per_exposure %>%
                      expand = c(0, 0)) +
   scale_color_manual(values = grouping_pal) +
   xlab("Time since first article share (hrs.)") +
-  ylab("Receptive users per exposure") +
+  ylab("Prop. of exposed users that are receptive") +
   facet_grid(~source_type,
              scales = "free_y") +
   theme_ctokita() +
@@ -625,7 +625,7 @@ gg_belief_rate_exposure_source <- belief_per_exposure %>%
                      name = "Article rating", 
                      labels = c("False/Misleading", "True")) +
   xlab("Time since first article share (hrs.)") +
-  ylab("Receptive users per exposure") +
+  ylab("Prop. of exposed users that are receptive") +
   facet_grid(article_lean~source_type,
              scales = "free_y") +
   theme_ctokita() +
