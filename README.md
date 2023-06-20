@@ -1,7 +1,7 @@
 # Measuring and simulating belief in news articles at the scale of the social media ecosystem
 
 This is the code for the forthecoming paper:
-> Tokita CK, Aslett K, Godel WP, Sanderson Z, Tucker JA, Nagler J, Persily N, Bonneau RA. (In Prep). Measuring and mitigating belief in misinformation at the scale of the social media ecosystem.
+> Tokita CK, Aslett K, Godel WP, Sanderson Z, Tucker JA, Nagler J, Persily N, Bonneau RA. (In Prep). Measuring and mitigating misinformation at the scale of the social media ecosystem.
 
 Bibtex Citation:
 ```
