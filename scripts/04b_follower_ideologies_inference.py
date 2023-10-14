@@ -52,6 +52,9 @@ outpath = data_directory + "data_derived/ideological_scores/estimated_ideol_dist
 prior_file = outpath + "_population_posterior_samples.csv"
 map_estimate_file = outpath + "_population_MAP_estimate.csv"
 
+# Temporary directory where we will store batch results before combining
+temp_dir = outpath + 'TEMP_follower_ideology_dist_shapes/'
+
 # Supress theano/pymc3 logging
 import logging
 logger = logging.getLogger("pymc3")
@@ -63,6 +66,16 @@ logger.propagate = False
 n_samples = 1000
 burn_in = 500
 n_chains = 4
+
+
+
+####################
+# If this batch's data exists, do not proceed with calculation 
+####################
+# This allows us to skip already calculated batches in the event we need to restart/rerun the batch job
+if os.path.isfile(temp_dir + 'batch_' + str(batch).zfill(3) + '.csv'):
+    exit()
+
 
 
 ####################
@@ -203,9 +216,10 @@ for user in users_with_scored_followers:
         # Create empirical prior from posterior
         mu = from_posterior('mu', prior_mu, lower_bound = -6, upper_bound = 6)
         sigma = from_posterior('sigma', prior_sigma, lower_bound = 0, upper_bound = 10)
+        alpha = pm.Normal('alpha', mu = 0, sigma = 1)
          
         # Likelihood function
-        observed_data = pm.Normal('observed_data', mu = mu, sigma = sigma, observed = follower_samples)
+        observed_data = pm.SkewNormal('observed_data', mu = mu, sigma = sigma, alpha = alpha, observed = follower_samples)
         
         # Sample from posterior
         step = pm.NUTS(target_accept = 0.9) #0.8 is default, higher to deal with difficult posteriors
@@ -222,12 +236,14 @@ for user in users_with_scored_followers:
     # Get estimate of parameters
     posterior_mu = trace.get_values('mu', burn = burn_in, combine = True)
     posterior_sigma = trace.get_values('sigma', burn = burn_in, combine = True)
+    posterior_alpha = trace.get_values('alpha', burn = burn_in, combine = True)
     
     estimated_ideology_batch = estimated_ideology_batch.append({'user_id': user,
                                                                 'user_id_str': "\"" + user + "\"",
                                                                 'n_follower_samples': n_follower_samples,
                                                                 'mu': np.mean(posterior_mu), 
                                                                 'sigma': np.mean(posterior_sigma),
+                                                                'alpha': np.mean(posterior_alpha),
                                                                 'basis': "followers"}, ignore_index = True)
         
     
@@ -238,15 +254,15 @@ for user in users_with_scored_followers:
 missing_users = [x for x in user_ids if x not in users_with_scored_followers]
 missing_user_estimates = pd.DataFrame({'user_id': missing_users,
                                       'user_id_str': ["\"" + x + "\"" for x in missing_users]}) 
+missing_user_estimates['n_follower_samples'] = 0
 missing_user_estimates['mu'] = population_MAP_estimate['mu'].iloc[0]
 missing_user_estimates['sigma'] = population_MAP_estimate['sigma'].iloc[0]
-missing_user_estimates['n_follower_samples'] = 0
+missing_user_estimates['alpha'] = 0
 missing_user_estimates['basis'] = "population"
 
 # Append to all estiamtes and save to temporary folder to hold partial results
 estimated_ideology_batch = estimated_ideology_batch.append(missing_user_estimates, ignore_index = True)
 estimated_ideology_batch['batch'] = batch
-temp_dir = outpath + 'TEMP_follower_ideology_dist_shapes/'
 os.makedirs(temp_dir, exist_ok = True)
 estimated_ideology_batch.to_csv(temp_dir + 'batch_' + str(batch).zfill(3) + '.csv', index = False)
 
@@ -266,16 +282,3 @@ if len(temp_files) == n_batches:
     estimated_ideology_distributions.to_csv(outpath + 'follower_ideology_distribution_shapes.csv', index = False)
     os.rmdir(temp_dir)
 
-    
-####################
-# Uncomment to see individual fits
-####################
-#select_est_parameters = select_user = 0
-#
-# import matplotlib.pyplot as plt
-# x = np.linspace(-4, 4, 100)
-
-# mu  = np.mean(posterior_mu)
-# sigma = np.mean(posterior_sigma)
-# plt.plot(x, stats.norm(loc = mu, scale = sigma).pdf(x))    
-# plt.hist(followers.follower_ideology, density = True, bins = np.arange(-5, 5, 0.25))
