@@ -125,7 +125,7 @@ if __name__ == '__main__':
     # Load and shape belief data
     ####################
     # Load belief data, turn into dataframe
-    belief_file = data_directory + '/data/article_belief/response_distribution.p'
+    belief_file = data_directory + 'data/article_belief/response_distribution.p'
     belief_data = pickle.load( open(belief_file, "rb") )
     belief_data = pd.DataFrame.from_dict(belief_data, orient = 'index')
     belief_data['total_article_number'] = belief_data.index
