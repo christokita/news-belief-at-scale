@@ -54,7 +54,7 @@ def calculate_extra_exposed(total_users, mu, sigma, alpha, upper_bin_edges):
     """
     
     bin_size = upper_bin_edges[1] - upper_bin_edges[0]  #assuming regularly sized bins
-    follower_dist = stats.normskew(loc = mu, scale = sigma, a = alpha)
+    follower_dist = stats.skewnorm(loc = mu, scale = sigma, a = alpha)
     exposed_probs = np.array([])
     for upper_edge in upper_bin_edges:
         # If it's the lowest bin, calculate space of -inf to upper edge
