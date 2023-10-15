@@ -44,7 +44,7 @@ DATA_DIRECTORY <- "/Volumes/CKT-DATA/news-belief-at-scale/"
 # Choose GROUPING of interest. Options: 
 #     (1) article veracity: "article_fc_rating"
 #     (2) source: "source_type"
-GROUPING <- "article_fc_rating"
+GROUPING <- "source_type"
 
 
 ####################
@@ -363,7 +363,7 @@ gg_ideol_dist <- exposure_ideol %>%
   scale_fill_gradientn(colours = ideol_pal, 
                        limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   xlab("Exposed user ideology") +
-  ylab("Avg. proportion of article exposure per article") +
+  ylab("Avg. proportion of exposed users per article") +
   theme_ctokita() +
   theme(legend.position = "none",
         aspect.ratio = NULL) +
