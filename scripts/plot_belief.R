@@ -282,7 +282,7 @@ gg_ideol_dist <- belief_ideol %>%
                      expand = c(0, 0), 
                      breaks = seq(-6, 6, 2)) +
   scale_y_continuous(breaks = seq(0, 1, 0.05), 
-                     limits = c(0, 0.2),
+                     limits = c(0, 0.25),
                      expand = c(0, 0)) +
   scale_color_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   scale_fill_gradientn(colours = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
