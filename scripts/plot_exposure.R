@@ -340,7 +340,7 @@ ggsave(gg_ideol_avg, filename = paste0(outpath, subdir_out, "ideol_avg_exposed.p
 gg_ideol_dist <- exposure_ideol %>% 
   # filter(total_article_number == 28) %>%
   # For each article, determine proportion exposed by ideology bin
-  group_by(!!sym(GROUPING), ideology_bin, total_article_number) %>% 
+  group_by(!!sym(GROUPING), ideology_bin, total_article_number, n_articles_in_grouping) %>% 
   summarise(count = sum(count)) %>% 
   ungroup() %>% 
   group_by(total_article_number, n_articles_in_grouping) %>% 
