@@ -44,7 +44,7 @@ DATA_DIRECTORY <- "/Volumes/CKT-DATA/news-belief-at-scale/"
 # Choose GROUPING of interest. Options: 
 #     (1) article veracity: "article_fc_rating"
 #     (2) source: "source_type"
-GROUPING <- "source_type"
+GROUPING <- "article_fc_rating"
 
 
 ####################
