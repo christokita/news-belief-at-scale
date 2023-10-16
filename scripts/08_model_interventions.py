@@ -48,7 +48,7 @@ outpath = data_directory + "data_derived/interventions/"
 
 # Parameters for simulation
 n_replicates = 50
-visibility_reduction = 0.25
+visibility_reduction = 0.75
 sharing_reduction = 0
 belief_reduction = 0
 
