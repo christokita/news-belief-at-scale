@@ -10,13 +10,14 @@
 library(ggplot2)
 library(dplyr)
 library(tidyr)
+library(RColorBrewer)
 source("scripts/_plot_themes/theme_ctokita.R")
 
 
 ####################
 # Paramters for analysis: paths to data, paths for output, and filename
 ####################
-ideology_scores_path <- '/Volumes/CKT-DATA/fake-news-diffusion/data/ideology_check/selfreported_vs_pabloscore.csv' 
+ideology_scores_path <- '/Volumes/CKT-DATA/news-belief-at-scale/data/ideology_check/selfreported_vs_pabloscore.csv' 
 outpath <- 'output/ideology_basis/'
 
 # Color palette
@@ -84,21 +85,22 @@ gg_ideology_comparison <- ggplot() +
              alpha = 0.15,
              position = position_jitter(width = 0.1, height = 0)) +
   geom_point(data = ideology_means, aes(x = ideology_category, y = mean_pablo_score, fill = ideology_category),
-             size = 3, 
+             size = 3,
              shape = 21,
-             color = 'white') +  
+             color = 'white') +
   xlab('Self-reported ideology') +
   ylab('Inferred ideology from Twitter') +
-  scale_x_discrete(labels = c("Very\nliberal", "Liberal", "Somewhat\nliberal", "Moderate", "Somewhat\nconservative", "Conservative", "Very\nconservative", "Not\nsure")) +
+  scale_x_discrete(labels = c("Very liberal", "Liberal", "Somewhat liberal", "Moderate", "Somewhat conservative", "Conservative", "Very conservative", "Not sure")) +
   scale_y_continuous(breaks = seq(-4, 4, 1), limits = c(-4, 4), expand = c(0, 0)) +
   scale_color_manual(values = c(ideol_pal_small, 'black')) +
   scale_fill_manual(values = c(ideol_pal_large, 'black')) +
   theme_ctokita() +
   theme(legend.position = 'none',
-        aspect.ratio = NULL)
+        aspect.ratio = NULL,
+        axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1.03))
 
 gg_ideology_comparison
-ggsave(gg_ideology_comparison, filename = paste0(outpath, 'empirical_ideology_means.pdf'), width = 120, height = 90, units = 'mm', dpi = 400)
+ggsave(gg_ideology_comparison, filename = paste0(outpath, 'empirical_ideology_means.pdf'), width = 90, height = 70, units = 'mm', dpi = 400)
 
 ####################
 # Calculate bins using these empirical categories
