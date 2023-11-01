@@ -203,7 +203,7 @@ gg_exposure_decrease_point <- ggplot(relative_effect, aes(x = intervention_time,
                                "Visibility reduction (light)",
                                "Visibility reduction (heavy)")) +
   xlab(expression( paste("Intervention delay ", italic(t[int]), " (hr)") )) + 
-  ylab("Relative exposure of receptive users to misinformation") +
+  ylab("Relative user exposure to misinformation") +
   coord_cartesian(clip = 'off') + #prevent clipping of po9ints on axis line
   theme_ctokita() +
   theme(axis.line = element_blank(),
