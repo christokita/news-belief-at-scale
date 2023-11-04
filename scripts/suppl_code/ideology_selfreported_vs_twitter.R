@@ -39,7 +39,7 @@ ideologies <- read.csv(ideology_scores_path, header = TRUE) %>%
 
 
 ####################
-# PLOT: scatter of two ideology scores for each user
+# PLOT: scatter Twitter vs. self-reported ideology
 ####################
 # Calculate mean by ideology category
 ideology_means <- ideologies %>% 
@@ -82,7 +82,7 @@ gg_ideology_comparison <- ggplot() +
   geom_point(data = ideologies, aes(x = ideology_category, y = pablo_score, color = ideology_category),
              size = 1.5, 
              stroke = 0, 
-             alpha = 0.15,
+             alpha = 0.25,
              position = position_jitter(width = 0.1, height = 0)) +
   geom_point(data = ideology_means, aes(x = ideology_category, y = mean_pablo_score, fill = ideology_category),
              size = 3,
@@ -96,16 +96,91 @@ gg_ideology_comparison <- ggplot() +
   scale_fill_manual(values = c(ideol_pal_large, 'black')) +
   theme_ctokita() +
   theme(legend.position = 'none',
-        aspect.ratio = NULL,
+        aspect.ratio = 0.6,
         axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1.03))
 
 gg_ideology_comparison
 ggsave(gg_ideology_comparison, filename = paste0(outpath, 'empirical_ideology_means.pdf'), width = 90, height = 70, units = 'mm', dpi = 400)
 
+
+####################
+# PLOT: scatter Twitter vs. self-reported ideology with synthetic data for "Somewhat" category
+####################
+# Get IDs of users to reassign to "somewhat category"
+somewhat_liberal_samples <- ideologies %>% 
+  filter(ideology_category %in% c("Liberal", "Moderate")) %>% 
+  group_by(ideology_category) %>% 
+  sample_frac(0.33)
+
+somewhat_conservative_samples <- ideologies %>% 
+  filter(ideology_category %in% c("Conservative", "Moderate")) %>% 
+  filter(!smappid %in% somewhat_liberal_samples$smappid) %>% 
+  group_by(ideology_category) %>% 
+  sample_frac(0.33)
+
+# Reassign selected users to "Somewhat" categories
+ideologies_synthetic <- ideologies %>% 
+  mutate(data_type = "Actual category")
+ideologies_synthetic$ideology_category[ideologies_synthetic$smappid %in% somewhat_liberal_samples$smappid] <- "Somewhat liberal"
+ideologies_synthetic$data_type[ideologies_synthetic$smappid %in% somewhat_liberal_samples$smappid] <- "Reassigned category"
+
+ideologies_synthetic$ideology_category[ideologies_synthetic$smappid %in% somewhat_conservative_samples$smappid] <- "Somewhat conservative"
+ideologies_synthetic$data_type[ideologies_synthetic$smappid %in% somewhat_conservative_samples$smappid] <- "Reassigned category"
+
+
+ideologies_synthetic <- ideologies_synthetic %>% 
+  mutate(ideology_category = factor(ideology_category, levels = c("Very liberal", "Liberal", "Somewhat liberal", "Moderate", "Somewhat conservative", "Conservative", "Very conservative", "Not sure")))
+
+# Calculate mean by ideology category
+ideology_means_synthetic <- ideologies_synthetic %>% 
+  group_by(ideology_category) %>% 
+  summarise(mean_pablo_score = mean(pablo_score),
+            sd_pablo_score = sd(pablo_score),
+            se_pablo_score = sd(pablo_score) / sqrt(length(pablo_score))) %>% 
+  mutate(ideology_category = factor(ideology_category, levels = c("Very liberal", "Liberal", "Somewhat liberal", "Moderate", "Somewhat conservative", "Conservative", "Very conservative", "Not sure")))
+
+# Plot
+gg_ideology_comparison_synthetic <- ggplot() +
+  geom_hline(yintercept = 0, linetype = 'dotted', size = 0.3) +
+  # Have to double plot group means to force factors to plot in order
+  geom_point(data = ideology_means_synthetic, aes(x = ideology_category, y = mean_pablo_score, fill = ideology_category),
+             size = 3, 
+             shape = 21,
+             color = 'white') +  
+  geom_point(data = ideologies_synthetic, aes(x = ideology_category, y = pablo_score, color = ideology_category),
+             size = 1.5, 
+             stroke = 0, 
+             alpha = 0.25,
+             position = position_jitter(width = 0.1, height = 0)) +
+  geom_point(data = ideology_means_synthetic, aes(x = ideology_category, y = mean_pablo_score, fill = ideology_category),
+             size = 3,
+             shape = 21,
+             color = 'white') +
+  xlab('Self-reported ideology') +
+  ylab('Inferred ideology from Twitter') +
+  scale_x_discrete(labels = c("Very liberal", "Liberal", "Somewhat liberal", "Moderate", "Somewhat conservative", "Conservative", "Very conservative", "Not sure")) +
+  scale_y_continuous(breaks = seq(-4, 4, 1), limits = c(-4, 4), expand = c(0, 0)) +
+  scale_color_manual(values = c(ideol_pal_large, 'black')) +
+  scale_fill_manual(values = c(ideol_pal_large, 'black')) +
+  theme_ctokita() +
+  theme(legend.position = 'none',
+        aspect.ratio = 0.6,
+        axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1.03))
+
+gg_ideology_comparison_synthetic
+ggsave(gg_ideology_comparison_synthetic, filename = paste0(outpath, 'synthetic_ideology_means.pdf'), width = 90, height = 70, units = 'mm', dpi = 400)
+
+
 ####################
 # Calculate bins using these empirical categories
 ####################
 ideology_means %>% 
+  filter(ideology_category != "Not sure") %>% 
+  mutate(bin_edge_upper = (mean_pablo_score + lead(mean_pablo_score)) / 2,
+         bin_edge_lower = (mean_pablo_score + lag(mean_pablo_score)) / 2,
+         bin_size = bin_edge_upper - bin_edge_lower)
+
+ideology_means_synthetic %>% 
   filter(ideology_category != "Not sure") %>% 
   mutate(bin_edge_upper = (mean_pablo_score + lead(mean_pablo_score)) / 2,
          bin_edge_lower = (mean_pablo_score + lag(mean_pablo_score)) / 2,
