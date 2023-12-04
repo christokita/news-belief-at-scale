@@ -397,7 +397,8 @@ belief_ideol_sum <- belief_ideol %>%
   summarise(belief_count = sum(count, na.rm = TRUE))
 
 exposure_belief_data <- merge(exposure_ideol_sum, belief_ideol_sum, by = c("article_fc_rating", "ideology_bin")) %>% 
-  filter(article_fc_rating %in% c("False/Misleading news", "True news"))
+  filter(article_fc_rating %in% c("False/Misleading news", "True news")) %>% 
+  mutate(nonbelief_count = exposure_count - belief_count)
 
 
 # Calculate cumulative distribution of exposure and belief
@@ -407,8 +408,10 @@ exposure_belief_diff <- exposure_belief_data %>%
   arrange(article_fc_rating, ideology_bin) %>% 
   mutate(exposure_count = replace_na(exposure_count, 0),
          belief_count = replace_na(belief_count, 0), 
+         nonbelief_count = replace_na(nonbelief_count, 0), 
          exposure_pct = exposure_count / sum(exposure_count),
          belief_pct = belief_count / sum(belief_count),
+         nonbelief_pct = nonbelief_count / sum(nonbelief_count),
          diff_pct = belief_pct - exposure_pct,
          ratio_pct = belief_pct / exposure_pct - 1,
          exposure_cumulative = cumsum(exposure_count),
@@ -418,12 +421,12 @@ exposure_belief_diff <- exposure_belief_data %>%
          diff_cdf = belief_cdf - exposure_cdf)
 
 # Plot ideology bin % of exposure vs % of belief
-gg_pct_exposurebelief <- ggplot(exposure_belief_diff, aes(x = exposure_pct, y = belief_pct, color = ideology_bin)) +
+gg_pct_exposurebelief <- ggplot(exposure_belief_diff, aes(x = nonbelief_pct, y = belief_pct, color = ideology_bin)) +
   geom_abline(aes(slope = 1, intercept = 0), linewidth = 0.3, linetype = "dotted") +
   geom_point(size = 3, stroke = 0) +
   # scale_color_manual(values = grouping_pal) +
-  scale_x_continuous(breaks = seq(0, 0.2, 0.1), limits = c(0, 0.21)) +
-  scale_y_continuous(breaks = seq(0, 0.2, 0.1), limits = c(0, 0.21)) +
+  scale_x_continuous(breaks = seq(0, 0.2, 0.1), limits = c(0, 0.23)) +
+  scale_y_continuous(breaks = seq(0, 0.2, 0.1), limits = c(0, 0.23)) +
   scale_color_gradientn(colors = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish, name = "User ideology") +
   scale_shape_manual(values = c(19, 0)) +
   xlab("Proportion of all exposed users") +
@@ -458,7 +461,8 @@ belief_ideol_sum <- belief_ideol %>%
   summarise(belief_count = sum(count, na.rm = TRUE))
 
 exposure_belief_data <- merge(exposure_ideol_sum, belief_ideol_sum, by = c("article_fc_rating", "article_lean", "ideology_bin")) %>% 
-  filter(article_fc_rating %in% c("False/Misleading news", "True news"))
+  filter(article_fc_rating %in% c("False/Misleading news", "True news")) %>% 
+  mutate(nonbelief_count = exposure_count - belief_count)
 
 # Calculate cumulative distribution of exposure and belief
 exposure_belief_diff <- exposure_belief_data %>% 
@@ -467,8 +471,10 @@ exposure_belief_diff <- exposure_belief_data %>%
   arrange(article_fc_rating, ideology_bin) %>% 
   mutate(exposure_count = replace_na(exposure_count, 0),
          belief_count = replace_na(belief_count, 0), 
+         nonbelief_count = replace_na(nonbelief_count, 0), 
          exposure_pct = exposure_count / sum(exposure_count),
          belief_pct = belief_count / sum(belief_count),
+         nonbelief_pct = nonbelief_count / sum(nonbelief_count),
          diff_pct = belief_pct - exposure_pct,
          ratio_pct = belief_pct / exposure_pct - 1,
          exposure_cumulative = cumsum(exposure_count),
@@ -481,8 +487,8 @@ exposure_belief_diff <- exposure_belief_data %>%
 gg_pct_exposurebelief_articlelean <- ggplot(exposure_belief_diff, aes(x = exposure_pct, y = belief_pct, color = ideology_bin)) +
   geom_abline(aes(slope = 1, intercept = 0), linewidth = 0.3, linetype = "dotted") +
   geom_point(size = 3, stroke = 0) +
-  scale_x_continuous(breaks = seq(0, 0.3, 0.1), limits = c(0, 0.31), trans = scales::pseudo_log_trans(base = 10)) +
-  scale_y_continuous(breaks = seq(0, 0.3, 0.1), limits = c(0, 0.31), trans = scales::pseudo_log_trans(base = 10)) +
+  scale_x_continuous(breaks = seq(0, 0.5, 0.1), limits = c(0, 0.32), trans = scales::pseudo_log_trans(base = 10)) +
+  scale_y_continuous(breaks = seq(0, 0.5, 0.1), limits = c(0, 0.32), trans = scales::pseudo_log_trans(base = 10)) +
   scale_color_gradientn(colors = ideol_pal, limit = c(-ideol_limit, ideol_limit), oob = scales::squish, name = "User ideology") +
   scale_shape_manual(values = c(19, 0)) +
   xlab("Proportion of all exposed users") +
