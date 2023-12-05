@@ -40,6 +40,11 @@ source("scripts/_plot_themes/theme_ctokita.R")
 # Choose location of data
 DATA_DIRECTORY <- "/Volumes/CKT-DATA/news-belief-at-scale/"
 
+# Choose GROUPING of interest. Options: 
+#     (1) article veracity: "article_fc_rating"
+#     (2) source: "source_type"
+GROUPING <- "article_fc_rating"
+
 
 ####################
 # Prepare for analysis: set paths to data, paths for output, and color palettes for plotting
@@ -52,7 +57,11 @@ article_evaluation_path <- paste0(DATA_DIRECTORY, "data/articles/evaluations.csv
 article_source_path <- paste0(DATA_DIRECTORY, "data/articles/daily_articles.csv") #article source type
 
 # Set path for plots
-outpath <- 'output/belief/veracity/'
+if (GROUPING == "article_fc_rating") {
+  subdir_out <- 'veracity/'
+} else if(GROUPING == "source_type") {
+  subdir_out <- 'source_type/'
+}
 
 # Set plotting palettes
 ideol_pal <- rev(brewer.pal(5, "RdBu"))
@@ -97,7 +106,8 @@ belief_timeseries <- merge(belief_data, article_data, by = c("tweet_id", "total_
          source_type = ifelse(source_type == "mainstream", "Mainstream outlet", ifelse(source_type == "fringe", "Fringe outlet", source_type)),
          article_lean = ifelse(article_lean == "C", "Conservative", ifelse(article_lean == "L", "Liberal",
                                                                            ifelse(article_lean == "N", "Neutral", 
-                                                                                  ifelse(article_lean == "U", "Unclear", source_type)))) )
+                                                                                  ifelse(article_lean == "U", "Unclear", source_type)))) ) %>% 
+  filter(article_fc_rating %in% c("False/Misleading news", "True news"))
 
 # Add ideological data (data is melted to make one ideological bin per tweet per row)
 belief_ideol <- belief_timeseries %>% 
@@ -134,7 +144,9 @@ exposure_timeseries <- merge(exposure_data, article_data, by = c("tweet_id", "to
          source_type = ifelse(source_type == "mainstream", "Mainstream outlet", ifelse(source_type == "fringe", "Fringe outlet", source_type)),
          article_lean = ifelse(article_lean == "C", "Conservative", ifelse(article_lean == "L", "Liberal",
                                                                            ifelse(article_lean == "N", "Neutral", 
-                                                                                  ifelse(article_lean == "U", "Unclear", source_type)))) )
+                                                                                  ifelse(article_lean == "U", "Unclear", source_type)))) ) %>% 
+  filter(article_fc_rating %in% c("False/Misleading news", "True news"))
+  
 
 # Add ideology data (data is melted to make one ideological bin per tweet per row)
 exposure_ideol <- exposure_timeseries %>% 
@@ -167,7 +179,7 @@ receptivity_ideol <- exposure_ideol
 receptivity_ideol$count_belief <- belief_ideol$count
 
 receptivity_ideol <- receptivity_ideol %>% 
-  select(article_fc_rating, tweet_id, total_article_number, time, tweet_number, ideology_bin, count, count_belief) %>% 
+  select(article_fc_rating, source_type, tweet_id, total_article_number, time, tweet_number, ideology_bin, count, count_belief) %>% 
   rename(count_exposed = count) %>% 
   mutate(count_nonbelief = count_exposed - count_belief) # nonreceptive = exposed - receptive
 
@@ -181,19 +193,18 @@ receptivity_ideol <- receptivity_ideol %>%
 ####################
 # Prep data
 receptivity_ideol_dist <- receptivity_ideol %>% 
-  group_by(article_fc_rating, absolute_ideology_bin) %>% 
+  group_by(!!sym(GROUPING), absolute_ideology_bin) %>% 
   summarise("Receptive users" = sum(count_belief, na.rm = TRUE),
             "Non-receptive users" = sum(count_nonbelief, na.rm = TRUE)) %>% 
   ungroup() %>% 
-  pivot_longer(-c(article_fc_rating, absolute_ideology_bin), names_to = "receptivity", values_to = "count") %>% 
-  group_by(article_fc_rating, receptivity) %>% 
+  pivot_longer(-c(!!sym(GROUPING), absolute_ideology_bin), names_to = "receptivity", values_to = "count") %>% 
+  group_by(!!sym(GROUPING), receptivity) %>% 
   mutate(proportion = count / sum(count)) %>% 
-  filter(article_fc_rating %in% c("False/Misleading news", "True news")) %>% 
-  arrange(article_fc_rating, receptivity, absolute_ideology_bin)
+  arrange(!!sym(GROUPING), receptivity, absolute_ideology_bin)
 
 # Plot
-gg_receptivity_ideological_extreme_compare <- ggplot(receptivity_ideol_dist, aes(x = absolute_ideology_bin, y = proportion, fill = article_fc_rating)) +
-  geom_step(aes(color = article_fc_rating, absolute_ideology_bin - 0.25),
+gg_receptivity_ideological_extreme_compare <- ggplot(receptivity_ideol_dist, aes(x = absolute_ideology_bin, y = proportion, fill = !!sym(GROUPING))) +
+  geom_step(aes(color = !!sym(GROUPING), absolute_ideology_bin - 0.25),
             linewidth = 0.3,
             alpha = 0.8) +
   geom_bar(position = "identity",
@@ -219,7 +230,7 @@ gg_receptivity_ideological_extreme_compare <- ggplot(receptivity_ideol_dist, aes
              scales = "free")
 
 gg_receptivity_ideological_extreme_compare
-# ggsave(gg_receptivity_ideological_extreme_compare, filename = "output/belief/veracity/ideol_extremity.pdf", width = 45, height = 90, units = "mm", dpi = 400)
+ggsave(gg_receptivity_ideological_extreme_compare, filename = paste0("output/belief/", subdir_out, "ideol_extremity.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
 
 
 ####################
@@ -227,19 +238,18 @@ gg_receptivity_ideological_extreme_compare
 ####################
 # Prep data
 receptivity_ideol_dist <- receptivity_ideol %>% 
-  group_by(article_fc_rating, absolute_ideology_bin) %>% 
+  group_by(!!sym(GROUPING), absolute_ideology_bin) %>% 
   summarise("Receptive users" = sum(count_belief, na.rm = TRUE),
             "Non-receptive users" = sum(count_nonbelief, na.rm = TRUE)) %>% 
   ungroup() %>% 
-  pivot_longer(-c(article_fc_rating, absolute_ideology_bin), names_to = "receptivity", values_to = "count") %>% 
-  group_by(article_fc_rating) %>% 
+  pivot_longer(-c(!!sym(GROUPING), absolute_ideology_bin), names_to = "receptivity", values_to = "count") %>% 
+  group_by(!!sym(GROUPING)) %>% 
   mutate(proportion = count / sum(count)) %>% 
-  filter(article_fc_rating %in% c("False/Misleading news", "True news")) %>% 
-  arrange(article_fc_rating, receptivity, absolute_ideology_bin)
+  arrange(!!sym(GROUPING), receptivity, absolute_ideology_bin)
 
 # Plot
-gg_veracity_ideological_extreme_compare <- ggplot(receptivity_ideol_dist, aes(x = absolute_ideology_bin, y = count, fill = article_fc_rating)) +
-  geom_step(aes(x = absolute_ideology_bin - 0.25, linetype = receptivity, color = article_fc_rating),
+gg_veracity_ideological_extreme_compare <- ggplot(receptivity_ideol_dist, aes(x = absolute_ideology_bin, y = count, fill = !!sym(GROUPING))) +
+  geom_step(aes(x = absolute_ideology_bin - 0.25, linetype = receptivity, color = !!sym(GROUPING)),
             linewidth = 0.3,
             alpha = 0.8) +
   geom_bar(aes(alpha = receptivity),
@@ -260,13 +270,13 @@ gg_veracity_ideological_extreme_compare <- ggplot(receptivity_ideol_dist, aes(x 
   theme_ctokita() +
   theme(legend.position = "none",
         aspect.ratio = NULL) +
-  facet_wrap(~article_fc_rating, 
+  facet_wrap(as.formula(paste("~", GROUPING)), 
              ncol = 1,
              strip.position = "top",
              scales = "free")
 
 gg_veracity_ideological_extreme_compare
-ggsave(gg_veracity_ideological_extreme_compare, filename = "output/belief/veracity/ideol_extremity.pdf", width = 45, height = 90, units = "mm", dpi = 400)
+ggsave(gg_veracity_ideological_extreme_compare, filename = paste0("output/belief/", subdir_out, "ideol_extremity.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
 
 
 ####################
@@ -274,16 +284,15 @@ ggsave(gg_veracity_ideological_extreme_compare, filename = "output/belief/veraci
 ####################
 # Prep data
 exposure_ideol_dist <- receptivity_ideol %>% 
-  group_by(article_fc_rating, absolute_ideology_bin) %>% 
+  group_by(!!sym(GROUPING), absolute_ideology_bin) %>% 
   summarise(exposed_count = sum(count_exposed, na.rm = TRUE)) %>% 
   mutate(proportion = exposed_count / sum(exposed_count)) %>% 
-  ungroup() %>% 
-  filter(article_fc_rating %in% c("False/Misleading news", "True news")) 
+  ungroup()
 
 # Plot
-gg_exposure_ideological_extreme_compare <- ggplot(exposure_ideol_dist, aes(x = absolute_ideology_bin, y = proportion, fill = article_fc_rating)) +
+gg_exposure_ideological_extreme_compare <- ggplot(exposure_ideol_dist, aes(x = absolute_ideology_bin, y = proportion, fill = !!sym(GROUPING))) +
   # Data
-  geom_step(aes(color = article_fc_rating, absolute_ideology_bin - 0.25),
+  geom_step(aes(color = !!sym(GROUPING), absolute_ideology_bin - 0.25),
             linewidth = 0.3,
             alpha = 0.8) +
   geom_bar(position = "identity",
@@ -305,10 +314,7 @@ gg_exposure_ideological_extreme_compare <- ggplot(exposure_ideol_dist, aes(x = a
         aspect.ratio = NULL)
 
 gg_exposure_ideological_extreme_compare
-ggsave(gg_exposure_ideological_extreme_compare, filename = "output/exposure/veracity/ideol_extremity.pdf", width = 45, height = 84.5, units = "mm", dpi = 400)
-
-
-
+ggsave(gg_exposure_ideological_extreme_compare, filename = paste0("output/exposure/", subdir_out, "ideol_extremity.pdf"), width = 45, height = 84.5, units = "mm", dpi = 400)
 
 
 
@@ -379,3 +385,68 @@ chisq.test(
 chisq.test(
   data.frame(exposure = exposure_fm$exposed_count, nonreceptive = nonreceptive_fm$count) #p<0.0001
 )
+
+
+
+######################################## Ideological Extremity of Tweeters ########################################
+
+# Read in data, Calculate time since first sharing of the story
+tweets <- read.csv(tweet_path, header = TRUE, colClasses = c("user_id"="character", "tweet_id"="character")) %>% 
+  filter(total_article_number > 10) %>% #discard first 10 articles from analysis
+  mutate(article_ideology = article_con_feel - article_lib_feel,
+         tweet_time_text = tweet_time,
+         tweet_time = as.POSIXct(tweet_time, format = "%a %b %d %H:%M:%S %z %Y")) %>% 
+  arrange(total_article_number, tweet_time) %>% 
+  group_by(total_article_number) %>% 
+  mutate(article_first_time = min(tweet_time)) %>% 
+  mutate(tweet_number = 1:length(tweet_time), #order tweets for plotting purposes
+         relative_tweet_time = as.numeric( (tweet_time - article_first_time) / (60*60) ) ) %>%  #time diff is in seconds, so convert to hours
+  mutate(relative_tweet_count = tweet_number / max(tweet_number)) %>% 
+  mutate(article_fc_rating = ifelse(article_fc_rating == "T", "True news", ifelse(article_fc_rating == "FM", "False/Misleading news", 
+                                                                                  ifelse(article_fc_rating == "CND", "Borderline", 
+                                                                                         ifelse(article_fc_rating == "No Mode!", "No mode", article_fc_rating))))) %>% 
+  filter(article_fc_rating %in% c("False/Misleading news", "True news"))
+
+# Bin data
+tweeter_ideological_extremity <- tweets %>% 
+  filter(!is.na(user_ideol_extremity)) %>% 
+  mutate(user_ideol_extremity_bin = cut(user_ideol_extremity, breaks = seq(0, 10, 0.5), labels = seq(0, 9.5, 0.5), include.lowest = TRUE)) %>%
+  mutate(user_ideol_extremity_bin = as.numeric( as.character(user_ideol_extremity_bin) )) %>%
+  group_by(!!sym(GROUPING), user_ideol_extremity_bin) %>% 
+  summarise(tweeters_count = length(user_id)) %>% 
+  ungroup() %>% 
+  group_by(!!sym(GROUPING)) %>% 
+  mutate(tweeters_proportion = tweeters_count / sum(tweeters_count))
+
+####################
+# PLOT: ideological extremity of tweeters
+####################
+gg_tweeter_extremity <- ggplot(tweeter_ideological_extremity, aes(x = user_ideol_extremity_bin, y = tweeters_proportion, fill = !!sym(GROUPING))) +
+  geom_step(aes(color = !!sym(GROUPING), user_ideol_extremity_bin - 0.25),
+            linewidth = 0.3,
+            alpha = 0.8) +
+  geom_bar(position = "identity",
+           stat = "identity",
+           alpha = 0.5,
+           width = 0.5)  +
+  scale_x_continuous(limits = c(-0.25, 6), 
+                     expand = c(0, 0), 
+                     breaks = seq(0, 6, 1)) +
+  scale_y_continuous(limits = c(0, 0.4),
+                     expand = c(0, 0), 
+                     labels = comma) +
+  scale_fill_manual(values = grouping_pal) +
+  scale_color_manual(values = grouping_pal) +
+  xlab("Relative tweeter ideology") +
+  ylab("Proportion of tweeters") +
+  theme_ctokita() +
+  theme(legend.position = "none",
+        aspect.ratio = NULL) +
+  facet_wrap(as.formula(paste("~", GROUPING)), 
+             ncol = 1,
+             strip.position = "top",
+             scales = "free")
+
+gg_tweeter_extremity
+ggsave(gg_tweeter_extremity, file = paste0("output/tweeter_ideology/", subdir_out, "tweeter_ideological_extremity.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
+ggsave(gg_tweeter_extremity + theme(strip.text = element_blank()), file = paste0("output/tweeter_ideology/", subdir_out, "tweeter_ideological_extremity_FIG.pdf"), width = 45, height = 45, units = "mm", dpi = 400) #facet labels removed and manually added back during figure creation in vector art program
