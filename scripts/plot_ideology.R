@@ -121,8 +121,8 @@ gg_ideoltweets <- tweets %>%
   group_by(!!sym(GROUPING), ideology_bin) %>% 
   summarise(count = n()) %>% 
   # plot
-  ggplot(., aes(x = ideology_bin, y = count, fill = ideology_bin, color = ideology_bin)) +
-  geom_bar(stat = "identity") +
+  ggplot(., aes(x = ideology_bin, y = count, fill = ideology_bin)) +
+  geom_bar(stat = "identity", width = 0.5, color = NA) +
   xlab("Tweeter ideology") +
   ylab("Number of tweets") +
   scale_x_continuous(limits = c(-6, 6), 
@@ -160,8 +160,8 @@ gg_ideoldist_tweeters <- tweets %>%
   group_by(!!sym(GROUPING), ideology_bin) %>% 
   summarise(avg_tweeter_prop = sum(tweeter_prop) / unique(n_articles_in_GROUPING)) %>% 
   # Plot
-  ggplot(., aes(x = ideology_bin, y = avg_tweeter_prop, fill = ideology_bin, color = ideology_bin)) +
-  geom_bar(stat = "identity") +
+  ggplot(., aes(x = ideology_bin, y = avg_tweeter_prop, fill = ideology_bin)) +
+  geom_bar(stat = "identity", width = 0.5, color = NA) +
   xlab("Tweeter ideology") +
   ylab("Avg. proportion of article tweeters") +
   scale_x_continuous(limits = c(-6, 6), 
@@ -202,7 +202,7 @@ gg_ideoldist_retweet <- tweets %>%
   summarise(avg_tweeter_prop = sum(tweeter_prop) / unique(n_articles_in_GROUPING)) %>% 
   # Plot
   ggplot(., aes(x = ideology_bin, y = avg_tweeter_prop, fill = ideology_bin, color = ideology_bin)) +
-  geom_bar(stat = "identity") +
+  geom_bar(stat = "identity", width = 0.5, color = NA) +
   xlab("Retweeter ideology") +
   ylab("Avg. proportion of article retweeters") +
   scale_x_continuous(limits = c(-6, 6), 
