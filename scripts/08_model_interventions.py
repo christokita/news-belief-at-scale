@@ -37,6 +37,23 @@ import sys
 import pickle
 
 
+
+####################
+# Paths and parameters for simulation
+####################
+# high level directory (external HD or cluster storage)
+# data_directory = "/Volumes/CKT-DATA/news-belief-at-scale/" #external HD
+data_directory = "/scratch/gpfs/ctokita/news-belief-at-scale/" #HPC cluster storage
+outpath = data_directory + "data_derived/interventions/"
+
+# Parameters for simulation
+n_replicates = 10
+visibility_reduction = 0.75
+sharing_reduction = 0
+belief_reduction = 0
+
+
+
 ####################
 # Functions for modeling interventions
 ####################
@@ -144,10 +161,15 @@ def estimate_belief(exposed_users, ideologies, follower_ideol_distributions, art
         # Get user's follower ideology distribution shape
         follower_mu = follower_ideol_distributions.mu[follower_ideol_distributions.user_id == tweeter].iloc[0]
         follower_sigma = follower_ideol_distributions.sigma[follower_ideol_distributions.user_id == tweeter].iloc[0]
+        follower_alpha = follower_distributions.alpha[follower_ideol_distributions.user_id == tweeter].iloc[0]
         
-        # Draw ideology samples for missing users
+        # Draw ideology samples for missing users from fit skew normal distribution
         n_samples = belief_users.loc[(belief_users.user_id == tweeter) & pd.isna(belief_users.pablo_score)].shape[0] #number of unknown follower ideologies for this user
-        ideol_samples = np.random.normal(follower_mu, follower_sigma, n_samples)
+        ideol_samples = stats.skewnorm(
+            loc=follower_mu, 
+            scale=follower_sigma, 
+            a=follower_alpha
+            ).rvs(n_samples)
         belief_users.loc[(belief_users.user_id == tweeter) & pd.isna(belief_users.pablo_score), 'pablo_score'] = ideol_samples #fill in scores
         
     # Bin user ideologies
@@ -288,24 +310,11 @@ def load_followers(file, data_directory):
 if __name__ == "__main__":
     
     ####################
-    # Paths and parameters for simulation
-    ####################
-    # high level directory (external HD or cluster storage)
-    # data_directory = "/Volumes/CKT-DATA/news-belief-at-scale/" #external HD
-    data_directory = "/scratch/gpfs/ctokita/news-belief-at-scale/" #HPC cluster storage
-    outpath = data_directory + "data_derived/interventions/"
-    
-    # Parameters for simulation
-    n_replicates = 10
-    visibility_reduction = 0.25
-    sharing_reduction = 0
-    belief_reduction = 0
-    which_story = int(sys.argv[1]) #get from command line
-    
-    
-    ####################
     # Load fake news tweets
     ####################
+    # Determine which article we are simulating
+    which_story = int(sys.argv[1]) #get from command line
+
     # Load tweet data, esnure in proper format
     labeled_tweets = pd.read_csv(data_directory + "data_derived/tweets/tweets_labeled.csv",
                                  dtype = {'quoted_urls': object, 'quoted_urls_expanded': object, #these two columns cause memory issues if not pre-specified dtype

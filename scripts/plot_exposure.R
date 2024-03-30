@@ -338,9 +338,8 @@ ggsave(gg_ideol_avg, filename = paste0(outpath, subdir_out, "ideol_avg_exposed.p
 # PLOT: Average ideological distribution of users exposed to an article
 ####################
 gg_ideol_dist <- exposure_ideol %>% 
-  # filter(total_article_number == 28) %>%
   # For each article, determine proportion exposed by ideology bin
-  group_by(!!sym(GROUPING), ideology_bin, total_article_number) %>% 
+  group_by(!!sym(GROUPING), ideology_bin, total_article_number, n_articles_in_grouping) %>% 
   summarise(count = sum(count)) %>% 
   ungroup() %>% 
   group_by(total_article_number, n_articles_in_grouping) %>% 
@@ -356,14 +355,14 @@ gg_ideol_dist <- exposure_ideol %>%
                      expand = c(0, 0), 
                      breaks = seq(-6, 6, 2)) +
   scale_y_continuous(breaks = seq(0, 1, 0.05),
-                     limits = c(0, 0.2),
+                     limits = c(0, 0.25),
                      expand = c(0, 0)) +
   scale_color_gradientn(colours = ideol_pal, 
                         limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   scale_fill_gradientn(colours = ideol_pal, 
                        limit = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   xlab("Exposed user ideology") +
-  ylab("Avg. proportion of article exposure per article") +
+  ylab("Avg. proportion of exposed users per article") +
   theme_ctokita() +
   theme(legend.position = "none",
         aspect.ratio = NULL) +
@@ -527,9 +526,9 @@ exposure_diversity <- exposure_by_ideology %>%
 # Plot
 gg_exposure_sd <- exposure_diversity %>% 
   filter(!is.na(user_ideology_bin)) %>% 
-  ggplot(., aes(x = user_ideology_bin, y = exposure_sd, fill = user_ideology_bin, group = user_ideology_bin)) +
-  geom_violin(size = 0, color = NA) +
-  stat_summary(fun.y = mean, geom = "point", size = 0.7, color = "white") +
+  ggplot(., aes(x = user_ideology_bin, y = exposure_sd, fill = user_ideology_bin, color = user_ideology_bin, group = user_ideology_bin)) +
+  geom_violin(size = 0, color = NA, alpha = 0.5) +
+  stat_summary(fun.y = mean, geom = "point", size = 0.8) +
   geom_vline(xintercept = 0, linetype = "dotted", size = 0.3) +
   scale_x_continuous(limits = c(-3, 5), 
                      expand = c(0, 0), 
@@ -539,6 +538,7 @@ gg_exposure_sd <- exposure_diversity %>%
                      expand = c(0, 0),
                      labels = scales::comma) +
   scale_fill_gradientn(colors = ideol_pal, limits = c(-ideol_limit, ideol_limit), oob = scales::squish) +
+  scale_color_gradientn(colors = ideol_pal, limits = c(-ideol_limit, ideol_limit), oob = scales::squish) +
   xlab("Tweeter ideology") +
   ylab("Standard deviation of\nideologies exposed per tweet") +
   theme_ctokita() +

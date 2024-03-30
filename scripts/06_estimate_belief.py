@@ -113,8 +113,8 @@ def estimate_belief(estimated_exposure_df):
         # Estimate belief among those exposed to this tweet/article 
         # NOTE: For now just doing true
         est_belief = belief_rates['True'].values * estimated_exposure_df.loc[estimated_exposure_df.index[i], ideol_bins['bin_label']].values
-        estimated_belief_df.loc[estimated_belief_df.index[i], ideol_bins['bin_label']] = np.round(est_belief).astype(int)
-        estimated_belief_df.loc[estimated_belief_df.index[i], 'new_believing_users'] = sum( np.round(est_belief).astype(int) )
+        estimated_belief_df.loc[estimated_belief_df.index[i], ideol_bins['bin_label']] = np.round(est_belief).astype(np.float64)
+        estimated_belief_df.loc[estimated_belief_df.index[i], 'new_believing_users'] = sum( np.round(est_belief).astype(np.float64) )
         
     return estimated_belief_df
 
@@ -125,7 +125,7 @@ if __name__ == '__main__':
     # Load and shape belief data
     ####################
     # Load belief data, turn into dataframe
-    belief_file = data_directory + '/data/article_belief/response_distribution.p'
+    belief_file = data_directory + 'data/article_belief/response_distribution.p'
     belief_data = pickle.load( open(belief_file, "rb") )
     belief_data = pd.DataFrame.from_dict(belief_data, orient = 'index')
     belief_data['total_article_number'] = belief_data.index

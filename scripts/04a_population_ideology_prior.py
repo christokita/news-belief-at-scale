@@ -102,7 +102,6 @@ if __name__ == '__main__':
     # Infer population level ideology distrubiton shape
     ####################
     # Prepare data for inference
-    # samples = follower_ideologies['follower_ideology'].sample(frac = 0.1, replace = False, random_state = 323) #downsample due to sheer size of data
     samples = follower_ideologies['follower_ideology'].sample(n = 500000, replace = False, random_state = 323) #downsample due to sheer size of data
     del follower_ideologies
     sample_mu = np.array([np.mean(samples)])

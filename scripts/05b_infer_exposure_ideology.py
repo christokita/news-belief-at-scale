@@ -48,13 +48,13 @@ def get_bin_edges(df_columns):
     bin_edges = np.delete(bin_edges, 0)
     return pd.DataFrame({"bin_label": bin_labels, "upper_bin_edge": bin_edges})
 
-def calculate_extra_exposed(total_users, mu, sigma, upper_bin_edges):
+def calculate_extra_exposed(total_users, mu, sigma, alpha, upper_bin_edges):
     """
     This function takes the follower distriubtion shape and calculates how many users were exposed (binning into the ideological bins)
     """
     
     bin_size = upper_bin_edges[1] - upper_bin_edges[0]  #assuming regularly sized bins
-    follower_dist = stats.norm(loc = mu, scale = sigma)
+    follower_dist = stats.skewnorm(loc = mu, scale = sigma, a = alpha)
     exposed_probs = np.array([])
     for upper_edge in upper_bin_edges:
         # If it's the lowest bin, calculate space of -inf to upper edge
@@ -94,11 +94,13 @@ def update_exposure_data(exposure_df):
         # Get distribution shape
         follower_mu = follower_distributions.mu[follower_distributions.user_id == user_id].iloc[0]
         follower_sigma = follower_distributions.sigma[follower_distributions.user_id == user_id].iloc[0]
+        follower_alpha = follower_distributions.alpha[follower_distributions.user_id == user_id].iloc[0]
         
         # Infer 
         inferred_exposed = calculate_extra_exposed(total_users = unaccounted_new_exposed,
                                                    mu = follower_mu,
                                                    sigma = follower_sigma,
+                                                   alpha = follower_alpha,
                                                    upper_bin_edges = ideol_bins['upper_bin_edge'])
         
         # Add to the concrete counts of binned ideology

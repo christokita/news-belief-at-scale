@@ -121,8 +121,8 @@ gg_ideoltweets <- tweets %>%
   group_by(!!sym(GROUPING), ideology_bin) %>% 
   summarise(count = n()) %>% 
   # plot
-  ggplot(., aes(x = ideology_bin, y = count, fill = ideology_bin, color = ideology_bin)) +
-  geom_bar(stat = "identity") +
+  ggplot(., aes(x = ideology_bin, y = count, fill = ideology_bin)) +
+  geom_bar(stat = "identity", width = 0.5, color = NA) +
   xlab("Tweeter ideology") +
   ylab("Number of tweets") +
   scale_x_continuous(limits = c(-6, 6), 
@@ -160,8 +160,8 @@ gg_ideoldist_tweeters <- tweets %>%
   group_by(!!sym(GROUPING), ideology_bin) %>% 
   summarise(avg_tweeter_prop = sum(tweeter_prop) / unique(n_articles_in_GROUPING)) %>% 
   # Plot
-  ggplot(., aes(x = ideology_bin, y = avg_tweeter_prop, fill = ideology_bin, color = ideology_bin)) +
-  geom_bar(stat = "identity") +
+  ggplot(., aes(x = ideology_bin, y = avg_tweeter_prop, fill = ideology_bin)) +
+  geom_bar(stat = "identity", width = 0.5, color = NA) +
   xlab("Tweeter ideology") +
   ylab("Avg. proportion of article tweeters") +
   scale_x_continuous(limits = c(-6, 6), 
@@ -202,7 +202,7 @@ gg_ideoldist_retweet <- tweets %>%
   summarise(avg_tweeter_prop = sum(tweeter_prop) / unique(n_articles_in_GROUPING)) %>% 
   # Plot
   ggplot(., aes(x = ideology_bin, y = avg_tweeter_prop, fill = ideology_bin, color = ideology_bin)) +
-  geom_bar(stat = "identity") +
+  geom_bar(stat = "identity", width = 0.5, color = NA) +
   xlab("Retweeter ideology") +
   ylab("Avg. proportion of article retweeters") +
   scale_x_continuous(limits = c(-6, 6), 
@@ -231,21 +231,28 @@ ggsave(gg_ideoldist_retweet, file = paste0(outpath, subdir_out, "average_retweet
 ####################
 # Plot shape of follower distributions
 ####################
-gg_dist_follower_ideology_distributions <- follower_ideology_distributions %>% 
+gg_dist_follower_ideology_distributions <- 
+  # Calculate mean SD for each skew normal distribution (see: https://en.wikipedia.org/wiki/Skew_normal_distribution)
+  follower_ideology_distributions %>% 
   filter(basis == "followers") %>% 
-  select(user_id, mu, sigma, user_ideology) %>% 
+  select(user_id, mu, sigma, alpha, user_ideology) %>% 
+  mutate(delta = alpha / sqrt(1 + alpha**2)) %>% 
+  mutate(mean = mu + sigma * delta * sqrt(2/pi)) %>% 
+  mutate(variance = sigma**2 * (1 - ((2*delta**2) / pi)) ) %>% 
+  mutate(sd = sqrt(variance)) %>% 
   distinct() %>% 
-  ggplot(., aes(x = mu, y = sigma, color = user_ideology)) +
+  # Plot
+  ggplot(., aes(x = mean, y = sd, color = user_ideology)) +
   geom_point(alpha = 0.1, size = 1, stroke = 0) +
-  scale_color_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish, name = "User\nideology") +
-  xlab("Estimated mean ideology of user's followers") +
-  ylab("Estimated s.d. ideology of user's followers") +
+  scale_color_gradientn(colours = ideol_pal, limit = c(-2, 2), oob = scales::squish, name = "Tweeter\nideology") +
+  xlab("Estimated mean ideology\nof tweeter's followers") +
+  ylab("Estimated s.d. ideology\nof tweeter's followers") +
   theme_ctokita() +
   theme(plot.background = element_blank(),
         legend.position = "right")
 
 gg_dist_follower_ideology_distributions
-ggsave(gg_dist_follower_ideology_distributions, filename = paste0(outpath, "follower_dist_follower_ideology_distributions.png"), width = 90, height = 90, units = "mm", dpi = 400, bg = "transparent")
+ggsave(gg_dist_follower_ideology_distributions, filename = paste0(outpath, "follower_dist_follower_ideology_distributions.png"), width = 65, height = 50, units = "mm", dpi = 400, bg = "transparent")
 
 
 ####################
