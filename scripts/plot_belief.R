@@ -441,8 +441,8 @@ belief_per_exposure %>%
   summarise(mean_rate = mean(belief_per_exposure, na.rm = T))
 
 belief_per_exposure %>% 
-  filter(time < 36) %>% 
-  filter(time >= 35) %>% 
+  filter(time < 48) %>% 
+  filter(time >= 47) %>% 
   group_by(!!sym(GROUPING)) %>% 
   summarise(mean_rate = mean(belief_per_exposure, na.rm = T))
 
@@ -457,12 +457,12 @@ wilcox.test(belief_per_exposure ~ time_period, data = belief_rate_time_compare, 
 
 # Statistical test for paper: does belief-per-exposure increase again following 24 hours?
 belief_increase_time_compare <- belief_per_exposure %>% 
-  mutate(time_period = ifelse(time >= 23 & time < 24, "Hour 24", ifelse(time >= 35 & time < 36, "Hour 48", NA))) %>% 
+  mutate(time_period = ifelse(time >= 23 & time < 24, "Point A", ifelse(time >= 47 & time < 48, "Point B", NA))) %>% 
   filter(!is.na(time_period)) %>% 
   select(article_fc_rating, total_article_number, time_period, time, follower_count, new_exposed_users, new_believing_users, belief_per_exposure)
 
-wilcox.test(belief_per_exposure ~ time_period, data = belief_increase_time_compare, subset = article_fc_rating == "False/Misleading news") #W = 286842, p-value = 4.326e-07
-wilcox.test(belief_per_exposure ~ time_period, data = belief_increase_time_compare, subset = article_fc_rating == "True news") #W = 6567052, p-value < 2.2e-16
+wilcox.test(belief_per_exposure ~ time_period, data = belief_increase_time_compare, subset = article_fc_rating == "False/Misleading news") #W = 512.5, p-value = 0.4197
+wilcox.test(belief_per_exposure ~ time_period, data = belief_increase_time_compare, subset = article_fc_rating == "True news") #W = 23014, p-value = 0.008403
 
 
 # Fit bayesian trend line of belief-per-exposure over time
