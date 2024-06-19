@@ -422,7 +422,7 @@ belief_per_exposure <- belief_timeseries %>%
   mutate(belief_per_exposure = new_believing_users / new_exposed_users) %>% 
   filter(time >= 0 & time <= 48)
 
-# Quick average for paper: belief-per-exposure upon publication
+# Quick average for paper: belief-per-exposure upon publication and at later time points
 belief_per_exposure %>% 
   filter(time < 1) %>% 
   group_by(!!sym(GROUPING)) %>% 
@@ -433,6 +433,37 @@ belief_per_exposure %>%
   filter(time >= 23) %>% 
   group_by(!!sym(GROUPING)) %>% 
   summarise(mean_rate = mean(belief_per_exposure, na.rm = T))
+
+belief_per_exposure %>% 
+  filter(time < 36) %>% 
+  filter(time >= 35) %>% 
+  group_by(!!sym(GROUPING)) %>% 
+  summarise(mean_rate = mean(belief_per_exposure, na.rm = T))
+
+belief_per_exposure %>% 
+  filter(time < 36) %>% 
+  filter(time >= 35) %>% 
+  group_by(!!sym(GROUPING)) %>% 
+  summarise(mean_rate = mean(belief_per_exposure, na.rm = T))
+
+# Statistical test for paper: does belief-per-exposure change over 24 hours?
+belief_rate_time_compare <- belief_per_exposure %>% 
+  mutate(time_period = ifelse(time < 1, "Hour 1", ifelse(time >= 23 & time < 24, "Hour 24", NA))) %>% 
+  filter(!is.na(time_period)) %>% 
+  select(article_fc_rating, total_article_number, time_period, time, follower_count, new_exposed_users, new_believing_users, belief_per_exposure)
+
+wilcox.test(belief_per_exposure ~ time_period, data = belief_rate_time_compare, subset = article_fc_rating == "False/Misleading news") #W = 286842, p-value = 4.326e-07
+wilcox.test(belief_per_exposure ~ time_period, data = belief_rate_time_compare, subset = article_fc_rating == "True news") #W = 6567052, p-value < 2.2e-16
+
+# Statistical test for paper: does belief-per-exposure increase again following 24 hours?
+belief_increase_time_compare <- belief_per_exposure %>% 
+  mutate(time_period = ifelse(time >= 23 & time < 24, "Hour 24", ifelse(time >= 35 & time < 36, "Hour 48", NA))) %>% 
+  filter(!is.na(time_period)) %>% 
+  select(article_fc_rating, total_article_number, time_period, time, follower_count, new_exposed_users, new_believing_users, belief_per_exposure)
+
+wilcox.test(belief_per_exposure ~ time_period, data = belief_increase_time_compare, subset = article_fc_rating == "False/Misleading news") #W = 286842, p-value = 4.326e-07
+wilcox.test(belief_per_exposure ~ time_period, data = belief_increase_time_compare, subset = article_fc_rating == "True news") #W = 6567052, p-value < 2.2e-16
+
 
 # Fit bayesian trend line of belief-per-exposure over time
 if (GROUPING == "article_fc_rating") {
@@ -479,7 +510,7 @@ fit_belief <- do.call("rbind", fit_belief)
 
 # Plot trend line and binned mean of belief-per-exposure over time
 # NOTE: labels for trend lines are added later in vector art program during figure creation for paper
-minutes_per_bin <- 5
+minutes_per_bin <- 30
 
 gg_belief_rate_exposure <- belief_per_exposure %>% 
   # Prep data
@@ -490,7 +521,7 @@ gg_belief_rate_exposure <- belief_per_exposure %>%
   rename(group = !!sym(GROUPING)) %>% 
   # Plot
   ggplot(., aes(x = binned_time, y = belief_per_exposure, color = group)) +
-  geom_point(stroke = 0, alpha = 0.15, size = 1) +
+  geom_point(stroke = 0, alpha = 0.25, size = 1) +
   geom_line(data = fit_belief, aes(x = time, y = Estimate),
             linewidth = 0.6) +
   scale_x_continuous(breaks = seq(0, 48, 12),
@@ -571,7 +602,7 @@ fit_belief <- do.call("rbind", fit_belief)
 
 # Plot: Belief-per-exposure by source type and veracity
 # NOTE: labels for trend lines are added later in vector art program during figure creation for paper
-minutes_per_bin <- 5
+minutes_per_bin <- 30
 
 gg_belief_rate_exposure_source <- belief_per_exposure %>% 
   # Prep data
@@ -602,7 +633,7 @@ ggsave(gg_belief_rate_exposure_source, filename = paste0(outpath, "veracity/beli
 
 
 # Plot: Belief-per-exposure by source lean
-minutes_per_bin <- 5
+minutes_per_bin <- 30
 
 gg_belief_rate_exposure_source <- belief_per_exposure %>% 
   # Prep data
