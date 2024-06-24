@@ -577,7 +577,6 @@ group_names <- names(belief_split)
 
 regression_belief <- brm_multiple(data = belief_split,
                                   formula = belief_per_exposure ~ 1 + time + I(time^2),
-                                  # formula = belief_per_exposure ~ 1 + time,
                                   family = gaussian(), #assume normally distributed error
                                   prior = c(prior(uniform(-100, 100), class = Intercept),
                                             prior(uniform(-100, 100), class = b),
@@ -599,6 +598,9 @@ fit_belief <- lapply(seq(1:length(group_names)), function(i) {
 })
 fit_belief <- do.call("rbind", fit_belief)
 
+# Filter to just true and false news
+fit_belief <- fit_belief %>% filter(article_fc_rating %in% c("True news", "False/Misleading news"))
+
 
 # Plot: Belief-per-exposure by source type and veracity
 # NOTE: labels for trend lines are added later in vector art program during figure creation for paper
@@ -606,13 +608,14 @@ minutes_per_bin <- 30
 
 gg_belief_rate_exposure_source <- belief_per_exposure %>% 
   # Prep data
+  filter(article_fc_rating %in% c("True news", "False/Misleading news")) %>% 
   mutate(binned_time = floor(time / (minutes_per_bin / 60)  ), #assign to bin
          binned_time = binned_time / (60 / minutes_per_bin)) %>% #translate bin into real time
   group_by(source_type, article_fc_rating, binned_time) %>% 
   summarise(belief_per_exposure = mean(belief_per_exposure, na.rm = TRUE)) %>% 
   # Plot
   ggplot(., aes(x = binned_time, y = belief_per_exposure, color = article_fc_rating)) +
-  geom_point(stroke = 0, alpha = 0.15, size = 1) +
+  geom_point(stroke = 0, alpha = 0.25, size = 1) +
   geom_line(data = fit_belief , aes(x = time, y = Estimate),
             linewidth = 0.6) +
   scale_x_continuous(breaks = seq(0, 48, 12),
@@ -635,16 +638,17 @@ ggsave(gg_belief_rate_exposure_source, filename = paste0(outpath, "veracity/beli
 # Plot: Belief-per-exposure by source lean
 minutes_per_bin <- 30
 
-gg_belief_rate_exposure_source <- belief_per_exposure %>% 
+gg_belief_rate_exposure_sourcelean <- belief_per_exposure %>% 
   # Prep data
+  filter(article_fc_rating %in% c("True news", "False/Misleading news")) %>% 
   mutate(binned_time = floor(time / (minutes_per_bin / 60)  ), #assign to bin
          binned_time = binned_time / (60 / minutes_per_bin)) %>% #translate bin into real time
-  group_by(source_type, article_lean, !!sym(GROUPING), binned_time) %>% 
+  group_by(source_type, article_lean, article_fc_rating, binned_time) %>% 
   summarise(belief_per_exposure = mean(belief_per_exposure, na.rm = TRUE)) %>% 
-  rename(group = !!sym(GROUPING)) %>% 
+  rename(group = article_fc_rating) %>%
   # Plot
   ggplot(., aes(x = binned_time, y = belief_per_exposure, color = group)) +
-  geom_point(stroke = 0, alpha = 0.15, size = 1) +
+  geom_point(stroke = 0, alpha = 0.25, size = 1) +
   # geom_line(data = fit_belief, aes(x = time, y = Estimate),
   #           linewidth = 0.6) +
   scale_x_continuous(breaks = seq(0, 48, 12),
@@ -663,6 +667,6 @@ gg_belief_rate_exposure_source <- belief_per_exposure %>%
   theme(legend.position = "none",
         aspect.ratio = NULL)
 
-gg_belief_rate_exposure_source
-ggsave(gg_belief_rate_exposure_source, filename = paste0(outpath, "veracity/beliefs_per_exposure_sourceandveracityandlean.pdf"), width = 90, height = 120, units = "mm", dpi = 400)
+gg_belief_rate_exposure_sourcelean
+ggsave(gg_belief_rate_exposure_sourcelean, filename = paste0(outpath, "veracity/beliefs_per_exposure_sourceandveracityandlean.pdf"), width = 90, height = 120, units = "mm", dpi = 400)
 
