@@ -201,14 +201,70 @@ belief_ideol <- belief_timeseries %>%
 
 
 ####################
-# PLOT: Relative cumulative exposure vs belief over first 48 hours
+# PLOT: Total cumulative exposure vs belief over first 48 hours
 ####################
 # Prep time bins
 missing_time_bins <- expand_grid(total_article_number = unique(belief_timeseries$total_article_number), 
                                  time_bin = seq(0, 24, 0.1))
 
 # Plot
-gg_baseline <- belief_timeseries %>% 
+gg_baseline_total <- belief_timeseries %>% 
+  # Remove articles that didn't expose anyone
+  filter(!is.na(relative_cumulative_belief)) %>% 
+  # Bin into 6 min increments
+  mutate(time_bin = (time %/% 0.1) * 0.1) %>% 
+  # Add in missing hour bins
+  filter(time <= 24) %>% 
+  merge(missing_time_bins, by = c("total_article_number", "time_bin"), all = TRUE) %>% 
+  fill(cumulative_exposed, cumulative_believing, !!sym(GROUPING)) %>% 
+  select(total_article_number, !!sym(GROUPING), time_bin, cumulative_exposed, cumulative_believing) %>%
+  # Prep data
+  group_by(article_fc_rating, total_article_number, time_bin) %>% 
+  summarise(cumulative_exposed = max(cumulative_exposed, na.rm = TRUE),
+            cumulative_believing = max(cumulative_believing, na.rm = TRUE)) %>% 
+  group_by(!!sym(GROUPING), time_bin) %>% 
+  summarise(cumulative_exposed = sum(cumulative_exposed, na.rm = TRUE),
+            cumulative_believing = sum(cumulative_believing, na.rm = TRUE)) %>% 
+  gather(key = "metric", value = "count", -!!sym(GROUPING), -time_bin) %>% 
+  # Plot
+  ggplot(., aes(x = time_bin, y = count, color = !!sym(GROUPING), fill = !!sym(GROUPING))) +
+  geom_area(aes(alpha = metric), 
+            position = "identity", 
+            linewidth = 0,
+            color = NA) +
+  xlab("Time since first article share (hrs.)") +
+  ylab("Cumulative users") +
+  scale_x_continuous(breaks = seq(0, 24, 6),
+                     limits = c(-2, 24), 
+                     expand = c(0, 0)) +
+  scale_y_continuous(labels = comma,
+                     expand = c(0, 0)) +
+  scale_color_manual(values = grouping_pal) +
+  scale_fill_manual(values = grouping_pal) +
+  scale_alpha_manual(values = c(0.65, 0.35)) +
+  theme_ctokita() +
+  theme(aspect.ratio = NULL,
+        legend.position = "none") +
+  facet_wrap(as.formula(paste("~", GROUPING)),
+             ncol = 1,
+             strip.position = "top",
+             scales = "free")
+
+gg_baseline_total
+ggsave(gg_baseline_total, filename = paste0(outpath, subdir_out, "cumulative_users_exposed_vs_receptive.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
+
+
+
+
+####################
+# PLOT: Average cumulative exposure vs belief over first 48 hours
+####################
+# Prep time bins
+missing_time_bins <- expand_grid(total_article_number = unique(belief_timeseries$total_article_number), 
+                                 time_bin = seq(0, 24, 0.1))
+
+# Plot
+gg_baseline_avg <- belief_timeseries %>% 
   # Remove articles that didn't expose anyone
   filter(!is.na(relative_cumulative_belief)) %>% 
   # Bin into 6 min increments
@@ -250,8 +306,8 @@ gg_baseline <- belief_timeseries %>%
              strip.position = "top",
              scales = "free")
 
-gg_baseline
-ggsave(gg_baseline, filename = paste0(outpath, subdir_out, "cumulative_users_exposed_vs_receptive.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
+gg_baseline_avg
+ggsave(gg_baseline_avg, filename = paste0(outpath, subdir_out, "cumulative_avg_users_exposed_vs_receptive.pdf"), width = 45, height = 90, units = "mm", dpi = 400)
 
 
 ####################
