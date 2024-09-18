@@ -1,15 +1,17 @@
 # Measuring and simulating belief in news articles at the scale of the social media ecosystem
 
 This is the code for the forthecoming paper:
-> Tokita CK, Aslett K, Godel WP, Sanderson Z, Tucker JA, Nagler J, Persily N, Bonneau RA. (In Prep). Measuring and mitigating misinformation at the scale of the social media ecosystem.
+> Tokita CK, Aslett K, Godel WP, Sanderson Z, Tucker JA, Nagler J, Persily N, Bonneau RA. (2024). Measuring receptivity to misinformation at scale on a social media platform. PNAS Nexus.
 
 Bibtex Citation:
 ```
- @article{
- tokita_aslett_godel_sanderson_tucker_nagler_persily_bonneau, 
- title={Measuring and mitigating belief in misinformation at the scale of the social media ecosystem}, 
- author={Tokita, Christopher K. and Aslett, Kevin and Godel, William P. and Sanderson, Zeve and Tucker, Joshua  A. and Nagler, Jonathan and Persily, Nathaniel and Bonneau, Richard A.}
-  } 
+@article{tokita2024measuring,
+  title={Measuring receptivity to misinformation at scale on a social media platform},
+  author={Tokita, Christopher K and Aslett, Kevin and Godel, William P and Sanderson, Zeve and Tucker, Joshua A and Nagler, Jonathan and Persily, Nathaniel and Bonneau, Richard},
+  journal={PNAS Nexus},
+  year={2024},
+  publisher={Oxford University Press}
+}
  ```
 
 ## Project abstract
