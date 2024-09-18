@@ -13,7 +13,7 @@ Bibtex Citation:
   publisher={Oxford University Press}
 }
  ```
-This is the living version of the code, although I don't expect many updates to take place going forward. The officially archived code can be found at [![DOI](https://zenodo.org/badge/251651379.svg)](https://zenodo.org/doi/10.5281/zenodo.13777145)
+This is the living version of the code, although I don't expect many updates to take place going forward. The officially archived code for the paper as it was published can be found at [![DOI](https://zenodo.org/badge/251651379.svg)](https://zenodo.org/doi/10.5281/zenodo.13777145)
 
 
 ## Project abstract
