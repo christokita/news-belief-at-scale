@@ -1,6 +1,6 @@
 # Measuring and simulating belief in news articles at the scale of the social media ecosystem
 
-This is the code for the forthecoming paper:
+This is the code for the paper:
 > Tokita CK, Aslett K, Godel WP, Sanderson Z, Tucker JA, Nagler J, Persily N, Bonneau RA. (2024). Measuring receptivity to misinformation at scale on a social media platform. PNAS Nexus.
 
 Bibtex Citation:
@@ -13,6 +13,8 @@ Bibtex Citation:
   publisher={Oxford University Press}
 }
  ```
+This is the living version of the code, although I don't expect many updates to take place going forward. The officially archived code can be found at [![DOI](https://zenodo.org/badge/251651379.svg)](https://zenodo.org/doi/10.5281/zenodo.13777145)
+
 
 ## Project abstract
 Using computational simulations, this project combines social media data and experimental survey data to create an estimate for exposure to and belief in top-trending news articles on Twitter.
