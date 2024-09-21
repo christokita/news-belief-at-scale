@@ -1,4 +1,4 @@
-# Measuring and simulating belief in news articles at the scale of the social media ecosystem
+# Measuring receptivity to misinformation at scale on a social media platform
 
 This is the code for the paper:
 > Tokita CK, Aslett K, Godel WP, Sanderson Z, Tucker JA, Nagler J, Persily N, Bonneau RA. (2024). Measuring receptivity to misinformation at scale on a social media platform. PNAS Nexus.
@@ -15,7 +15,7 @@ Bibtex Citation:
  ```
 This is the living version of the code, although I don't expect many updates to take place going forward. The officially archived code for the paper as it was published can be found at [![DOI](https://zenodo.org/badge/251651379.svg)](https://zenodo.org/doi/10.5281/zenodo.13777145)
 
-An archived copy of the data used in this project can be found at [INSERT DOI]
+An archived copy of the data used in this project can be found at [INSERT DOI]. See the section "Data" below for more details.
 
 ## Project abstract
 Using computational simulations, this project combines social media data and experimental survey data to create an estimate for exposure to and belief in top-trending news articles on Twitter.
@@ -64,7 +64,18 @@ All R scripts for generating plots and summary statistics are denoted by the lea
 * **Python**: All Python packages for this project can be found in `<requirements.txt>` and can easily be installed with `<pip install -r requirements.txt>` from command line.
 * **R**: dplyr, ggplot2, tidyr, stringr, RColorBrewer, scales, brms
 
-### Data
+### Structure of folders in `output/`
+The `output/` folder contains all of the results of our analysis and visualization scripts (almost exclusively our `.R` scripts). Generally, the results are plots and data visualizations.
+
+* `belief/`: estimates for the scale of user belief in news articles (subfolders break this down by article veracity and news source type).
+* `exposure/`: estimates for the scale of user exposure to news articles (subfolders break this down by article veracity and news source type).
+* `ideology_basis/`: comparison of self-reported user ideology (e.g., "liberal", "very liberal", etc.) and estimated ideology from Twitter data. This serves as a check on our basis for aligning self-reported ideology categories with the continuous ideology scores estimated from Twitter data.
+* `interventions/`: the impact of different platform-level interventions on user exposure/belief in misinformation artilces in our dataset.
+* `networks/`: visualization retweetn networks and analyzing their structure (includes break down by article veracity and news source type).
+* `tweeter_ideology/`: distribution of ideologies among users who tweeted articles, along with estimates for the ideology of their followers (subfolders break this down by article veracity and news source type).
+* `tweeting`: how users shared articles on Twitter via tweets (subfolders break this down by article veracity and news source type).
+
+## Data
 Given the large size of the Twitter data, all the data in this study was held on an external harddrive. Therefore, the scripts expect to be pointed to the data storage path, `data_directory` that has a `data/` folder containing all raw data and `data_derived/` folder with all resulting data from analyzing and processing the raw data. A copy of this entire data directory has been uploaded to Zenodo at [INSERT DOI].
 
 The data directory is expected to have the following structure:
@@ -90,15 +101,3 @@ data_directory/
     └───networks/
     └───tweets/
 ```
-
-
-### Structure of folders in `output/`
-The `output/` folder contains all of the results of our analysis and visualization scripts (almost exclusively our `.R` scripts). Generally, the results are plots and data visualizations.
-
-* `belief/`: estimates for the scale of user belief in news articles (subfolders break this down by article veracity and news source type).
-* `exposure/`: estimates for the scale of user exposure to news articles (subfolders break this down by article veracity and news source type).
-* `ideology_basis/`: comparison of self-reported user ideology (e.g., "liberal", "very liberal", etc.) and estimated ideology from Twitter data. This serves as a check on our basis for aligning self-reported ideology categories with the continuous ideology scores estimated from Twitter data.
-* `interventions/`: the impact of different platform-level interventions on user exposure/belief in misinformation artilces in our dataset.
-* `networks/`: visualization retweetn networks and analyzing their structure (includes break down by article veracity and news source type).
-* `tweeter_ideology/`: distribution of ideologies among users who tweeted articles, along with estimates for the ideology of their followers (subfolders break this down by article veracity and news source type).
-* `tweeting`: how users shared articles on Twitter via tweets (subfolders break this down by article veracity and news source type).
