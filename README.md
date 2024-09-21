@@ -1,23 +1,29 @@
 # Measuring and simulating belief in news articles at the scale of the social media ecosystem
 
-This is the code for the forthecoming paper:
-> Tokita CK, Aslett K, Godel WP, Sanderson Z, Tucker JA, Nagler J, Persily N, Bonneau RA. (In Prep). Measuring and mitigating misinformation at the scale of the social media ecosystem.
+This is the code for the paper:
+> Tokita CK, Aslett K, Godel WP, Sanderson Z, Tucker JA, Nagler J, Persily N, Bonneau RA. (2024). Measuring receptivity to misinformation at scale on a social media platform. PNAS Nexus.
 
 Bibtex Citation:
 ```
- @article{
- tokita_aslett_godel_sanderson_tucker_nagler_persily_bonneau, 
- title={Measuring and mitigating belief in misinformation at the scale of the social media ecosystem}, 
- author={Tokita, Christopher K. and Aslett, Kevin and Godel, William P. and Sanderson, Zeve and Tucker, Joshua  A. and Nagler, Jonathan and Persily, Nathaniel and Bonneau, Richard A.}
-  } 
+@article{tokita2024measuring,
+  title={Measuring receptivity to misinformation at scale on a social media platform},
+  author={Tokita, Christopher K and Aslett, Kevin and Godel, William P and Sanderson, Zeve and Tucker, Joshua A and Nagler, Jonathan and Persily, Nathaniel and Bonneau, Richard},
+  journal={PNAS Nexus},
+  year={2024},
+  publisher={Oxford University Press}
+}
  ```
+This is the living version of the code, although I don't expect many updates to take place going forward. The officially archived code for the paper as it was published can be found at [![DOI](https://zenodo.org/badge/251651379.svg)](https://zenodo.org/doi/10.5281/zenodo.13777145)
+
 
 ## Project abstract
 Using computational simulations, this project combines social media data and experimental survey data to create an estimate for exposure to and belief in top-trending news articles on Twitter.
 
 The abstract from our paper:
-> While online misinformation has become a growing topic of scholarly and public inquiry in recent years, the science of studying its impact and evaluating potential remedies at the scale of the social media ecosystem is still developing. On the one hand, research on the diffusion of and exposure to misinformation utilizes large-scale observational data, but these data provide little insight into belief. On the other, measurement of belief in misinformation is largely derived from surveys, which cannot capture the networked dynamics of belief's spread. These two methods have yet to be unified, leaving us without an ecosystem-level estimate of levels of belief in misinformation and the efficacy of interventions aimed at mitigating belief at scale. Here, we pair experimental survey data with observational Twitter data to estimate both exposure to and belief in trending true and false news. Using this new method, we find that the patterns of exposure and belief differ between true and false news: while true news is seen and believed by an ideologically balanced segment of the user base, false news is seen by an ideologically diverse set of users yet believed by an ideologically-skewed segment of the user base. Thus, efforts to infer the impact of misinformation by measuring exposure alone may not accurately capture the true impact of misinformation on social media. We extend this new method and conduct data-driven simulation to evaluate different interventions social media platforms deploy to curtail misinformation. We find that most interventions have a minimal impact on the number of people who see and believe misinformation and, importantly, that the effectiveness of interventions quickly dissipates with each hour delay in implementation. Our paper provides the first full-scale estimation of belief in and potential remedies for online misinformation at the scale of social media platforms.
+> Measuring the impact of online misinformation is challenging. Traditional measures, such as user views or shares on social media, are incomplete because not everyone who is exposed to misinformation is equally likely to believe it. To address this issue, we developed a method that combines survey data with observational Twitter data to probabilistically estimate the number of users both exposed to and likely to believe a specific news story. As a proof of concept, we applied this method to 139 viral news articles and find that although false news reaches an audience with diverse political views, users who are both exposed and receptive to believing false news tend to have more extreme ideologies. These receptive users are also more likely to encounter misinformation earlier than those who are unlikely to believe it. This mismatch between overall user exposure and receptive user exposure underscores the limitation of relying solely on exposure or interaction data to measure the impact of misinformation, as well as the challenge of implementing effective interventions. To demonstrate how our approach can address this challenge, we then conducted data-driven simulations of common interventions used by social media platforms. We find that these interventions are only modestly effective at reducing exposure among users likely to believe misinformation, and their effectiveness quickly diminishes unless implemented soon after misinformation's initial spread. Our paper provides a more precise estimate of misinformation's impact by focusing on the exposure of users likely to believe it, offering insights for effective mitigation strategies on social media.
 
+The significane statement from our paper:
+> As social media platforms grapple with misinformation, our study offers a new approach to measure its spread and impact. By combining survey data with social media data, we estimate not only the number of users exposed to false (and true) news but also the number of users likely to believe these news stories. We find that the impact of misinformation is not evenly distributed, with ideologically extreme users being more likely to see and believe false content, often encountering it before others. Our simulations suggest that current interventions may have limited effectiveness in reducing the exposure of receptive users. These findings highlight the need to consider individual user receptiveness when measuring misinformation's impact and developing policies to combat its spread.
 
 ## About this repository and how to use the code
 Most of this project is written in Python. Python scripts are used to construct the dataset, calculate exposure/belief, run simulations of platform interventions, and analyze the retweet network structure. R is used for generating figures/plots and summary statistics for the paper.
@@ -58,7 +64,32 @@ All R scripts for generating plots and summary statistics are denoted by the lea
 * **R**: dplyr, ggplot2, tidyr, stringr, RColorBrewer, scales, brms
 
 ### Data
-Given the large size of the Twitter data, all the data in this study is currently held on an external harddrive, with a backup copy stored on Princeton's Della cluster.
+Given the large size of the Twitter data, all the data in this study was held on an external harddrive. Therefore, the scripts expect to be pointed to the data storage path, `data_directory` that has a `data/` folder containing all raw data and `data_derived/` folder with all resulting data from analyzing and processing the raw data. A copy of this entire data directory has been uploaded to Zenodo.
+
+The data directory is expected to have the following structure:
+
+```
+data_directory
+│
+└───data/
+│   └───article_belief/
+│   └───articles/
+│   └───followers/
+│   └───friends/
+│   └───ideology_check/
+│   └───tweets/
+│   
+└───data_derived/
+    └───articles/
+    └───belief/
+    └───exposure/
+    └───friends/
+    └───ideological_scores/
+    └───interventions/
+    └───networks/
+    └───tweets/
+```
+
 
 ### Structure of folders in `output/`
 The `output/` folder contains all of the results of our analysis and visualization scripts (almost exclusively our `.R` scripts). Generally, the results are plots and data visualizations.
