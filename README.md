@@ -13,9 +13,9 @@ Bibtex Citation:
   publisher={Oxford University Press}
 }
  ```
-This is the living version of the code, although I don't expect many updates to take place going forward. The officially archived code for the paper as it was published can be found at [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13826419.svg)](https://zenodo.org/doi/10.5281/zenodo.13777145) 
+This is the living version of the code, although I don't expect many updates to take place going forward. The officially archived code for the paper as it was published can be found at [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13777145.svg)](https://zenodo.org/doi/10.5281/zenodo.13777145) 
 
-An archived copy of the data used in this project can be found at [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13777171.svg)](https://zenodo.org/doi/10.5281/zenodo.13777170). See the section "Data" below for more details.
+An archived copy of the data used in this project can be found at [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13777170.svg)](https://zenodo.org/doi/10.5281/zenodo.13777170). See the section "Data" below for more details.
 
 ## Project abstract
 Using computational simulations, this project combines social media data and experimental survey data to create an estimate for exposure to and belief in top-trending news articles on Twitter.
@@ -76,7 +76,7 @@ The `output/` folder contains all of the results of our analysis and visualizati
 * `tweeting`: how users shared articles on Twitter via tweets (subfolders break this down by article veracity and news source type).
 
 ## Data
-Given the large size of the Twitter data, all the data in this study was held on an external harddrive. Therefore, the scripts expect to be pointed to the data storage path, `data_directory` that has a `data/` folder containing all raw data and `data_derived/` folder with all resulting data from analyzing and processing the raw data. A copy of this entire data directory has been uploaded to Zenodo at [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13777171.svg)](https://zenodo.org/doi/10.5281/zenodo.13777170)
+Given the large size of the Twitter data, all the data in this study was held on an external harddrive. Therefore, the scripts expect to be pointed to the data storage path, `data_directory` that has a `data/` folder containing all raw data and `data_derived/` folder with all resulting data from analyzing and processing the raw data. A copy of this entire data directory has been uploaded to Zenodo at [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13777170.svg)](https://zenodo.org/doi/10.5281/zenodo.13777170)
 
 The data directory is expected to have the following structure:
 
